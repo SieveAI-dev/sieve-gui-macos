@@ -67,8 +67,8 @@ HIPS 弹窗显示中 → IPC 断开
 
 ### 场景 D：协议版本不识别
 ```
-收 sieve.hello{protocol_version:"v2"}
-  → "v2" 不在白名单 ["v1"]
+收 sieve.hello{protocol_version:"v1"}
+  → "v1" 不在白名单 ["v2"]
   → 关闭 NWConnection
   → AppState.daemonStatus = .disconnected
   → 不再自动重连（避免 loop）
@@ -297,7 +297,7 @@ func onConnected() {
 
 ```swift
 func handleHello(_ params: HelloParams) {
-    guard params.protocolVersion == "v1" else {
+    guard params.protocolVersion == "v2" else {
         // 不识别的版本 → 关闭连接，进入 version_mismatch
         connection.cancel()
         Task { @MainActor in
@@ -318,7 +318,7 @@ func handleHello(_ params: HelloParams) {
 }
 ```
 
-协议版本白名单：`["v1"]`（硬编码，随编译而定）。
+协议版本白名单：`["v2"]`（硬编码，随编译而定）。
 
 ---
 
@@ -357,7 +357,7 @@ func handleHello(_ params: HelloParams) {
 ### 单元测试（mock daemon harness）
 
 **连接与握手**：
-- mock daemon 发 `sieve.hello{protocol_version:"v1"}` → 断言 `AppState.daemonStatus == .connected`
+- mock daemon 发 `sieve.hello{protocol_version:"v2"}` → 断言 `AppState.daemonStatus == .connected`
 - mock daemon 发 `sieve.hello{protocol_version:"v99"}` → 断言 `daemonStatus == .disconnected` + `ipcVersionMismatch == true`，且不再自动重连
 
 **重连退避**：

@@ -23,7 +23,7 @@ public protocol IPCDelegate: AnyObject, Sendable {
 /// - 状态变更通过 `Task { @MainActor }` 投递到 delegate（delegate 必须在 MainActor 处理）
 public final class IPCClient: @unchecked Sendable {
     public static let socketPath: String = NSHomeDirectory() + "/.sieve/ipc.sock"
-    public static let supportedProtocolVersions: Set<String> = ["v1"]
+    public static let supportedProtocolVersions: Set<String> = ["v2"]
 
     private static let backoff: [TimeInterval] = [1, 2, 5, 10, 30]
     private static let heartbeatTimeout: TimeInterval = 30
