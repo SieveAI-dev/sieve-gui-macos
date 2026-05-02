@@ -31,12 +31,10 @@ public struct ReloadConfigResult: Decodable, Sendable {
 }
 
 public struct EvaluateResult: Decodable, Sendable {
-    public let evaluatedRules: Int
     public let matches: [Match]
     public let noMatch: [String]?
 
     enum CodingKeys: String, CodingKey {
-        case evaluatedRules = "evaluated_rules"
         case matches
         case noMatch = "no_match"
     }
@@ -46,18 +44,40 @@ public struct EvaluateResult: Decodable, Sendable {
         public let ruleId: String
         public let severity: Severity
         public let disposition: String
-        public let matchedPattern: String?
-        public let matchedCanonical: String?
-        public let fields: [String]?
-        public let redactedEvidence: String?
+        public let matchedPatternSummary: String?
+        public let fieldsTriggered: [String]?
+        public let evaluatedAt: Date?
+        public let ruleKind: String
+        public let wouldDecision: String
+        public let wouldRecommendation: String?
 
         enum CodingKeys: String, CodingKey {
             case ruleId = "rule_id"
             case severity, disposition
-            case matchedPattern = "matched_pattern"
-            case matchedCanonical = "matched_canonical"
-            case fields
-            case redactedEvidence = "redacted_evidence"
+            case matchedPatternSummary = "matched_pattern_summary"
+            case fieldsTriggered = "fields_triggered"
+            case evaluatedAt = "evaluated_at"
+            case ruleKind = "rule_kind"
+            case wouldDecision = "would_decision"
+            case wouldRecommendation = "would_recommendation"
+        }
+
+        public init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            ruleId = try c.decode(String.self, forKey: .ruleId)
+            severity = try c.decode(Severity.self, forKey: .severity)
+            disposition = try c.decode(String.self, forKey: .disposition)
+            matchedPatternSummary = try c.decodeIfPresent(String.self, forKey: .matchedPatternSummary)
+            fieldsTriggered = try c.decodeIfPresent([String].self, forKey: .fieldsTriggered)
+            ruleKind = try c.decode(String.self, forKey: .ruleKind)
+            wouldDecision = try c.decode(String.self, forKey: .wouldDecision)
+            wouldRecommendation = try c.decodeIfPresent(String.self, forKey: .wouldRecommendation)
+            // evaluated_at is Unix ms integer
+            if let ms = try c.decodeIfPresent(Int64.self, forKey: .evaluatedAt) {
+                evaluatedAt = Date(timeIntervalSince1970: Double(ms) / 1000.0)
+            } else {
+                evaluatedAt = nil
+            }
         }
     }
 }

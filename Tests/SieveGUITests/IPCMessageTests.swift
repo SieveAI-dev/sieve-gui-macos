@@ -145,6 +145,60 @@ struct PausedChangedParamsTests {
     }
 }
 
+@Suite("EvaluateResult.Match decode")
+struct EvaluateResultMatchTests {
+    @Test func decodes_match_with_new_fields() throws {
+        let json = """
+        {
+          "matches": [{
+            "rule_id": "OUT-07",
+            "severity": "high",
+            "disposition": "auto_redact",
+            "matched_pattern_summary": "wallet address",
+            "fields_triggered": ["tool_input"],
+            "evaluated_at": 1746000000000,
+            "rule_kind": "pattern",
+            "would_decision": "redact",
+            "would_recommendation": "block"
+          }],
+          "no_match": ["IN-CR-01"]
+        }
+        """
+        let result = try JSONDecoder().decode(EvaluateResult.self, from: Data(json.utf8))
+        #expect(result.matches.count == 1)
+        let m = result.matches[0]
+        #expect(m.ruleId == "OUT-07")
+        #expect(m.severity == .high)
+        #expect(m.matchedPatternSummary == "wallet address")
+        #expect(m.fieldsTriggered == ["tool_input"])
+        #expect(m.ruleKind == "pattern")
+        #expect(m.wouldDecision == "redact")
+        #expect(m.wouldRecommendation == "block")
+        #expect(m.evaluatedAt != nil)
+        #expect(result.noMatch == ["IN-CR-01"])
+    }
+
+    @Test func decodes_match_without_optional_fields() throws {
+        let json = """
+        {
+          "matches": [{
+            "rule_id": "IN-GEN-01",
+            "severity": "low",
+            "disposition": "status_bar",
+            "rule_kind": "sequence",
+            "would_decision": "allow"
+          }]
+        }
+        """
+        let result = try JSONDecoder().decode(EvaluateResult.self, from: Data(json.utf8))
+        let m = result.matches[0]
+        #expect(m.matchedPatternSummary == nil)
+        #expect(m.fieldsTriggered == nil)
+        #expect(m.evaluatedAt == nil)
+        #expect(m.wouldRecommendation == nil)
+    }
+}
+
 @Suite("NotifyKind decode")
 struct NotifyKindTests {
     @Test func decodes_all_six_values() throws {
