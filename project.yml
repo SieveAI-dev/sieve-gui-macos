@@ -1,0 +1,77 @@
+name: SieveGUI
+options:
+  bundleIdPrefix: com.sieve
+  deploymentTarget:
+    macOS: "13.0"
+  developmentLanguage: en
+  createIntermediateGroups: true
+  groupSortPosition: top
+  generateEmptyDirectories: false
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
+    CLANG_WARN_DOCUMENTATION_COMMENTS: YES
+    SWIFT_STRICT_CONCURRENCY: complete
+    MACOSX_DEPLOYMENT_TARGET: "13.0"
+    PRODUCT_NAME: "Sieve GUI"
+    PRODUCT_BUNDLE_IDENTIFIER: com.sieve.gui
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    GENERATE_INFOPLIST_FILE: NO
+    INFOPLIST_FILE: config/Info.plist
+    CODE_SIGN_ENTITLEMENTS: config/SieveGUI.entitlements
+    ENABLE_HARDENED_RUNTIME: YES
+    DEAD_CODE_STRIPPING: YES
+  configs:
+    Debug:
+      SWIFT_OPTIMIZATION_LEVEL: "-Onone"
+      SWIFT_ACTIVE_COMPILATION_CONDITIONS: "DEBUG"
+    Release:
+      SWIFT_OPTIMIZATION_LEVEL: "-O"
+
+packages:
+  SQLite.swift:
+    url: https://github.com/stephencelis/SQLite.swift
+    from: "0.15.0"
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    from: "2.6.0"
+
+targets:
+  SieveGUI:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources
+        excludes:
+          - "**/.DS_Store"
+    dependencies:
+      - package: SQLite.swift
+        product: SQLite
+      - package: Sparkle
+        product: Sparkle
+    info:
+      path: config/Info.plist
+      properties:
+        LSUIElement: true
+        CFBundleDisplayName: Sieve GUI
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSHumanReadableCopyright: "© 2026 Sieve. All rights reserved."
+        NSAppleEventsUsageDescription: "Sieve GUI needs to display HIPS prompts above all windows."
+        SUFeedURL: "https://updates.sieve.local/appcast.xml"
+        SUEnableInstallerLauncherService: true
+        LSMinimumSystemVersion: "13.0"
+
+  SieveGUITests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - Tests/SieveGUITests
+    dependencies:
+      - target: SieveGUI
+    settings:
+      base:
+        SWIFT_STRICT_CONCURRENCY: complete

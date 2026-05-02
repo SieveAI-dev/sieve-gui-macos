@@ -1,0 +1,110 @@
+import SwiftUI
+
+public struct InspectorPanelView: View {
+    let row: AuditEventRow
+    @ObservedObject var appState: AppState
+    @State private var unlocking: Bool = false
+
+    public var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 6) {
+                    Text("event #\(row.id)").font(.headline.monospaced())
+                    Spacer()
+                    SeverityChip(row.severity)
+                    DirectionBadge(row.direction)
+                }
+
+                fieldRow("rule_id", row.ruleId, mono: true)
+                fieldRow("disposition", row.disposition)
+                if let uc = row.userChoice { fieldRow("user_choice", uc) }
+                fieldRow("created_at", DateFormatter.localizedString(from: row.createdAt, dateStyle: .short, timeStyle: .medium))
+
+                if let fp = row.fingerprint {
+                    HStack {
+                        Text("fingerprint").font(.caption).foregroundStyle(.secondary)
+                        MaskedField(fp, style: .prefix4Suffix4, isUnlocked: appState.isUnlocked)
+                    }
+                }
+                if let sid = row.sessionId {
+                    HStack {
+                        Text("session_id").font(.caption).foregroundStyle(.secondary)
+                        MaskedField(sid, style: .sessionTrunc, isUnlocked: appState.isUnlocked)
+                    }
+                }
+                if let pid = row.callerPid {
+                    HStack {
+                        Text("caller_pid").font(.caption).foregroundStyle(.secondary)
+                        if appState.isUnlocked { Text("\(pid)").font(.system(.caption, design: .monospaced)) }
+                        else { MaskedField("\(pid)", style: .clearWhenUnlocked, isUnlocked: false) }
+                    }
+                }
+
+                Divider()
+
+                evidenceMetaSection
+
+                HStack(spacing: 8) {
+                    if !appState.isUnlocked {
+                        Button {
+                            Task { await unlock() }
+                        } label: {
+                            Label(unlocking ? "解锁中…" : "Touch ID 解锁", systemImage: "touchid")
+                        }
+                        .disabled(unlocking)
+                    } else {
+                        Label("已解锁（剩余 \(remainingMinutes) 分钟）", systemImage: "lock.open")
+                            .font(.caption)
+                            .foregroundStyle(.green)
+                    }
+                    Spacer()
+                    Button("调试重放") {
+                        WindowManager.shared.openDebug()
+                    }
+                    .disabled(row.requestId == nil)
+                    Button("复制 ID") {
+                        let pb = NSPasteboard.general
+                        pb.clearContents()
+                        pb.setString("\(row.id)", forType: .string)
+                    }
+                }
+            }
+            .padding(12)
+        }
+    }
+
+    private var remainingMinutes: Int {
+        guard let s = appState.unlockSession else { return 0 }
+        return max(0, Int(s.expiresAt.timeIntervalSinceNow / 60))
+    }
+
+    private func unlock() async {
+        unlocking = true
+        defer { unlocking = false }
+        _ = await TouchIDService.shared.authenticate(reason: "查看完整 evidence_meta")
+    }
+
+    private var evidenceMetaSection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("evidence_meta").font(.caption).foregroundStyle(.secondary)
+            if appState.isUnlocked, let json = row.evidenceMetaJSON {
+                ScrollView {
+                    Text(json)
+                        .font(.system(.caption2, design: .monospaced))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .frame(maxHeight: 180)
+            } else {
+                MaskedField(row.evidenceMetaJSON ?? "", style: .clearWhenUnlocked, isUnlocked: false)
+            }
+        }
+    }
+
+    private func fieldRow(_ key: String, _ value: String, mono: Bool = false) -> some View {
+        HStack(alignment: .top) {
+            Text(key).font(.caption).foregroundStyle(.secondary).frame(width: 90, alignment: .leading)
+            if mono { Text(value).font(.system(.callout, design: .monospaced)) } else { Text(value).font(.callout) }
+            Spacer()
+        }
+    }
+}

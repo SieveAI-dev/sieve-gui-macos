@@ -1,0 +1,10 @@
+--swiftversion 5.9
+--indent 4
+--maxwidth 120
+--commas inline
+--linebreaks lf
+--trimwhitespace always
+--ifdef no-indent
+--self remove
+--importgrouping testable-bottom
+--exclude .build,DerivedData,Sources/Resources

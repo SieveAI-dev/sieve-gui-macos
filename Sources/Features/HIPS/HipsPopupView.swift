@@ -1,0 +1,192 @@
+import SwiftUI
+
+public struct HipsPopupView: View {
+    let request: HipsRequest
+    @ObservedObject var appState: AppState
+    let onDecision: (_ decision: Decision, _ remember: Bool, _ hint: String?, _ phase: HipsPhase) -> Void
+    let onCloseWithoutDecision: () -> Void
+    let isClickSwallowed: () -> Bool
+
+    @State private var rememberChecked: Bool = false
+    @State private var contextHint: String = ""
+    @State private var lastHovered: Bool = false
+
+    public init(
+        request: HipsRequest,
+        appState: AppState,
+        onDecision: @escaping (Decision, Bool, String?, HipsPhase) -> Void,
+        onCloseWithoutDecision: @escaping () -> Void,
+        isClickSwallowed: @escaping () -> Bool
+    ) {
+        self.request = request
+        self.appState = appState
+        self.onDecision = onDecision
+        self.onCloseWithoutDecision = onCloseWithoutDecision
+        self.isClickSwallowed = isClickSwallowed
+    }
+
+    public var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            header.padding(16)
+            Divider()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    if request.merged {
+                        ForEach(request.issues) { issue in
+                            IssueCardView(issue: issue, isUnlocked: appState.isUnlocked)
+                        }
+                    } else if let context = request.context, let ruleId = request.ruleId {
+                        DetailCardView(ruleId: ruleId, context: context, recommendation: request.recommendation, isUnlocked: appState.isUnlocked)
+                    }
+                    if let rec = request.recommendation {
+                        RecommendationBarView(recommendation: rec)
+                    }
+                }
+                .padding(16)
+            }
+            Divider()
+            footer.padding(16)
+        }
+        .frame(minWidth: 540, minHeight: 480)
+        .onAppear { rememberChecked = false }
+    }
+
+    // MARK: - Header
+
+    private var header: some View {
+        HStack(spacing: 10) {
+            severityIcon
+                .font(.title2)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(request.title)
+                    .font(.headline)
+                    .lineLimit(2)
+                HStack(spacing: 6) {
+                    SeverityChip(request.severity)
+                    DirectionBadge(request.direction)
+                    if let rid = request.ruleId {
+                        Text(rid).font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+            }
+            Spacer()
+            CountdownView(remainingSeconds: appState.holdRemainingSeconds, totalSeconds: request.timeoutSeconds)
+                .frame(width: 140)
+        }
+    }
+
+    private var severityIcon: some View {
+        let name: String
+        let color: Color
+        switch request.severity {
+        case .critical: name = "exclamationmark.octagon.fill"; color = .red
+        case .high: name = "exclamationmark.triangle.fill"; color = .orange
+        case .medium: name = "exclamationmark.circle.fill"; color = .yellow
+        case .low: name = "info.circle.fill"; color = .secondary
+        }
+        return Image(systemName: name).foregroundStyle(color)
+    }
+
+    // MARK: - Footer
+
+    private var footer: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Remember checkbox - 红线：allow_remember=false 时禁止渲染（包括灰显）
+            if request.allowRemember {
+                Toggle(isOn: $rememberChecked) {
+                    Text("记住选择（加入灰名单）")
+                        .font(.callout)
+                }
+                .toggleStyle(.checkbox)
+            } else {
+                HStack(spacing: 6) {
+                    Image(systemName: "lock.fill").foregroundStyle(.secondary)
+                    Text("此规则不允许加入灰名单")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            // 备注
+            TextField("可选备注（≤ 200 字符）", text: $contextHint, axis: .vertical)
+                .textFieldStyle(.roundedBorder)
+                .lineLimit(2...3)
+                .onChange(of: contextHint) { new in
+                    if new.count > 200 { contextHint = String(new.prefix(200)) }
+                }
+
+            HStack(spacing: 10) {
+                Spacer()
+                if !shouldHideAllowAll {
+                    if mainActionLocked || phaseRequiresCmdClick {
+                        // 主按钮锁拒绝时，"允许"作为副选；红阶段需 Command-Click
+                        Button(action: { tryAllow() }) {
+                            Label(allowLabel, systemImage: "checkmark.circle")
+                        }
+                        .help(phaseRequiresCmdClick ? "按住 ⌘ 点击允许" : "")
+                        .buttonStyle(.bordered)
+                    } else {
+                        Button(action: { tryAllow() }) {
+                            Text("允许")
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .keyboardShortcut(.defaultAction)
+                    }
+                }
+                if mainActionLocked {
+                    Button(action: { tryDeny() }) { Text("拒绝") }
+                        .buttonStyle(.borderedProminent)
+                        .keyboardShortcut(.defaultAction)
+                } else {
+                    Button(action: { tryDeny() }) { Text("拒绝") }
+                        .buttonStyle(.bordered)
+                        .keyboardShortcut("d", modifiers: [])
+                }
+            }
+        }
+    }
+
+    private var mainActionLocked: Bool {
+        Recommendation.mainActionLocksToDeny(request.recommendation)
+    }
+
+    /// 多 issue 含 critical → 隐藏"全部允许"按钮
+    private var shouldHideAllowAll: Bool {
+        request.merged && request.hasCriticalIssue
+    }
+
+    private var phaseRequiresCmdClick: Bool {
+        // 当前阶段为 red（剩余 ≤20%）→ 允许按钮需 Command-Click
+        let phase = currentPhase
+        return phase == .red
+    }
+
+    private var currentPhase: HipsPhase {
+        let total = request.timeoutSeconds
+        let remaining = appState.holdRemainingSeconds
+        guard total > 0 else { return .red }
+        let r = Double(remaining) / Double(total)
+        if r > 0.5 { return .blue }
+        if r > 0.2 { return .orange }
+        return .red
+    }
+
+    private var allowLabel: String {
+        phaseRequiresCmdClick ? "按住 ⌘ 点击允许" : "允许"
+    }
+
+    private func tryAllow() {
+        guard !isClickSwallowed() else { return }
+        if phaseRequiresCmdClick {
+            // 检查 Command 修饰键
+            let flags = NSApp.currentEvent?.modifierFlags ?? []
+            if !flags.contains(.command) { return }
+        }
+        onDecision(.allow, request.allowRemember && rememberChecked, contextHint.isEmpty ? nil : contextHint, currentPhase)
+    }
+
+    private func tryDeny() {
+        guard !isClickSwallowed() else { return }
+        onDecision(.deny, false, contextHint.isEmpty ? nil : contextHint, currentPhase)
+    }
+}

@@ -73,26 +73,41 @@ docs/
 详见 [`docs/guides/development.md`](docs/guides/development.md)。简版：
 
 ```bash
-# 1. 装 Xcode 15+
-# 2. 打开工程
+# 1. 装 Xcode 15+ 和 xcodegen
+brew install xcodegen
+
+# 2. 生成 Xcode 工程
+xcodegen generate
+
+# 3. 编译 + 测试 Core 库（不依赖 Xcode）
+swift build              # 编译 Models / IPC / AuditDB / Logger / Telemetry
+swift test               # 跑单元测试（当前 20 个，全绿）
+
+# 4. 完整 App 构建
+xcodebuild -project SieveGUI.xcodeproj -scheme SieveGUI -destination 'platform=macOS' build
+
+# 5. Xcode 里 Run
 open SieveGUI.xcodeproj
-
-# 3. 跑 mock daemon（不需要真的 sieve daemon）
-swift run sieve-gui-mock-daemon
-
-# 4. 在 Xcode 里 Run
 ```
+
+> mock daemon 子项目尚未开工；当前可以连真的 sieve daemon（监听 `~/.sieve/ipc.sock`）联调，daemon 不在时 GUI 进入 disconnected 状态并弹失联视图。
 
 ---
 
 ## 当前状态
 
-**Phase 0：文档体系落地中**。代码尚未开工。
-进度见 [`tasks/todo.md`](tasks/todo.md)。
+**Phase 1A：骨架 + 核心红线落地完成**（2026-05-02）。
 
-GA 时间表与 daemon 同步：
-- Week 5：SwiftUI 骨架 + HIPS 主流程
-- Week 12：v1.0 GA
+- ✅ 49 个 Swift 源文件 / 5593 行
+- ✅ `swift build` Core 库干净通过
+- ✅ `swift test` 20/20 测试全绿
+- ✅ `xcodebuild` 完整 App 构建成功，产物 `Sieve GUI.app` arm64
+- ✅ 所有 SPEC 红线已编码层落地（`allow_remember=false ⇒ remember=false` / 主按钮锁拒绝 / Phase3 ⌘-Click / rawJSON 关闭即清 / 多 issue 含 critical 禁「全部允许」/ 决策路径不联网）
+
+下一步：Phase 1B（SPEC 像素级打磨）+ Phase 1C（CI / Notarization / Sparkle / GA）。
+
+完整路线图与待办见 [`tasks/todo.md`](tasks/todo.md)，
+本轮工程踩坑沉淀见 [`tasks/lessons.md`](tasks/lessons.md)。
 
 ---
 
