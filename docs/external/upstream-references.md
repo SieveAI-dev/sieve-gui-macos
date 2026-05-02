@@ -78,9 +78,20 @@
 
 ## 3. 上游 SPEC
 
+### SPEC-005：ipc-protocol（**双仓库唯一权威 IPC 协议规格**）
+- **路径（上游仓库内）**：`docs/specs/SPEC-005-ipc-protocol.md`
+- **覆盖**：所有 IPC 方法名、字段、枚举、错误码、握手、心跳、版本协商、协议升级流程、schema 一致性测试约定
+- **当前 pinned commit**：`<待 GUI 代码 PR 时填入 SPEC-005 commit hash>`
+- **本仓库依赖**：所有 IPC 字段定义都来自此文件；GUI 端不复刻 schema 表
+- **本仓库实现端**：
+  - [`docs/api/ipc-protocol.md`](../api/ipc-protocol.md) v2.0（GUI 实现注解，不再定义 schema）
+  - [`SPEC-008-ipc-client.md`](../specs/SPEC-008-ipc-client.md)（GUI IPC 客户端实现规格）
+  - `Sources/Services/IPC/`、`Sources/Models/HipsRequest*.swift` 等
+- **变更协调**：任何 SPEC-005 改动必须先在 daemon 仓库 merge SPEC PR，再分别在两仓提代码 PR；本仓库 commit pin 字段必须更新
+
 ### SPEC-002：hips-popup-behavior
 - **覆盖**：HIPS 弹窗的 IPC 行为契约（多 issue 合并字段、超时三段、merged_decision 格式、`default_on_timeout` fail-closed）
-- **本仓库实现端**：[`SPEC-002-hips-popup-window.md`](../specs/SPEC-002-hips-popup-window.md)（GUI 渲染规格）+ [`api/ipc-protocol.md`](../api/ipc-protocol.md)（协议字段）
+- **本仓库实现端**：[`SPEC-002-hips-popup-window.md`](../specs/SPEC-002-hips-popup-window.md)（GUI 渲染规格）+ [`api/ipc-protocol.md`](../api/ipc-protocol.md)（GUI 实现注解）
 
 ### SPEC-003：sieve-setup-tool
 - **覆盖**：`sieve setup` / `sieve doctor` / `sieve uninstall` 行为
@@ -136,7 +147,8 @@ GUI 必须 0700 / 0600 权限校验 `~/.sieve/`，不符合时引导修复（[`S
 
 | protocol_version | daemon 起始版本 | GUI 起始版本 | 状态 |
 |------------------|----------------|-------------|------|
-| `v1` | daemon v0.x（Phase 1） | GUI v1.0 | Active |
+| `v1` | daemon v0.x（v1.5 实现） | GUI v0.x | **Deprecated**（schema drift 严重，已弃用） |
+| `v2` | daemon v0.7+（SPEC-005 v2.0 落地后） | GUI v1.0 | Active（双仓库统一 schema） |
 
 未来递增策略：
 - 字段新增（向后兼容） → 不递增 `protocol_version`，但更新 `ipc-protocol.md` 标注引入版本

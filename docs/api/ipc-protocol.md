@@ -1,537 +1,284 @@
-# IPC 协议参考 — GUI ↔ daemon
+# IPC 协议参考 — GUI 实现注解
 
-> Version: v1.0 — 2026-05-02
+> Version: v2.0 — 2026-05-02
 > Status: Stable
 > Owner: doskey
-> 上游契约：[ADR-013](../external/upstream-references.md#adr-013ipc-protocol) · [SPEC-002](../external/upstream-references.md#spec-002hips-popup-behavior)
+> **权威协议规格**：[upstream `SPEC-005-ipc-protocol.md`](../external/upstream-references.md#spec-005ipc-protocol)（daemon 仓库 `docs/specs/SPEC-005-ipc-protocol.md`）
+> 上游 ADR：[ADR-013](../external/upstream-references.md#adr-013ipc-protocol) · [SPEC-002](../external/upstream-references.md#spec-002hips-popup-behavior)
 > GUI 实现端：[SPEC-008](../specs/SPEC-008-ipc-client.md)
 
 ---
 
-## 0. 摘要
+## 0. 文档定位
 
-GUI 和 daemon 之间的所有通信走 **Unix Domain Socket + JSON-RPC 2.0**。本文件是**两个仓库共同的契约**——任何修改必须双仓库同步并递增 `protocol_version`。
+> ⚠️ **本文件不再定义 schema 字段。**
 
-- **socket 路径**：`~/.sieve/ipc.sock`
-- **socket 权限**：`0600`（仅 owner）
-- **协议**：JSON-RPC 2.0，**无 batch**
-- **服务端可主动 notify**（daemon → GUI，无 id 字段）
-- **当前协议版本**：`v1`
-- **传输**：每条消息一行 JSON + `\n` 终止符（newline-delimited JSON）
+所有方法名、字段名、枚举值、错误码、握手时序的定义全部在 **SPEC-005**（daemon 仓库 `docs/specs/SPEC-005-ipc-protocol.md`），这是双仓库唯一权威源。本文件只描述 **GUI 实现端的本地行为**：
 
----
+- GUI 端 Codable 结构与 wire schema 的映射约定
+- 解析容错策略（未知字段、未知枚举值、超时降级）
+- IPC 客户端状态机（disconnected ↔ connecting ↔ handshaking ↔ connected ↔ retrying）
+- UI 状态机映射（菜单栏指示灯、disconnected 横幅、HIPS 弹窗排队）
+- 重连与超时策略（GUI 端独有，不在 SPEC-005 范围内）
 
-## 1. 握手
-
-GUI 连接 socket 后，daemon **主动发** `sieve.hello`（notification，无 id）：
-
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "sieve.hello",
-  "params": {
-    "protocol_version": "v1",
-    "daemon_version": "0.7.2",
-    "paused": false,
-    "preset": "Standard",
-    "uptime_seconds": 14523,
-    "audit_db_user_version": 2
-  }
-}
-```
-
-GUI 端处理：
-1. 检查 `protocol_version`：不在 `["v1"]` 白名单 → 关闭连接，进入 disconnected 状态，UI 引导升级
-2. 缓存 `daemon_version` 到 `kLastSeenDaemonVersion`
-3. 同步 `paused` / `preset` 到 `AppState`
-4. 标记 connected
-
-**daemon 不主动重发 hello**，除非 GUI 重连后建立新 socket。
+任何 wire 协议层面的疑问 → 直接去 SPEC-005，不要在本文件二次定义。
 
 ---
 
-## 2. 心跳与超时
+## 1. 协议版本
 
-- **不**显式 ping/pong（避免协议噪音）
-- daemon 在没有其他流量时，每 25s 发一条 `sieve.heartbeat` notification（仅 method）
-- GUI 30s 内未收到任何消息 → 视为失联，关闭重连
+GUI 当前实现 SPEC-005 v2 协议（`protocol_version = "v2"`）。GUI 白名单：`["v2"]`，收到任何其他值立即关闭连接、UI 引导用户升级。
 
----
-
-## 3. daemon → GUI 消息
-
-### 3.1 `sieve.request_decision`（request）
-
-**含 id**，期望 GUI 回 `decision_response`。
-
-#### 单 issue 形式
-
-```jsonc
-{
-  "jsonrpc": "2.0",
-  "method": "sieve.request_decision",
-  "id": "8f3a2b91-...",
-  "params": {
-    "request_id": "8f3a2b91-...",          // 与 id 相同（冗余便于日志）
-    "rule_id": "IN-CR-05",
-    "title": "签名工具调用：signTransaction", // 已本地化（语言由 daemon 决定）
-    "severity": "critical",                 // critical | high | medium | low
-    "direction": "inbound",                 // inbound | outbound
-    "disposition": "GuiPopup",
-    "timeout_seconds": 120,
-    "default_on_timeout": "Block",          // Block | Allow
-    "allow_remember": false,                // ← 关键：daemon 算，GUI 不改
-    "merged": false,
-    "context": {
-      "template": "signing_tool_use",       // 见 §3.1.1 模板表
-      // template 特定字段
-      "tool_name": "signTransaction",
-      "chain": "Ethereum",
-      "chain_id": 1,
-      "typed_data": { /* EIP-712 结构 */ },
-      "flags": {
-        "infinite_amount": true,
-        "deadline_zero": true,
-        "approve_all": false
-      }
-    },
-    "recommendation": {
-      "decision": "deny",                   // deny | allow
-      "confidence": "high",                 // high | medium | low
-      "reason": "deadline=0 + 无限 amount 是 Permit2 钓鱼经典模式"
-    },
-    "received_at_daemon": "2026-05-02T15:03:11.234Z"
-  }
-}
-```
-
-#### 多 issue 合并形式
-
-```jsonc
-{
-  "jsonrpc": "2.0",
-  "method": "sieve.request_decision",
-  "id": "9c1d...",
-  "params": {
-    "request_id": "9c1d...",
-    "title": "Sieve 检测到 2 个安全问题",
-    "severity": "critical",                 // 取最严重
-    "direction": "inbound",
-    "disposition": "GuiPopup",
-    "timeout_seconds": 30,                  // 取最小
-    "default_on_timeout": "Block",
-    "allow_remember": false,                // 任一 issue allow_remember=false → 整体 false
-    "merged": true,
-    "issues": [
-      {
-        "issue_id": "i-1",
-        "rule_id": "IN-CR-05",
-        "title": "签名工具调用：signTransaction",
-        "severity": "critical",
-        "allow_remember": false,
-        "context": { "template": "signing_tool_use", /* ... */ },
-        "recommendation": { /* ... */ }
-      },
-      {
-        "issue_id": "i-2",
-        "rule_id": "IN-GEN-04",
-        "title": "Markdown 图片外链",
-        "severity": "high",
-        "allow_remember": true,
-        "context": { "template": "markdown_exfil", /* ... */ },
-        "recommendation": { /* ... */ }
-      }
-    ]
-  }
-}
-```
-
-#### 3.1.1 `context.template` 字段表
-
-| template | 含义 | 关键字段 |
-|----------|-----|---------|
-| `address_compare` | 钱包地址替换（IN-CR-01） | `original_address`, `substituted_address`, `chain`, `levenshtein` |
-| `signing_tool_use` | 签名工具调用（IN-CR-05） | `tool_name`, `chain`, `typed_data`, `flags{infinite_amount, deadline_zero, approve_all}` |
-| `markdown_exfil` | Markdown 外链外泄（IN-GEN-04） | `markdown_snippet`, `urls[]`, `reachable[]` |
-| `secret_outbound` | BIP39/WIF/raw key 出站（OUT-07/09/10） | `secret_kind`, `prefix4`, `suffix4`, `length`, `hash_short` |
-| `generic_json` | 通用兜底 | `payload` (任意 JSON tree) |
-
-GUI 不识别的 template → 降级到 `generic_json`。
-
-### 3.2 `sieve.request_decision_canceled`（notification）
-
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "sieve.request_decision_canceled",
-  "params": {
-    "request_id": "8f3a2b91-...",
-    "reason": "timeout"  // timeout | daemon_shutdown | superseded
-  }
-}
-```
-
-GUI 端处理：
-- 如果该 request_id 在 pendingQueue 中 → 移除
-- 如果是 activeRequest → 关闭弹窗，恢复菜单栏 normal
-- 不弹任何提示（daemon 已按 default_on_timeout 处置）
-
-### 3.3 `sieve.event_notify`（notification）
-
-非 GuiPopup 类的事件（AutoRedact / StatusBar / 其他通知）：
-
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "sieve.event_notify",
-  "params": {
-    "kind": "redacted",        // redacted | status_marked | hook_terminal
-    "rule_id": "OUT-01",
-    "severity": "critical",
-    "direction": "outbound",
-    "disposition": "AutoRedact",
-    "summary": "Anthropic API key",  // 已本地化短语，用于 Toast
-    "count": 1,
-    "audit_event_id": 1024,    // events.id，可点 Toast 跳详情
-    "occurred_at": "2026-05-02T15:03:11.234Z"
-  }
-}
-```
-
-GUI 渲染：见 [SPEC-007](../specs/SPEC-007-toast-and-system-notifications.md)。
-
-### 3.4 `sieve.preset_changed`（notification）
-
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "sieve.preset_changed",
-  "params": {
-    "preset": "Strict",        // Strict | Standard | Relaxed | Custom
-    "changed_by": "cli",       // cli | gui | config_reload
-    "occurred_at": "..."
-  }
-}
-```
-
-GUI 端处理：
-- 如果 `changed_by == "gui"` → 已经是 GUI 自己的操作，忽略（避免重复刷新）
-- 否则 → 同步 `AppState.preset`，设置面板 picker 切换
-
-### 3.5 `sieve.heartbeat`（notification）
-
-```json
-{ "jsonrpc": "2.0", "method": "sieve.heartbeat" }
-```
-
-无 params。GUI 端只刷新"最近收到消息时间"，不做其他动作。
+不允许"嗅探未知字段做向后兼容"——版本不匹配 = 不通信，没有中间态。
 
 ---
 
-## 4. GUI → daemon 消息
+## 2. 连接与握手（GUI 端实现）
 
-### 4.1 `sieve.decision_response`（response）
+### 2.1 socket 校验
 
-**回应 `request_decision`，使用相同 id**。
+GUI 连接 `~/.sieve/ipc.sock` 前必须校验：
 
-#### 单 issue / 简单形式
+| 项 | 期望 | 不符合时 GUI 行为 |
+|---|---|---|
+| 文件存在 | 是 | 进入 disconnected，提示"daemon 未运行" |
+| 父目录权限 | `0700` | 进入 disconnected，提示"权限异常，运行 sieve doctor" |
+| socket 文件权限 | `0600` | 同上 |
+| 文件 owner | 当前用户 UID | 拒连，提示"用户不匹配" |
 
-```jsonc
-{
-  "jsonrpc": "2.0",
-  "id": "8f3a2b91-...",
-  "result": {
-    "decision": "deny",                // allow | deny
-    "remember": false,                 // GUI 在 allow_remember=false 时永远 false
-    "context_hint": null,              // ≤ 200 字符，用户备注
-    "responded_at": "2026-05-02T15:03:18.512Z",
-    "ui_phase_when_clicked": "blue"    // blue | orange | red — 调试/审计用
-  }
-}
-```
+### 2.2 握手时序（GUI 视角）
 
-#### 多 issue 部分允许
+1. GUI connect socket → 立即启动 5 秒 handshake timer
+2. 收到第一条消息：
+   - 是 `sieve.hello` notification → 校验 `protocol_version`，写入 AppState（`paused` / `preset` / `daemon_version`），cancel timer，标记 connected
+   - 是其他任何消息 → 视为协议违规，关闭连接，进入 retrying
+3. timer 超时未收到 hello → 关闭连接，进入 retrying
+4. `protocol_version` 不在白名单 → 关闭连接，进入 disconnected，UI 引导升级（**不重连**，避免 daemon-不会自愈的死循环）
 
-```jsonc
-{
-  "jsonrpc": "2.0",
-  "id": "9c1d...",
-  "result": {
-    "merged_decision": "partial",      // all_deny | all_allow | partial
-    "per_issue": [
-      { "issue_id": "i-1", "decision": "deny",  "remember": false },
-      { "issue_id": "i-2", "decision": "allow", "remember": true, "context_hint": "测试中允许" }
-    ],
-    "responded_at": "..."
-  }
-}
-```
+### 2.3 重连退避
 
-#### 错误回应
+| 次数 | 间隔 |
+|---|---|
+| 1 | 1 s |
+| 2 | 2 s |
+| 3 | 5 s |
+| 4 | 10 s |
+| ≥5 | 30 s（持续） |
 
-```json
-{
-  "jsonrpc": "2.0",
-  "id": "8f3a2b91-...",
-  "error": {
-    "code": -32000,
-    "message": "user_canceled_via_window_close"
-  }
-}
-```
+任何成功握手 → 重置退避计数。
 
-错误码（GUI 侧）：
+### 2.4 心跳超时
 
-| code | 含义 | daemon 处置 |
-|------|-----|------------|
-| `-32000` | `user_canceled_via_window_close` | 等同 default_on_timeout |
-| `-32001` | `gui_render_failed` | 等同 default_on_timeout + 系统通知告警 |
-| `-32002` | `gui_shutdown_during_decision` | 等同 default_on_timeout |
+- GUI 内部维护 `lastReceivedAt`，所有入站消息（含 heartbeat、业务消息）都刷新此时间
+- 30 秒内 `lastReceivedAt` 未刷新 → 关闭连接，进入 retrying
+- daemon 心跳周期是 25 秒（SPEC-005 §4），GUI 30 秒超时给 5 秒缓冲
 
-### 4.2 `sieve.set_paused`（request）
+---
 
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "sieve.set_paused",
-  "id": "<uuid>",
-  "params": { "minutes": 30 }
-}
-```
+## 3. Codable 命名约定
 
-response：
+GUI 用 Swift `Codable`。所有 IPC payload 结构遵循：
 
-```json
-{
-  "jsonrpc": "2.0",
-  "id": "<uuid>",
-  "result": {
-    "paused_until": "2026-05-02T15:33:11.234Z",
-    "critical_still_blocks": true
-  }
-}
-```
+- Swift property 用 camelCase（语言约定）
+- `CodingKeys` 显式映射到 wire 上的 snake_case
+- 严禁 `[String: Any]` 透传 IPC 字段（CLAUDE.md 硬约束）
 
-### 4.3 `sieve.set_preset` / `sieve.set_preset_overrides`
+示例：
 
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "sieve.set_preset",
-  "id": "<uuid>",
-  "params": { "mode": "Strict" }
-}
-```
+```swift
+struct DecisionRequestParams: Codable {
+    let requestId: UUID
+    let allowRemember: Bool
+    let timeoutSeconds: UInt32
 
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "sieve.set_preset_overrides",
-  "id": "<uuid>",
-  "params": {
-    "mode": "Custom",
-    "overrides": [
-      { "rule_id": "OUT-08", "timeout_seconds": 90, "default_on_timeout": "Allow" }
-    ]
-  }
-}
-```
-
-response（成功）：
-
-```json
-{ "jsonrpc": "2.0", "id": "<uuid>", "result": { "ok": true } }
-```
-
-response（违反 critical_lock）：
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": "<uuid>",
-  "error": {
-    "code": -32010,
-    "message": "critical_lock_violation",
-    "data": { "rule_id": "IN-CR-05", "field": "default_on_timeout" }
-  }
-}
-```
-
-### 4.4 `sieve.reload_config`
-
-```json
-{ "jsonrpc": "2.0", "method": "sieve.reload_config", "id": "<uuid>" }
-```
-
-response：
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": "<uuid>",
-  "result": {
-    "ok": true,
-    "rules_loaded": 47,
-    "user_rules_loaded": 3,
-    "warnings": []
-  }
-}
-```
-
-### 4.5 `sieve.evaluate`（沙箱评估）
-
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "sieve.evaluate",
-  "id": "<uuid>",
-  "params": {
-    "direction": "outbound",
-    "content_kind": "tool_use_input",   // text | tool_use_input | sse_chunk
-    "payload": "<≤ 64 KB>",
-    "source_agent": "claude-code"
-  }
-}
-```
-
-response：
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": "<uuid>",
-  "result": {
-    "evaluated_rules": 47,
-    "matches": [
-      {
-        "rule_id": "IN-GEN-02",
-        "severity": "critical",
-        "disposition": "HookTerminal",
-        "matched_pattern": "curl POST",
-        "matched_canonical": "...",
-        "fields": ["body.text"],
-        "redacted_evidence": "..."     // critical_lock 规则只返回脱敏摘要
-      }
-    ],
-    "no_match": ["IN-CR-02", "user:MY-CURL-PIPE"]
-  }
-}
-```
-
-### 4.6 `sieve.list_graylist` / `sieve.remove_graylist`
-
-```json
-{ "jsonrpc": "2.0", "method": "sieve.list_graylist", "id": "<uuid>" }
-```
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": "<uuid>",
-  "result": {
-    "entries": [
-      {
-        "fingerprint": "7a3f...e9c2",
-        "rule_id": "IN-GEN-04",
-        "created_at": "2026-04-29T10:11:00Z",
-        "context_hint": "测试外链",
-        "last_triggered_at": "2026-05-01T08:23:00Z",
-        "trigger_count": 4
-      }
-    ]
-  }
-}
-```
-
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "sieve.remove_graylist",
-  "id": "<uuid>",
-  "params": { "fingerprint": "7a3f...e9c2" }
-}
-```
-
-### 4.7 `sieve.health`
-
-```json
-{ "jsonrpc": "2.0", "method": "sieve.health", "id": "<uuid>" }
-```
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": "<uuid>",
-  "result": {
-    "ok": true,
-    "checks": [
-      { "name": "ipc_socket", "ok": true },
-      { "name": "audit_db_writable", "ok": true },
-      { "name": "rules_loaded", "ok": true, "detail": "47 rules" },
-      { "name": "anthropic_proxy_listening", "ok": true, "detail": "127.0.0.1:11453" }
-    ],
-    "metrics": {
-      "goroutines": 23,                  // daemon 是 Rust，字段名沿用历史，实际是 task 数
-      "p99_latency_ms": 12,
-      "throughput_1h": 142
+    enum CodingKeys: String, CodingKey {
+        case requestId = "request_id"
+        case allowRemember = "allow_remember"
+        case timeoutSeconds = "timeout_seconds"
     }
-  }
+}
+```
+
+枚举映射：所有 wire 枚举（severity / direction / disposition / preset_mode 等）的 raw value **必须用 SPEC-005 §5 的小写 snake_case 字面量**，禁止 PascalCase 化为符合 Swift 风格的 raw value。
+
+```swift
+enum Severity: String, Codable {
+    case critical, high, medium, low
+}
+
+enum PresetMode: String, Codable {
+    case strict, standard, relaxed, custom
+    // ⚠️ 不要写 "Default"——SPEC-005 v2 把 "default" 重命名为 "standard"
 }
 ```
 
 ---
 
-## 5. 错误码
+## 4. 解析容错策略
 
-| code | 名称 | 来源 | 含义 |
-|------|-----|------|-----|
-| `-32700` | parse_error | JSON-RPC 标准 | JSON 解析失败 |
-| `-32600` | invalid_request | JSON-RPC 标准 | 请求格式不符 JSON-RPC |
-| `-32601` | method_not_found | JSON-RPC 标准 | 方法不存在 |
-| `-32602` | invalid_params | JSON-RPC 标准 | 参数不符合 schema |
-| `-32603` | internal_error | JSON-RPC 标准 | 服务端内部错误 |
-| `-32000` | user_canceled_via_window_close | GUI → daemon | 用户关闭弹窗 |
-| `-32001` | gui_render_failed | GUI → daemon | GUI 渲染异常 |
-| `-32002` | gui_shutdown_during_decision | GUI → daemon | GUI 进程退出 |
-| `-32010` | critical_lock_violation | daemon → GUI | 试图修改 critical_lock 字段 |
-| `-32011` | preset_unknown | daemon → GUI | 未知 preset 名称 |
-| `-32012` | graylist_not_found | daemon → GUI | 删除不存在的 fingerprint |
-| `-32013` | evaluate_payload_too_large | daemon → GUI | 沙箱评估 payload > 64KB |
+### 4.1 未知字段
+
+JSONDecoder 默认忽略未知 key（Swift Codable 行为符合 SPEC-005 §13.2）。**不要**为了"严格校验"启用任何 strict-decoder 模式。
+
+### 4.2 未知枚举值
+
+每个 wire 枚举都要在 GUI 端有 `unknown` 兜底分支：
+
+```swift
+enum NotifyKind: String, Codable {
+    case sequenceHit = "sequence_hit"
+    case outboundRedacted = "outbound_redacted"
+    case hookTerminal = "hook_terminal"
+    case userRulesLoadFailed = "user_rules_load_failed"
+    case userRulesReloaded = "user_rules_reloaded"
+    case generic
+    case unknown  // 兜底：遇到 SPEC-005 v2.x 之后新增的 kind 值
+
+    init(from decoder: Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        self = NotifyKind(rawValue: raw) ?? .unknown
+    }
+}
+```
+
+`unknown` 在 UI 层降级到通用文案（"Sieve 内部通知"）+ 灰色图标，不展开详情。
+
+### 4.3 未知 `context.template`
+
+SPEC-005 §6.1.3 规定：未知 `template` 必须降级到 `generic_json`，把整个 context 对象作为 `payload` 渲染。GUI 端实现：
+
+```swift
+struct HipsContext: Codable {
+    let template: ContextTemplate
+    let payload: AnyCodable  // 用通用容器吃下任何 JSON 子树
+}
+```
+
+`HipsRequestDecoder.swift` 在解析失败时统一降级到 `generic_json`，不抛错。
+
+### 4.4 缺失 / 字段类型错误
+
+- `request_decision` 任何**必需字段**缺失或类型错 → 整条消息 reject，回 `-32101 gui_render_failed`，daemon 端按 `default_on_timeout` 处置
+- 可选字段缺失 → 走 `null` / 默认值
+- `received_at_daemon` 解析失败 → 不阻断渲染，弹窗倒计时退化到从"收到消息时刻"起算
 
 ---
 
-## 6. 协议版本演进
+## 5. UI 状态机映射
 
-当前 `v1`。任何下列变更视为不兼容，必须递增到 `v2`：
+### 5.1 菜单栏指示灯
 
-- 删除字段
-- 修改字段语义（如 `decision` 增加新枚举值）
-- 修改方法名
-- 改变 disposition 枚举集合
-- 改变握手时序
+| GUI IPC 状态 | daemon `paused` | 菜单栏图标 |
+|---|---|---|
+| disconnected | — | 灰色（断开） |
+| handshaking | — | 灰色 + 旋转 |
+| connected | false | 绿色（保护中） |
+| connected | true | 黄色（已暂停） |
+| retrying | — | 黄色 + 旋转 |
 
-向后兼容的变更（不递增）：
+`paused` 字段同时受 `sieve.hello.paused` 和 `sieve.paused_changed` 两路更新；后者优先。
 
-- 新增可选字段（GUI 必须忽略未知字段）
-- 新增方法（GUI 必须返回 `method_not_found` 而不是 crash）
-- 新增 `error.code`（GUI 必须有 fallback "未知错误" 文案）
+### 5.2 HIPS 弹窗排队
+
+`request_decision` 收到后进入 `pendingQueue`：
+
+- 同时只渲染一个 active 弹窗（`activeRequest`）
+- 同 `request_id` 二次到达 → 视为 daemon 端重发（GUI 重连场景），用新 params 替换旧 entry
+- `request_decision_canceled` → 从 queue 移除或关闭 active 弹窗
+- daemon 断开 → queue 清空，所有弹窗关闭并显示"daemon 已断开，本次决策已由系统兜底"
+
+### 5.3 Toast 渲染
+
+`sieve.notify_status_bar` 走 `toastController.presentEvent`：
+
+| `kind` | UI 表现 |
+|---|---|
+| `sequence_hit` | 黄色 toast，常驻直到用户点击 |
+| `outbound_redacted` | 蓝色 toast，5 秒自动消失 |
+| `hook_terminal` | 灰色 toast，8 秒自动消失，点击跳转 History |
+| `user_rules_load_failed` | 红色 toast，常驻 + 点击打开 Settings → Detection |
+| `user_rules_reloaded` | 绿色 toast，5 秒自动消失 |
+| `generic` | 灰色 toast，按 daemon 给的 `auto_dismiss_seconds` 决定 |
+| `unknown`（GUI 兜底） | 灰色 toast，5 秒自动消失，文案"Sieve 内部通知" |
+
+详见 [SPEC-007](../specs/SPEC-007-toast-and-system-notifications.md)。
 
 ---
 
-## 7. 协议层硬约束（GUI 实现端）
+## 6. 错误码处理
 
-复述 [PRD §6.4](../requirements/sieve-gui-macos-prd-v1.0.md) 与 [上游 ADR-021](../external/upstream-references.md#adr-021tri-state-decision-and-graylist)：
+GUI 端按 SPEC-005 §12 段位划分处理：
 
-1. **`allow_remember == false` 时，GUI 永远不能在 `decision_response` 里返回 `remember: true`**——即便 UI bug 让 checkbox 被勾上也必须在编码层 reject
-2. **`recommendation` 缺失或 `confidence != "high"` 时，主按钮 = 拒绝，键盘 Return 默认 = 拒绝**
-3. **未知字段必须忽略**，不能拒绝整条消息
-4. **同 request_id 的多次 response**：daemon 端有去重保护，GUI 重连后重发同 id 的 decision_response 是允许的
-5. **GUI 不发送任何敏感原文回 daemon**，`context_hint` 由用户输入，GUI 不预填
+### 6.1 GUI 发出的错误（`-32100 ~ -32199`）
+
+| Code | Swift 触发点 |
+|---|---|
+| `-32100` `user_canceled_via_window_close` | 用户点 HIPS 弹窗关闭按钮或按 ESC |
+| `-32101` `gui_render_failed` | `HipsRequestDecoder` 抛错、SwiftUI 渲染异常 |
+| `-32102` `gui_shutdown_during_decision` | App lifecycle terminate 时 inflight 请求兜底 |
+
+### 6.2 daemon 发来的错误（`-32000 ~ -32099`）GUI 文案
+
+| Code | 显示文案（已本地化） |
+|---|---|
+| `-32001` `critical_lock_violated` | "此规则受 Critical 锁保护，不能调整。" + 引导用户读 [PRD §9 #3](../requirements/sieve-gui-macos-prd-v1.0.md) |
+| `-32002` `daemon_busy` | "daemon 正在重载，请几秒后重试。" |
+| `-32003` `payload_too_large` | "粘贴内容超过 64KB 上限，请压缩后重试。" |
+| `-32004` `unknown_fingerprint` | "该灰名单条目已不存在（可能被另一窗口删除）。"（同时刷新 graylist 列表） |
+| 未知 daemon 错误码 | "daemon 返回未知错误（code=<n>）"，提示用户更新 GUI |
 
 ---
 
-## 8. 变更记录
+## 7. 多 GUI 并存
+
+SPEC-005 允许多 GUI 同时连接 daemon（多窗口场景）。GUI 端注意：
+
+- `request_decision` 由 daemon 路由给"最早连接的 GUI"，本 GUI 收不到 ≠ 没有待处理决策；用户可能在另一个窗口处理
+- `preset_changed` / `paused_changed` / `notify_status_bar` 是 fan-out，所有 GUI 都会收到，按 `source` 字段判断是否本 GUI 自己的回声
+- `list_graylist` / `health` 是只读，多 GUI 各自调用互不影响
+
+---
+
+## 8. 日志与诊断
+
+GUI 自身的 IPC 行为日志写入 `~/.sieve/gui.log`（详见 SPEC-006 / SPEC-008）。脱敏要求：
+
+- **wire 上收到的 `request_decision.context` 永远不写入 gui.log**（避免间接泄露原文）
+- 只允许记录 method 名、message id、解析成功/失败、错误码
+- `gui.log` rotate 策略：每天一份，保留 7 天
+
+诊断包默认脱敏；详见 [SPEC-009](../specs/SPEC-009-diagnostic-bundle.md)（如已落地）。
+
+---
+
+## 9. 协议升级流程（GUI 视角）
+
+当 SPEC-005 升版（如 v2 → v3）：
+
+1. daemon 仓库先 merge SPEC + 代码 PR
+2. GUI 仓库 `docs/external/upstream-references.md` 更新 SPEC-005 commit pin
+3. 本仓库代码 PR 实施新 schema：
+   - 升级 IPCClient 的 `protocol_version` 白名单（如 `["v2"]` → `["v3"]`，**通常不并存支持多版本**——避免分支爆炸）
+   - 重写受影响的 Codable 结构
+   - 跑 `swift test --filter IPCSchemaV3FixtureTests`（fixture 来自 daemon 仓库）
+4. 本 GUI 文件的"协议版本"段落同步更新
+
+---
+
+## 10. 关联文档
+
+- 上游权威 SPEC：`sieve/docs/specs/SPEC-005-ipc-protocol.md`
+- 上游引用清单：[upstream-references.md](../external/upstream-references.md)
+- GUI 实现规格：[SPEC-008-ipc-client.md](../specs/SPEC-008-ipc-client.md)
+- HIPS 渲染规格：[SPEC-002-hips-popup-window.md](../specs/SPEC-002-hips-popup-window.md)
+- Toast 规格：[SPEC-007-toast-and-system-notifications.md](../specs/SPEC-007-toast-and-system-notifications.md)
+- 架构：[../design/architecture.md](../design/architecture.md)
+
+---
+
+## 11. 变更记录
 
 | 版本 | 日期 | 作者 | 变更 |
-|------|------|-----|-----|
-| v1.0 | 2026-05-02 | doskey | 首次起草，对应 protocol v1 |
+|---|---|---|---|
+| v1.0 | 2026-05-02（早晨） | doskey | 首次起草，描述协议 v1（已弃用） |
+| v2.0 | 2026-05-02（午后） | doskey | 重写为 GUI 实现注解。所有 schema 定义迁移到上游 SPEC-005，本文件仅保留 GUI 端本地行为。协议升至 v2，落锤 D1–D8 决策（详见会话记录）。 |
