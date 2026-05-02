@@ -2,11 +2,12 @@ import Foundation
 
 /// 用户对 HIPS 弹窗的回应。编码层强制：`allowRemember == false` → `remember = false`。
 public struct DecisionResponse: Sendable {
-    public let id: String                  // 与 request_decision id 相同
+    public let id: String                  // 与 request_decision id 相同（= JSON-RPC id）
     public let decision: Decision
     public let remember: Bool
     public let contextHint: String?        // ≤ 200 字符
-    public let respondedAt: Date
+    public let decidedAt: Date             // GUI 端时钟，SPEC-005 §6.2.1 required
+    public let byUser: Bool                // true=用户主动操作；false=超时/失联回退
     public let uiPhaseWhenClicked: HipsPhase
 
     public init(
@@ -14,23 +15,27 @@ public struct DecisionResponse: Sendable {
         decision: Decision,
         remember: Bool,
         contextHint: String?,
-        respondedAt: Date = Date(),
+        decidedAt: Date = Date(),
+        byUser: Bool,
         uiPhaseWhenClicked: HipsPhase
     ) {
         self.id = id
         self.decision = decision
         self.remember = remember
         self.contextHint = contextHint
-        self.respondedAt = respondedAt
+        self.decidedAt = decidedAt
+        self.byUser = byUser
         self.uiPhaseWhenClicked = uiPhaseWhenClicked
     }
 
     /// 编码为 JSON-RPC response.result 子对象（不含 jsonrpc/id 包装）
     public func resultJSON(allowRemember: Bool) -> [String: Any] {
         var dict: [String: Any] = [
+            "request_id": id,
             "decision": decision.rawValue,
             "remember": allowRemember ? remember : false,   // ← 编码层强制
-            "responded_at": Self.iso8601(respondedAt),
+            "decided_at": Self.iso8601(decidedAt),
+            "by_user": byUser,
             "ui_phase_when_clicked": Self.phaseLabel(uiPhaseWhenClicked)
         ]
         if let hint = contextHint, !hint.isEmpty {
@@ -60,7 +65,8 @@ public struct DecisionResponse: Sendable {
 public struct MergedDecisionResponse: Sendable {
     public let id: String
     public let perIssue: [PerIssue]
-    public let respondedAt: Date
+    public let decidedAt: Date             // GUI 端时钟，SPEC-005 §6.2.1 required
+    public let byUser: Bool                // true=用户主动操作；false=超时/失联回退
 
     public struct PerIssue: Sendable {
         public let issueId: String
@@ -78,10 +84,11 @@ public struct MergedDecisionResponse: Sendable {
         }
     }
 
-    public init(id: String, perIssue: [PerIssue], respondedAt: Date = Date()) {
+    public init(id: String, perIssue: [PerIssue], decidedAt: Date = Date(), byUser: Bool) {
         self.id = id
         self.perIssue = perIssue
-        self.respondedAt = respondedAt
+        self.decidedAt = decidedAt
+        self.byUser = byUser
     }
 
     public var mergedDecisionLabel: String {
@@ -105,9 +112,11 @@ public struct MergedDecisionResponse: Sendable {
             return d
         }
         return [
+            "request_id": id,
             "merged_decision": mergedDecisionLabel,
             "per_issue": arr,
-            "responded_at": DecisionResponse.iso8601(respondedAt)
+            "decided_at": DecisionResponse.iso8601(decidedAt),
+            "by_user": byUser
         ]
     }
 }

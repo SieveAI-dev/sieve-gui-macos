@@ -142,6 +142,7 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
             decision: decision,
             remember: safeRemember,
             contextHint: hint,
+            byUser: true,   // 用户主动点按钮触发
             uiPhaseWhenClicked: phase
         )
 
