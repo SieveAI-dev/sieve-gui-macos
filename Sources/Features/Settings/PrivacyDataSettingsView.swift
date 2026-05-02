@@ -77,7 +77,7 @@ public struct GraylistSheetView: View {
                             }
                         }
                         Spacer()
-                        Text("命中 \(entry.triggerCount) 次").font(.caption).foregroundStyle(.secondary)
+                        Text("命中 \(entry.matchCountSince) 次").font(.caption).foregroundStyle(.secondary)
                         Button(role: .destructive) {
                             Task { await remove(entry.fingerprint) }
                         } label: {

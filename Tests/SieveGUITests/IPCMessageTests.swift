@@ -145,6 +145,43 @@ struct PausedChangedParamsTests {
     }
 }
 
+@Suite("GraylistEntry decode")
+struct GraylistEntryTests {
+    @Test func decodes_entry_with_unix_ms_timestamp() throws {
+        let json = """
+        {
+          "fingerprint": "abc123",
+          "rule_id": "OUT-07",
+          "added_at": 1746000000000,
+          "context_hint": "wallet",
+          "match_count_since": 3,
+          "rule_kind": "pattern",
+          "added_by": "gui"
+        }
+        """
+        let entry = try JSONDecoder().decode(GraylistEntry.self, from: Data(json.utf8))
+        #expect(entry.fingerprint == "abc123")
+        #expect(entry.ruleId == "OUT-07")
+        #expect(entry.matchCountSince == 3)
+        #expect(entry.ruleKind == "pattern")
+        #expect(entry.addedBy == "gui")
+        #expect(entry.contextHint == "wallet")
+        // 1746000000000 ms = 1746000000 s
+        #expect(entry.addedAt.timeIntervalSince1970 == 1_746_000_000.0)
+    }
+
+    @Test func decodes_entry_with_missing_optional_fields() throws {
+        let json = """
+        {"fingerprint":"fp1","rule_id":"IN-CR-01","added_at":0}
+        """
+        let entry = try JSONDecoder().decode(GraylistEntry.self, from: Data(json.utf8))
+        #expect(entry.matchCountSince == 0)
+        #expect(entry.ruleKind == "unknown")
+        #expect(entry.addedBy == "unknown")
+        #expect(entry.contextHint == nil)
+    }
+}
+
 @Suite("EvaluateResult.Match decode")
 struct EvaluateResultMatchTests {
     @Test func decodes_match_with_new_fields() throws {

@@ -84,27 +84,32 @@ public struct GraylistEntry: Identifiable, Sendable, Equatable, Decodable {
     public var id: String { fingerprint }
     public let fingerprint: String
     public let ruleId: String
-    public let createdAt: Date
+    /// added_at: Unix milliseconds timestamp (SPEC-005 §9.7)
+    public let addedAt: Date
     public let contextHint: String?
-    public let lastTriggeredAt: Date?
-    public let triggerCount: Int
+    public let matchCountSince: Int
+    public let ruleKind: String
+    public let addedBy: String
 
-    public init(fingerprint: String, ruleId: String, createdAt: Date, contextHint: String?, lastTriggeredAt: Date?, triggerCount: Int) {
+    public init(fingerprint: String, ruleId: String, addedAt: Date, contextHint: String?,
+                matchCountSince: Int, ruleKind: String, addedBy: String) {
         self.fingerprint = fingerprint
         self.ruleId = ruleId
-        self.createdAt = createdAt
+        self.addedAt = addedAt
         self.contextHint = contextHint
-        self.lastTriggeredAt = lastTriggeredAt
-        self.triggerCount = triggerCount
+        self.matchCountSince = matchCountSince
+        self.ruleKind = ruleKind
+        self.addedBy = addedBy
     }
 
     enum CodingKeys: String, CodingKey {
         case fingerprint
         case ruleId = "rule_id"
-        case createdAt = "created_at"
+        case addedAt = "added_at"
         case contextHint = "context_hint"
-        case lastTriggeredAt = "last_triggered_at"
-        case triggerCount = "trigger_count"
+        case matchCountSince = "match_count_since"
+        case ruleKind = "rule_kind"
+        case addedBy = "added_by"
     }
 
     public init(from decoder: Decoder) throws {
@@ -112,18 +117,12 @@ public struct GraylistEntry: Identifiable, Sendable, Equatable, Decodable {
         self.fingerprint = try c.decode(String.self, forKey: .fingerprint)
         self.ruleId = try c.decode(String.self, forKey: .ruleId)
         self.contextHint = try c.decodeIfPresent(String.self, forKey: .contextHint)
-        self.triggerCount = try c.decodeIfPresent(Int.self, forKey: .triggerCount) ?? 0
-
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        let f2 = ISO8601DateFormatter()
-        f2.formatOptions = [.withInternetDateTime]
-        func parse(_ s: String?) -> Date? {
-            guard let s else { return nil }
-            return f.date(from: s) ?? f2.date(from: s)
-        }
-        self.createdAt = parse(try c.decodeIfPresent(String.self, forKey: .createdAt)) ?? Date()
-        self.lastTriggeredAt = parse(try c.decodeIfPresent(String.self, forKey: .lastTriggeredAt))
+        self.matchCountSince = try c.decodeIfPresent(Int.self, forKey: .matchCountSince) ?? 0
+        self.ruleKind = try c.decodeIfPresent(String.self, forKey: .ruleKind) ?? "unknown"
+        self.addedBy = try c.decodeIfPresent(String.self, forKey: .addedBy) ?? "unknown"
+        // added_at: Unix milliseconds integer
+        let ms = try c.decodeIfPresent(Int64.self, forKey: .addedAt) ?? 0
+        self.addedAt = Date(timeIntervalSince1970: Double(ms) / 1000.0)
     }
 }
 
