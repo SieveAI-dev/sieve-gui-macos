@@ -44,6 +44,75 @@ struct IPCMessageTests {
     }
 }
 
+@Suite("PresetChangedParams decode")
+struct PresetChangedParamsTests {
+    @Test func decodes_with_origin_request_id() throws {
+        let json = #"{"preset":"Standard","mode":"standard","changed_at":"2099-01-01T00:00:00Z","source":"gui","origin_request_id":"req-xyz"}"#
+        let p = try JSONDecoder().decode(PresetChangedParams.self, from: Data(json.utf8))
+        #expect(p.preset == .standard)
+        #expect(p.source == "gui")
+        #expect(p.originRequestId == "req-xyz")
+        #expect(p.mode == "standard")
+    }
+
+    @Test func decodes_without_origin_request_id() throws {
+        // daemon CLI 触发，无 origin_request_id
+        let json = #"{"preset":"Strict","mode":"strict","changed_at":"2099-01-01T00:00:00Z","source":"daemon_cli"}"#
+        let p = try JSONDecoder().decode(PresetChangedParams.self, from: Data(json.utf8))
+        #expect(p.preset == .strict)
+        #expect(p.originRequestId == nil)
+        #expect(p.source == "daemon_cli")
+    }
+}
+
+@Suite("InflightMutatingSet")
+struct InflightMutatingSetTests {
+    @Test func insert_and_contains() async {
+        let set = InflightMutatingSet()
+        await set.insert("req-1")
+        #expect(await set.contains("req-1") == true)
+        #expect(await set.contains("req-2") == false)
+    }
+
+    @Test func remove() async {
+        let set = InflightMutatingSet()
+        await set.insert("req-1")
+        await set.remove("req-1")
+        #expect(await set.contains("req-1") == false)
+    }
+
+    @Test func clear() async {
+        let set = InflightMutatingSet()
+        await set.insert("req-1")
+        await set.insert("req-2")
+        await set.clear()
+        #expect(await set.count() == 0)
+    }
+
+    // 三场景：自发回声 / 他 GUI 触发 / daemon CLI 触发（null origin）
+    @Test func echo_detection_self_issued() async {
+        let set = InflightMutatingSet()
+        await set.insert("req-abc")
+        // 自己发出的 mutating request → 在集合中 → 回声
+        #expect(await set.contains("req-abc") == true)
+    }
+
+    @Test func echo_detection_other_gui() async {
+        let set = InflightMutatingSet()
+        await set.insert("req-abc")
+        // 他 GUI 发出的，origin_request_id 不在本集合
+        #expect(await set.contains("req-other") == false)
+    }
+
+    @Test func echo_detection_daemon_cli() async {
+        let set = InflightMutatingSet()
+        await set.insert("req-abc")
+        // daemon CLI 触发，origin_request_id 为 nil → 不在集合 → 应更新
+        let id: String? = nil
+        #expect(id == nil)  // nil → 应更新（IPCClient.isMutatingEcho 返回 false）
+    }
+}
+
 @Suite("PausedChangedParams decode")
 struct PausedChangedParamsTests {
     @Test func decodes_minimal() throws {

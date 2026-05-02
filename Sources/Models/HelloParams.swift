@@ -20,13 +20,35 @@ public struct HelloParams: Codable, Sendable {
 
 public struct PresetChangedParams: Codable, Sendable {
     public let preset: Preset
-    public let changedBy: String
-    public let occurredAt: String?
+    public let mode: String
+    public let changedAt: Date
+    public let source: String
+    public let originRequestId: String?
 
     enum CodingKeys: String, CodingKey {
         case preset
-        case changedBy = "changed_by"
-        case occurredAt = "occurred_at"
+        case mode
+        case changedAt = "changed_at"
+        case source
+        case originRequestId = "origin_request_id"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        preset = try container.decode(Preset.self, forKey: .preset)
+        mode = try container.decode(String.self, forKey: .mode)
+        source = try container.decode(String.self, forKey: .source)
+        originRequestId = try container.decodeIfPresent(String.self, forKey: .originRequestId)
+        // changed_at 是 ISO8601 字符串
+        let s = try container.decode(String.self, forKey: .changedAt)
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let d = f.date(from: s) {
+            changedAt = d
+        } else {
+            f.formatOptions = [.withInternetDateTime]
+            changedAt = f.date(from: s) ?? Date()
+        }
     }
 }
 

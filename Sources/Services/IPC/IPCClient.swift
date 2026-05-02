@@ -33,6 +33,7 @@ public final class IPCClient: @unchecked Sendable {
 
     private let ipcQueue = DispatchQueue(label: "com.sieve.gui.ipc", qos: .userInitiated)
     private let inflight = InflightQueue()
+    private let inflightMutatingIds = InflightMutatingSet()
     private let logger = Logger(subsystem: "com.sieve.gui", category: "ipc")
 
     private var connection: NWConnection?
@@ -122,6 +123,22 @@ public final class IPCClient: @unchecked Sendable {
 
     public var currentState: IPCState {
         ipcQueue.sync { state }
+    }
+
+    /// 发出 mutating request（sieve.set_preset / sieve.set_paused 等）时，把 id 加入集合，
+    /// 收到响应后移除，供 IPCRouter 判断 preset_changed / paused_changed 是否为本 GUI 回声。
+    public func registerMutatingRequest(_ id: String) {
+        Task { await inflightMutatingIds.insert(id) }
+    }
+
+    public func unregisterMutatingRequest(_ id: String) {
+        Task { await inflightMutatingIds.remove(id) }
+    }
+
+    /// IPCRouter 调用，判断通知是否由本 GUI 发出的 mutating request 引起（回声）。
+    public func isMutatingEcho(originRequestId: String?) async -> Bool {
+        guard let oid = originRequestId else { return false }
+        return await inflightMutatingIds.contains(oid)
     }
 
     // MARK: - Connection lifecycle
@@ -286,6 +303,8 @@ public final class IPCClient: @unchecked Sendable {
                     self.sendRaw(entry.payload)
                 }
             }
+            // 重连时清空 mutating request id 集合（旧连接的 id 已失效）
+            Task { await self.inflightMutatingIds.clear() }
         } catch {
             logger.error("ipc hello decode failed: \(String(describing: error), privacy: .public)")
             tearDown()

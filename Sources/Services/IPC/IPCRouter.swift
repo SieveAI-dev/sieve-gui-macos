@@ -10,6 +10,7 @@ public final class IPCRouter: IPCDelegate {
     public weak var appStateAdapter: IPCAppStateAdapter?
     public weak var hipsManager: IPCHipsAdapter?
     public weak var toastController: IPCToastAdapter?
+    public weak var ipcClient: IPCClient?
 
     private init() {}
 
@@ -106,13 +107,25 @@ public final class IPCRouter: IPCDelegate {
             }
         case "sieve.preset_changed":
             if let p = try? JSONDecoder().decode(PresetChangedParams.self, from: paramsData) {
-                if p.changedBy != "gui" {
-                    appStateAdapter?.applyPresetChanged(p.preset)
+                let client = ipcClient
+                let adapter = appStateAdapter
+                Task { @MainActor in
+                    let isEcho = await client?.isMutatingEcho(originRequestId: p.originRequestId) ?? false
+                    if !isEcho {
+                        adapter?.applyPresetChanged(p.preset)
+                    }
                 }
             }
         case "sieve.paused_changed":
             if let p = try? JSONDecoder().decode(PausedChangedParams.self, from: paramsData) {
-                appStateAdapter?.applyPausedChanged(p)
+                let client = ipcClient
+                let adapter = appStateAdapter
+                Task { @MainActor in
+                    let isEcho = await client?.isMutatingEcho(originRequestId: p.originRequestId) ?? false
+                    if !isEcho {
+                        adapter?.applyPausedChanged(p)
+                    }
+                }
             }
         default:
             logger.notice("unhandled notification: \(method, privacy: .public)")
