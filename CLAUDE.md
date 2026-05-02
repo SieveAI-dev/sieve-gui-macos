@@ -26,6 +26,59 @@ Sieve GUI 是 [Sieve daemon](#上游-daemon) 的 native macOS 守门人壳：常
 - HIPS 弹窗是 `NSPanel` `.floating` 浮窗（独立生命周期）
 - IPC：Unix Domain Socket `~/.sieve/ipc.sock`（JSON-RPC 2.0，协议 v1）
 
+## 常用命令
+
+工程是双轨：`Package.swift` 只编译 Core 库（Models / IPC / AuditDB / Logger / Telemetry）供命令行测试；完整 App 走 XcodeGen 生成 `.xcodeproj`。
+
+```bash
+# 生成 Xcode 工程（修改 project.yml 后必跑）
+xcodegen generate
+
+# 命令行：编译 + 测试 Core 库（最快反馈，CI 用这条）
+swift build
+swift test
+
+# 跑单个测试（filter 接 TestSuite 或 TestSuite/testName）
+swift test --filter SieveGUICoreTests.HipsRequestDecoderTests
+swift test --filter SieveGUICoreTests.HipsRequestDecoderTests/testRejectsUnknownProtocolVersion
+
+# 完整 App 构建（产物 Sieve GUI.app）
+xcodebuild -project SieveGUI.xcodeproj -scheme SieveGUI -destination 'platform=macOS' build
+
+# Xcode 内 Run / 调试
+open SieveGUI.xcodeproj
+```
+
+注意：
+
+- App target 的 UI / Features / Sparkle 等代码**只能**经 xcodebuild 编译，`swift build` 会按 `Package.swift` 的 `exclude` 跳过。改完 UI 跑 `swift test` 不会触发 UI 层编译错误，必须 `xcodebuild` 才算验证。
+- mock daemon 还没接好，联调直接连真 sieve daemon（`~/.sieve/ipc.sock`），daemon 不在时 GUI 进入 disconnected。
+
+## 代码结构概览
+
+```
+Sources/
+├── App/         入口（@main、AppDelegate、生命周期）
+├── Models/      Codable IPC payload + 领域类型（HipsRequest / DecisionResponse / HitSummary / UserSettings …）
+├── Services/    无 UI 副作用的服务层
+│   ├── IPC/         Unix Socket 客户端、JSON-RPC 2.0、InflightQueue、协议版本握手
+│   ├── AuditDB/     SQLite.swift 只读 audit.db
+│   ├── Logger/      GUI 自身日志（不复用 daemon 通道）
+│   ├── Telemetry/   匿名指标
+│   ├── Sparkle/     自动更新（决策路径外）
+│   ├── Notifications/ 通知中心封装
+│   ├── TouchID/     LocalAuthentication 包装
+│   └── Diagnostic/  脱敏诊断包导出
+├── Features/    每个面是一个文件夹：HIPS / MenuBar / History / Settings / Debug / Onboarding / Toast
+│                每个 Feature 内部 = ViewModel（@Observable）+ View + 子组件
+├── UI/          跨 Feature 复用的 SwiftUI 组件（含 MaskedField 等红线组件）
+└── Resources/   xcstrings、图标
+```
+
+数据流单向：`daemon → IPC → Models → Feature ViewModel → SwiftUI View`；用户答复反向 `View → ViewModel → IPC.send → daemon`。决策路径**不**经过 Services/Sparkle / Notifications。
+
+理解任何 Feature 时，先读 `Features/<X>/<X>ViewModel.swift` 摸状态机，再读对应 SPEC 对照红线，最后看 View。
+
 ## 文档体系
 
 本仓库严格遵循全局 DOCS-STANDARD v2.0（见 [`docs/DOCS-STANDARD.md`](docs/DOCS-STANDARD.md)）。
