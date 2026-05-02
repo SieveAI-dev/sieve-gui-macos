@@ -53,6 +53,15 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
         if activeRequest?.id == id { closePanel(notifyDaemon: false) }
     }
 
+    /// 重连后关闭所有 stale HIPS 弹窗（SPEC-005 §3.4）。
+    public func closeAllActiveDialogs() {
+        pendingQueue.removeAll()
+        appState.setPendingQueueCount(0)
+        if activeRequest != nil {
+            closePanel(notifyDaemon: false)
+        }
+    }
+
     // MARK: - Queue
 
     private func scheduleNext() {

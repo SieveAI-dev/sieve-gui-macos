@@ -46,6 +46,43 @@ struct InflightQueueTests {
     }
 }
 
+@Suite("InflightQueue clearAndDiscard")
+struct InflightQueueClearTests {
+    @Test func reconnect_clears_entries_and_wakes_waiter_with_error() async {
+        let q = InflightQueue()
+        await q.enqueue(.init(id: "req-1", method: "sieve.set_preset", payload: Data(), createdAt: Date(), isDecisionResponse: false))
+
+        // 注册 waiter
+        async let result: Data = withCheckedThrowingContinuation { (cont: CheckedContinuation<Data, Error>) in
+            Task { await q.registerWaiter(id: "req-1", continuation: cont) }
+        }
+        try? await Task.sleep(nanoseconds: 1_000_000)
+
+        // 模拟重连触发丢弃
+        await q.clearAndDiscard()
+        #expect(await q.count() == 0)
+        #expect(await q.waiterCount() == 0)
+
+        // waiter 应收到 .reconnectedDiscarded 错误
+        do {
+            _ = try await result
+            Issue.record("expected throw")
+        } catch InflightQueue.AwaitError.reconnectedDiscarded {
+            // 正确
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+    }
+
+    @Test func clearAndDiscard_removes_all_entries() async {
+        let q = InflightQueue()
+        await q.enqueue(.init(id: "1", method: "m", payload: Data(), createdAt: Date(), isDecisionResponse: false))
+        await q.enqueue(.init(id: "2", method: "m", payload: Data(), createdAt: Date(), isDecisionResponse: true))
+        await q.clearAndDiscard()
+        #expect(await q.count() == 0)
+    }
+}
+
 @Suite("UserSettings persistence")
 struct UserSettingsTests {
     @Test func clamps_toast_duration() {

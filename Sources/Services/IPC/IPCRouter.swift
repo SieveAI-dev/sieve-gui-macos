@@ -47,6 +47,12 @@ public final class IPCRouter: IPCDelegate {
         Task { @MainActor in self.appStateAdapter?.applyDisconnect(reason: reason) }
     }
 
+    nonisolated public func ipcDidDiscardInflightOnReconnect(_ client: IPCClient) {
+        Task { @MainActor in
+            self.hipsManager?.closeAllActiveDialogs()
+        }
+    }
+
     private func applyState(_ state: IPCState) {
         appStateAdapter?.applyIPCState(state)
     }
@@ -156,6 +162,8 @@ public protocol IPCHipsAdapter: AnyObject {
     func enqueueRequest(_ req: HipsRequest)
     func cancelRequest(id: String, reason: String)
     func failRequest(id: String, error: DecisionError)
+    /// 重连后关闭所有 active HIPS 弹窗（避免 stale UI，SPEC-005 §3.4）。
+    func closeAllActiveDialogs()
 }
 
 public enum ReconnectKind: Sendable {

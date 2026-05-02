@@ -16,6 +16,8 @@ public protocol IPCDelegate: AnyObject, Sendable {
     func ipc(_ client: IPCClient, didReceive incoming: IPCIncoming)
     func ipcDidHandshake(_ client: IPCClient, params: HelloParams)
     func ipcDidLoseConnection(_ client: IPCClient, reason: DaemonStatus.DisconnectReason)
+    /// 重连后 inflight 已丢弃（SPEC-005 §3.4）：通知 UI 层关闭所有 stale 弹窗。
+    func ipcDidDiscardInflightOnReconnect(_ client: IPCClient)
 }
 
 /// GUI 侧 IPC 客户端。线程模型：
@@ -291,20 +293,21 @@ public final class IPCClient: @unchecked Sendable {
                 return
             }
             state = .active
+            // 重连后丢弃 inflight（SPEC-005 §3.4）：旧 oneshot channel 已失效，不重发
+            Task { [weak self] in
+                guard let self = self else { return }
+                await self.inflight.clearAndDiscard()
+                // 清空 mutating request id 集合（旧连接的 id 已失效）
+                await self.inflightMutatingIds.clear()
+                // 通知 UI 层关闭所有 stale 弹窗
+                Task { @MainActor in
+                    self.delegate?.ipcDidDiscardInflightOnReconnect(self)
+                }
+            }
             Task { @MainActor [weak self] in
                 guard let self = self else { return }
                 self.delegate?.ipcDidHandshake(self, params: hello)
             }
-            // 重连后重发 inflight
-            Task { [weak self] in
-                guard let self = self else { return }
-                let pending = await self.inflight.allPending()
-                for entry in pending {
-                    self.sendRaw(entry.payload)
-                }
-            }
-            // 重连时清空 mutating request id 集合（旧连接的 id 已失效）
-            Task { await self.inflightMutatingIds.clear() }
         } catch {
             logger.error("ipc hello decode failed: \(String(describing: error), privacy: .public)")
             tearDown()

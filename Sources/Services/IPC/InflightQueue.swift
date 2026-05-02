@@ -16,6 +16,8 @@ public actor InflightQueue {
         case rpcError(code: Int, message: String, data: Data?)
         case canceled
         case versionMismatch
+        /// 重连后旧 inflight 被丢弃（SPEC-005 §3.4）
+        case reconnectedDiscarded
     }
 
     private var entries: [String: Entry] = [:]
@@ -65,5 +67,17 @@ public actor InflightQueue {
 
     public func count() -> Int { entries.count }
     public func waiterCount() -> Int { waiters.count }
+
+    /// 清空所有 pending entries 并对所有 waiter 抛 .reconnectedDiscarded（重连后丢弃）。
+    /// SPEC-005 §3.4：重连后不重发 inflight，旧的 oneshot channel 已失效。
+    public func clearAndDiscard() {
+        for (_, cont) in waiters {
+            cont.resume(throwing: AwaitError.reconnectedDiscarded)
+        }
+        waiters.removeAll()
+        entries.removeAll()
+    }
+
+    /// 仅清 entries，不通知 waiters（内部用途）。
     public func clear() { entries.removeAll() }
 }
