@@ -22,10 +22,10 @@ public enum Direction: String, Codable, CaseIterable, Sendable {
 }
 
 public enum Disposition: String, Codable, CaseIterable, Sendable {
-    case guiPopup = "GuiPopup"
-    case autoRedact = "AutoRedact"
-    case statusBar = "StatusBar"
-    case hookTerminal = "HookTerminal"
+    case guiPopup = "gui_popup"
+    case autoRedact = "auto_redact"
+    case statusBar = "status_bar"
+    case hookTerminal = "hook_terminal"
     case other
 }
 
