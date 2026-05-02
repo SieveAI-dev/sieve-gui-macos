@@ -110,7 +110,7 @@ public final class IPCRouter: IPCDelegate {
             if let p = try? JSONDecoder().decode(RequestCanceledParams.self, from: paramsData) {
                 hipsManager?.cancelRequest(id: p.requestId, reason: p.reason)
             }
-        case "sieve.event_notify":
+        case "sieve.notify_status_bar":
             if let p = try? JSONDecoder().decode(EventNotifyParams.self, from: paramsData) {
                 appStateAdapter?.applyEventNotify(p)
                 toastController?.presentEvent(p)

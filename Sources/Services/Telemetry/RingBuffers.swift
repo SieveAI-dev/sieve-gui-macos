@@ -1,7 +1,7 @@
 import Foundation
 import Combine
 
-/// 实时事件 ring buffer（容量 1000）。来源：audit.db / IPC event_notify / GUILog。
+/// 实时事件 ring buffer（容量 1000）。来源：audit.db / IPC notify_status_bar / GUILog。
 @MainActor
 public final class LiveEventsRingBuffer: ObservableObject {
     public static let shared = LiveEventsRingBuffer()
