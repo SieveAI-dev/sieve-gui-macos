@@ -169,7 +169,7 @@ public struct OnboardingView: View {
             HStack {
                 Spacer()
                 Button("继续") {
-                    ipcClient.sendRequestAndForget(id: UUID().uuidString, method: "sieve.set_preset", params: ["mode": selectedPreset.rawValue])
+                    ipcClient.sendRequestAndForget(id: UUID().uuidString, method: "sieve.set_preset", params: SetPresetParams(mode: selectedPreset.rawValue))
                     appState.updatePreset(selectedPreset)
                     step = 6
                 }

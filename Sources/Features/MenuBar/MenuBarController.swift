@@ -132,7 +132,7 @@ public final class MenuBarController: NSObject, NSPopoverDelegate {
                 let data = try await client.sendRequest(
                     id: pauseId,
                     method: "sieve.set_paused",
-                    params: ["minutes": bounded]
+                    params: SetPausedParams(minutes: bounded)
                 )
                 client.unregisterMutatingRequest(pauseId)
                 if let resp = try? JSONDecoder().decode(SetPausedResult.self, from: data),
@@ -155,7 +155,7 @@ public final class MenuBarController: NSObject, NSPopoverDelegate {
         ipcClient?.sendRequestAndForget(
             id: resumeId,
             method: "sieve.set_paused",
-            params: ["minutes": 0]
+            params: SetPausedParams(minutes: 0)
         )
         // fire-and-forget 无法 await 结果，延迟 10s 后自动反注册（避免集合永久增长）
         Task { [weak self] in

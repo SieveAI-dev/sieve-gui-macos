@@ -33,7 +33,7 @@ public struct DaemonSettingsView: View {
                             do {
                                 let data = try await ipcClient.sendRequest(id: UUID().uuidString, method: "sieve.reload_config")
                                 if let r = try? JSONDecoder().decode(ReloadConfigResult.self, from: data) {
-                                    await GUILog.shared.info("reload_config ok: \(r.rulesLoaded ?? 0) rules", category: "settings")
+                                    await GUILog.shared.info("reload_config ok: system=\(r.systemRulesCount) user=\(r.userRulesCount) errors=\(r.userRulesErrors.count)", category: "settings")
                                 }
                             } catch {
                                 await GUILog.shared.warn("reload_config failed: \(error)", category: "settings")

@@ -38,16 +38,36 @@ public struct SetPresetOk: Decodable, Sendable {
 }
 
 public struct ReloadConfigResult: Decodable, Sendable {
-    public let ok: Bool
-    public let rulesLoaded: Int?
-    public let userRulesLoaded: Int?
-    public let warnings: [String]?
+    public let systemRulesCount: Int
+    public let userRulesCount: Int
+    public let userRulesErrors: [String]
+    public let reloadedAt: Date?
 
     enum CodingKeys: String, CodingKey {
-        case ok
-        case rulesLoaded = "rules_loaded"
-        case userRulesLoaded = "user_rules_loaded"
-        case warnings
+        case systemRulesCount = "system_rules_count"
+        case userRulesCount = "user_rules_count"
+        case userRulesErrors = "user_rules_errors"
+        case reloadedAt = "reloaded_at"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        systemRulesCount = try c.decodeIfPresent(Int.self, forKey: .systemRulesCount) ?? 0
+        userRulesCount = try c.decodeIfPresent(Int.self, forKey: .userRulesCount) ?? 0
+        userRulesErrors = try c.decodeIfPresent([String].self, forKey: .userRulesErrors) ?? []
+        // reloaded_at is ISO8601 string
+        if let s = try c.decodeIfPresent(String.self, forKey: .reloadedAt) {
+            let f = ISO8601DateFormatter()
+            f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let d = f.date(from: s) {
+                reloadedAt = d
+            } else {
+                f.formatOptions = [.withInternetDateTime]
+                reloadedAt = f.date(from: s)
+            }
+        } else {
+            reloadedAt = nil
+        }
     }
 }
 

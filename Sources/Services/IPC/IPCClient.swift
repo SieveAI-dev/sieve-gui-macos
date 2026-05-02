@@ -72,24 +72,43 @@ public final class IPCClient: @unchecked Sendable {
         }
     }
 
-    /// 发送一条请求并 await daemon 响应（result 数据）。
+    /// 发送一条请求并 await daemon 响应（result 数据）。无参数版本。
     /// daemon 返回 error 响应 → 抛 `InflightQueue.AwaitError.rpcError`。
     /// 协议版本不识别 / 失联终态 → 抛 `AwaitError.versionMismatch / .canceled`。
-    public func sendRequest(id: String, method: String, params: [String: Any]? = nil) async throws -> Data {
+    public func sendRequest(id: String, method: String) async throws -> Data {
+        let data = IPCOutbound.request(id: id, method: method)
+        return try await _enqueueAndAwait(id: id, method: method, payload: data)
+    }
+
+    /// 发送一条请求并 await daemon 响应（带 Encodable 参数版本）。
+    public func sendRequest<P: Encodable & Sendable>(id: String, method: String, params: P) async throws -> Data {
         let data = IPCOutbound.request(id: id, method: method, params: params)
+        return try await _enqueueAndAwait(id: id, method: method, payload: data)
+    }
+
+    private func _enqueueAndAwait(id: String, method: String, payload: Data) async throws -> Data {
         await inflight.enqueue(.init(
-            id: id, method: method, payload: data,
+            id: id, method: method, payload: payload,
             createdAt: Date(),
             isDecisionResponse: false
         ))
-        sendRaw(data)
+        sendRaw(payload)
         return try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Data, Error>) in
             Task { await self.inflight.registerWaiter(id: id, continuation: cont) }
         }
     }
 
-    /// fire-and-forget 版本（不关心响应，只送出去）。
-    public func sendRequestAndForget(id: String, method: String, params: [String: Any]? = nil) {
+    /// fire-and-forget 版本（无参数，不关心响应）。
+    public func sendRequestAndForget(id: String, method: String) {
+        let data = IPCOutbound.request(id: id, method: method)
+        Task { await self.inflight.enqueue(.init(
+            id: id, method: method, payload: data,
+            createdAt: Date(), isDecisionResponse: false)) }
+        sendRaw(data)
+    }
+
+    /// fire-and-forget 版本（带 Encodable 参数）。
+    public func sendRequestAndForget<P: Encodable & Sendable>(id: String, method: String, params: P) {
         let data = IPCOutbound.request(id: id, method: method, params: params)
         Task { await self.inflight.enqueue(.init(
             id: id, method: method, payload: data,
@@ -118,7 +137,12 @@ public final class IPCClient: @unchecked Sendable {
         sendRaw(data)
     }
 
-    public func sendNotification(method: String, params: [String: Any]? = nil) {
+    public func sendNotification(method: String) {
+        let data = IPCOutbound.notification(method: method)
+        sendRaw(data)
+    }
+
+    public func sendNotification<P: Encodable & Sendable>(method: String, params: P) {
         let data = IPCOutbound.notification(method: method, params: params)
         sendRaw(data)
     }

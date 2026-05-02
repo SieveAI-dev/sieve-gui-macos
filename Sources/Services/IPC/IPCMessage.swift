@@ -1,6 +1,46 @@
 import Foundation
 
 /// JSON-RPC 2.0 消息（GUI 侧解析与发送统一走此 enum）。
+// MARK: - 出站参数结构体（SPEC-008 §7：禁止 [String: Any] 透传）
+
+public struct SetPausedParams: Encodable, Sendable {
+    public let minutes: Int
+    public init(minutes: Int) { self.minutes = minutes }
+}
+
+public struct SetPresetParams: Encodable, Sendable {
+    public let mode: String
+    public init(mode: String) { self.mode = mode }
+}
+
+public struct RemoveGraylistParams: Encodable, Sendable {
+    public let fingerprint: String
+    public init(fingerprint: String) { self.fingerprint = fingerprint }
+}
+
+public struct EvaluateParams: Encodable, Sendable {
+    public let direction: String
+    public let contentKind: String
+    public let payload: String
+    public let sourceAgent: String
+
+    public init(direction: String, contentKind: String, payload: String, sourceAgent: String) {
+        self.direction = direction
+        self.contentKind = contentKind
+        self.payload = payload
+        self.sourceAgent = sourceAgent
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case direction
+        case contentKind = "content_kind"
+        case payload
+        case sourceAgent = "source_agent"
+    }
+}
+
+// MARK: -
+
 public enum IPCIncoming: Sendable {
     case request(id: String, method: String, paramsData: Data)
     case notification(method: String, paramsData: Data)
@@ -56,16 +96,31 @@ public enum IPCError: Error, Sendable {
 }
 
 /// 出站请求（GUI → daemon）封装，支持构造正确的 newline-delimited JSON 编码。
+/// 公开 API 接受 `Encodable` 参数类型，禁止 `[String: Any]` 透传（SPEC-008 §7）。
 public enum IPCOutbound {
-    public static func notification(method: String, params: [String: Any]? = nil) -> Data {
-        var dict: [String: Any] = ["jsonrpc": "2.0", "method": method]
-        if let params { dict["params"] = params }
+    /// 发送通知（无参数版本）。
+    public static func notification(method: String) -> Data {
+        let dict: [String: Any] = ["jsonrpc": "2.0", "method": method]
         return encodeLine(dict)
     }
 
-    public static func request(id: String, method: String, params: [String: Any]? = nil) -> Data {
+    /// 发送通知（Encodable 参数版本）。
+    public static func notification<P: Encodable>(method: String, params: P) -> Data {
+        var dict: [String: Any] = ["jsonrpc": "2.0", "method": method]
+        if let p = encodeParams(params) { dict["params"] = p }
+        return encodeLine(dict)
+    }
+
+    /// 发送请求（无参数版本）。
+    public static func request(id: String, method: String) -> Data {
+        let dict: [String: Any] = ["jsonrpc": "2.0", "method": method, "id": id]
+        return encodeLine(dict)
+    }
+
+    /// 发送请求（Encodable 参数版本）。
+    public static func request<P: Encodable>(id: String, method: String, params: P) -> Data {
         var dict: [String: Any] = ["jsonrpc": "2.0", "method": method, "id": id]
-        if let params { dict["params"] = params }
+        if let p = encodeParams(params) { dict["params"] = p }
         return encodeLine(dict)
     }
 
@@ -83,7 +138,13 @@ public enum IPCOutbound {
         return encodeLine(dict)
     }
 
-    private static func encodeLine(_ dict: [String: Any]) -> Data {
+    /// Encodable → JSONSerialization 对象（保证 sortedKeys 输出一致性）。
+    private static func encodeParams<P: Encodable>(_ params: P) -> Any? {
+        guard let data = try? JSONEncoder().encode(params) else { return nil }
+        return try? JSONSerialization.jsonObject(with: data)
+    }
+
+    static func encodeLine(_ dict: [String: Any]) -> Data {
         let opts: JSONSerialization.WritingOptions = [.sortedKeys, .withoutEscapingSlashes]
         guard let body = try? JSONSerialization.data(withJSONObject: dict, options: opts) else {
             return Data("{}\n".utf8)

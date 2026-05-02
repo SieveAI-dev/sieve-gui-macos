@@ -38,8 +38,12 @@ public struct DecisionResponse: Sendable {
             "by_user": byUser,
             "ui_phase_when_clicked": Self.phaseLabel(uiPhaseWhenClicked)
         ]
+        // SPEC-005 §1.3: context_hint ≤ 200 Unicode scalars；编码层按 scalar 计数截断（最终防线）
         if let hint = contextHint, !hint.isEmpty {
-            dict["context_hint"] = String(hint.prefix(200))
+            let trimmed = hint.unicodeScalars.count > 200
+                ? String(String.UnicodeScalarView(hint.unicodeScalars.prefix(200)))
+                : hint
+            dict["context_hint"] = trimmed
         } else {
             dict["context_hint"] = NSNull()
         }
@@ -106,8 +110,12 @@ public struct MergedDecisionResponse: Sendable {
                 "decision": p.decision.rawValue,
                 "remember": p.allowRemember ? p.remember : false  // ← 强制
             ]
+            // SPEC-005 §1.3: context_hint ≤ 200 Unicode scalars
             if let h = p.contextHint, !h.isEmpty {
-                d["context_hint"] = String(h.prefix(200))
+                let trimmed = h.unicodeScalars.count > 200
+                    ? String(String.UnicodeScalarView(h.unicodeScalars.prefix(200)))
+                    : h
+                d["context_hint"] = trimmed
             }
             return d
         }

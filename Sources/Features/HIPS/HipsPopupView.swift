@@ -112,7 +112,10 @@ public struct HipsPopupView: View {
                 .textFieldStyle(.roundedBorder)
                 .lineLimit(2...3)
                 .onChange(of: contextHint) { new in
-                    if new.count > 200 { contextHint = String(new.prefix(200)) }
+                    // SPEC-005 §1.3: 截断按 Unicode scalar 计数（≤ 200）
+                    if new.unicodeScalars.count > 200 {
+                        contextHint = String(String.UnicodeScalarView(new.unicodeScalars.prefix(200)))
+                    }
                 }
 
             HStack(spacing: 10) {

@@ -107,7 +107,7 @@ public struct GraylistSheetView: View {
     }
 
     private func remove(_ fp: String) async {
-        ipcClient.sendRequestAndForget(id: UUID().uuidString, method: "sieve.remove_graylist", params: ["fingerprint": fp])
+        ipcClient.sendRequestAndForget(id: UUID().uuidString, method: "sieve.remove_graylist", params: RemoveGraylistParams(fingerprint: fp))
         entries.removeAll { $0.fingerprint == fp }
     }
 }

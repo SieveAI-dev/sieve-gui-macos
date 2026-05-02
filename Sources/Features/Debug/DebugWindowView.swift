@@ -148,12 +148,12 @@ public struct RuleEvaluationTab: View {
                 let data = try await ipcClient.sendRequest(
                     id: UUID().uuidString,
                     method: "sieve.evaluate",
-                    params: [
-                        "direction": direction,
-                        "content_kind": contentKind,
-                        "payload": payload,
-                        "source_agent": "claude-code"
-                    ]
+                    params: EvaluateParams(
+                        direction: direction,
+                        contentKind: contentKind,
+                        payload: payload,
+                        sourceAgent: "claude"
+                    )
                 )
                 let pretty = String(data: (try? JSONSerialization.data(withJSONObject: JSONSerialization.jsonObject(with: data), options: [.prettyPrinted, .sortedKeys])) ?? data, encoding: .utf8) ?? ""
                 await MainActor.run {

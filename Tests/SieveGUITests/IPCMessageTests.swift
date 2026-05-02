@@ -145,6 +145,58 @@ struct PausedChangedParamsTests {
     }
 }
 
+@Suite("ReloadConfigResult decode")
+struct ReloadConfigResultTests {
+    @Test func decodes_full() throws {
+        let json = """
+        {
+          "system_rules_count": 42,
+          "user_rules_count": 3,
+          "user_rules_errors": ["parse error at line 5"],
+          "reloaded_at": "2099-01-01T00:00:00Z"
+        }
+        """
+        let r = try JSONDecoder().decode(ReloadConfigResult.self, from: Data(json.utf8))
+        #expect(r.systemRulesCount == 42)
+        #expect(r.userRulesCount == 3)
+        #expect(r.userRulesErrors == ["parse error at line 5"])
+        #expect(r.reloadedAt != nil)
+    }
+
+    @Test func decodes_minimal() throws {
+        let json = #"{}"#
+        let r = try JSONDecoder().decode(ReloadConfigResult.self, from: Data(json.utf8))
+        #expect(r.systemRulesCount == 0)
+        #expect(r.userRulesErrors.isEmpty)
+        #expect(r.reloadedAt == nil)
+    }
+}
+
+@Suite("context_hint unicode scalar truncation")
+struct ContextHintTruncationTests {
+    @Test func truncates_at_200_scalars_not_chars() {
+        // Each emoji is 1 Unicode scalar but may be > 1 Character in some encodings
+        // Use CJK characters (each is 1 scalar) for predictability
+        let longHint = String(repeating: "字", count: 250)
+        let response = DecisionResponse(
+            id: "r-1", decision: .allow, remember: false, contextHint: longHint, byUser: true, uiPhaseWhenClicked: .blue
+        )
+        let result = response.resultJSON(allowRemember: false)
+        let hint = result["context_hint"] as? String
+        #expect(hint != nil)
+        #expect(hint?.unicodeScalars.count == 200)
+    }
+
+    @Test func passes_through_hint_within_limit() {
+        let shortHint = "short"
+        let response = DecisionResponse(
+            id: "r-2", decision: .deny, remember: false, contextHint: shortHint, byUser: true, uiPhaseWhenClicked: .blue
+        )
+        let result = response.resultJSON(allowRemember: false)
+        #expect(result["context_hint"] as? String == "short")
+    }
+}
+
 @Suite("SetPausedResult decode")
 struct SetPausedResultTests {
     @Test func decodes_paused_true_with_until() throws {

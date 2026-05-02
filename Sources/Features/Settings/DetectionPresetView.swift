@@ -94,7 +94,7 @@ public struct DetectionPresetView: View {
         ipcClient.registerMutatingRequest(id)
         Task {
             do {
-                _ = try await ipcClient.sendRequest(id: id, method: "sieve.set_preset", params: ["mode": p.rawValue])
+                _ = try await ipcClient.sendRequest(id: id, method: "sieve.set_preset", params: SetPresetParams(mode: p.rawValue))
                 ipcClient.unregisterMutatingRequest(id)
             } catch {
                 ipcClient.unregisterMutatingRequest(id)
