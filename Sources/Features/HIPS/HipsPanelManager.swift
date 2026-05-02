@@ -165,7 +165,7 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
 
     private func handleClose() {
         guard let req = activeRequest else { return }
-        // 用户主动关闭 → -32000
+        // 用户主动关闭 → -32100
         Task { [weak self] in
             await self?.ipcClient?.sendErrorResponse(id: req.id, error: .userCanceledViaWindowClose)
         }

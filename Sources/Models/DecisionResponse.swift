@@ -120,9 +120,9 @@ public enum DecisionError: Sendable {
 
     public var code: Int {
         switch self {
-        case .userCanceledViaWindowClose: return -32000
-        case .guiRenderFailed: return -32001
-        case .guiShutdownDuringDecision: return -32002
+        case .userCanceledViaWindowClose: return -32100
+        case .guiRenderFailed: return -32101
+        case .guiShutdownDuringDecision: return -32102
         }
     }
 

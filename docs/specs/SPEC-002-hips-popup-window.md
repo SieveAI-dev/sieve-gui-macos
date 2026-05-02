@@ -166,7 +166,7 @@ NSPanel 采用**复用模式**（HipsPanelManager 持有一个常驻隐藏 NSPan
 └─────────────────────────────────────────────────────┘
 ```
 
-最小化按钮和最大化按钮设为灰色禁用（floating panel 不可最小化/最大化）。关闭按钮触发 `user_canceled_via_window_close` (-32000) 错误回应。
+最小化按钮和最大化按钮设为灰色禁用（floating panel 不可最小化/最大化）。关闭按钮触发 `user_canceled_via_window_close` (-32100) 错误回应。
 
 ### 4.3 倒计时三段视觉
 
@@ -383,9 +383,9 @@ GUI 内存域模型 `HipsRequest`：见 [data-model.md §3.1](../design/data-mod
 |------|-----|
 | `context.template` 不识别 | 降级到 `generic_json` 模板渲染 |
 | `recommendation` 缺失 | 显示"无明确建议"灰色推荐栏；主按钮强制为拒绝 |
-| NSPanel 渲染异常（View 崩溃）| 回调 `gui_render_failed`(-32001)；发系统通知："Sieve 拦截：rule_id，GUI 异常，已自动拒绝" |
-| 用户关闭弹窗（点关闭按钮）| 发 `user_canceled_via_window_close`(-32000)；daemon 按 `default_on_timeout` 处置 |
-| GUI 进程退出，弹窗未答 | 发 `gui_shutdown_during_decision`(-32002) |
+| NSPanel 渲染异常（View 崩溃）| 回调 `gui_render_failed`(-32101)；发系统通知："Sieve 拦截：rule_id，GUI 异常，已自动拒绝" |
+| 用户关闭弹窗（点关闭按钮）| 发 `user_canceled_via_window_close`(-32100)；daemon 按 `default_on_timeout` 处置 |
+| GUI 进程退出，弹窗未答 | 发 `gui_shutdown_during_decision`(-32102) |
 | `request_decision_canceled` 到达 | 若在 pending queue 中 → 移除；若是 activeRequest → 关闭弹窗，不弹提示 |
 | GUI 失联期间，弹窗已显示 | 弹窗继续显示，倒计时继续；banner 提示失联；用户决策后本地缓存，重连后重发 |
 | GUI 失联期间，新 `request_decision` 到达 | 无法接收（IPC 断开）；daemon 端超时后按 `default_on_timeout` fail-closed |
@@ -439,7 +439,7 @@ GUI 内存域模型 `HipsRequest`：见 [data-model.md §3.1](../design/data-mod
 - 多 issue 含 Critical → 断言不渲染"全部允许"按钮
 - `request_decision_canceled` 到达 activeRequest → 断言弹窗关闭
 - GUI 失联期间用户决策 → 断言缓存 → 重连后断言重发 decision_response
-- NSPanel 渲染失败 mock → 断言发送 `-32001` 错误 response + 系统通知
+- NSPanel 渲染失败 mock → 断言发送 `-32101` 错误 response + 系统通知
 
 ### IPC 协议测试
 
