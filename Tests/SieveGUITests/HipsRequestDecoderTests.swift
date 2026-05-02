@@ -14,7 +14,7 @@ struct HipsRequestDecoderTests {
           "direction": "inbound",
           "disposition": "gui_popup",
           "timeout_seconds": 120,
-          "default_on_timeout": "Block",
+          "default_on_timeout": "block",
           "allow_remember": false,
           "merged": false,
           "context": {
@@ -51,7 +51,7 @@ struct HipsRequestDecoderTests {
           "direction": "inbound",
           "disposition": "gui_popup",
           "timeout_seconds": 30,
-          "default_on_timeout": "Block",
+          "default_on_timeout": "block",
           "allow_remember": false,
           "merged": true,
           "issues": [
@@ -90,7 +90,7 @@ struct HipsRequestDecoderTests {
           "direction": "outbound",
           "disposition": "gui_popup",
           "timeout_seconds": 10,
-          "default_on_timeout": "Allow",
+          "default_on_timeout": "allow",
           "allow_remember": true,
           "merged": false,
           "context": { "template": "future_template_v9", "foo": "bar" }

@@ -30,8 +30,9 @@ public enum Disposition: String, Codable, CaseIterable, Sendable {
 }
 
 public enum DefaultOnTimeout: String, Codable, Sendable {
-    case block = "Block"
-    case allow = "Allow"
+    case block = "block"
+    case allow = "allow"
+    case redact = "redact"
 }
 
 public enum Decision: String, Codable, Sendable {
