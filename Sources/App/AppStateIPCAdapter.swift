@@ -52,6 +52,10 @@ public final class AppStateIPCAdapter: IPCAppStateAdapter {
         appState.updatePreset(preset)
     }
 
+    public func applyPausedChanged(_ params: PausedChangedParams) {
+        appState.updatePaused(params.paused, until: params.pausedUntil)
+    }
+
     private func parseDate(_ s: String?) -> Date? {
         guard let s else { return nil }
         let f = ISO8601DateFormatter()

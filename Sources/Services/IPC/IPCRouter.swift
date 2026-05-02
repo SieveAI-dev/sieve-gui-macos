@@ -110,6 +110,10 @@ public final class IPCRouter: IPCDelegate {
                     appStateAdapter?.applyPresetChanged(p.preset)
                 }
             }
+        case "sieve.paused_changed":
+            if let p = try? JSONDecoder().decode(PausedChangedParams.self, from: paramsData) {
+                appStateAdapter?.applyPausedChanged(p)
+            }
         default:
             logger.notice("unhandled notification: \(method, privacy: .public)")
         }
@@ -125,6 +129,7 @@ public protocol IPCAppStateAdapter: AnyObject {
     func applyDisconnect(reason: DaemonStatus.DisconnectReason)
     func applyEventNotify(_ params: EventNotifyParams)
     func applyPresetChanged(_ preset: Preset)
+    func applyPausedChanged(_ params: PausedChangedParams)
 }
 
 @MainActor

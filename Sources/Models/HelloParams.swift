@@ -40,6 +40,46 @@ public struct RequestCanceledParams: Codable, Sendable {
     }
 }
 
+public struct PausedChangedParams: Codable, Sendable {
+    public let paused: Bool
+    public let pausedUntil: Date?
+    public let reason: String?
+    public let appliesTo: [String]
+    public let source: String
+    public let originRequestId: String?
+
+    enum CodingKeys: String, CodingKey {
+        case paused
+        case pausedUntil = "paused_until"
+        case reason
+        case appliesTo = "applies_to"
+        case source
+        case originRequestId = "origin_request_id"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        paused = try container.decode(Bool.self, forKey: .paused)
+        reason = try container.decodeIfPresent(String.self, forKey: .reason)
+        appliesTo = try container.decodeIfPresent([String].self, forKey: .appliesTo) ?? []
+        source = try container.decode(String.self, forKey: .source)
+        originRequestId = try container.decodeIfPresent(String.self, forKey: .originRequestId)
+        // paused_until 是 ISO8601 字符串，需手动解析
+        if let s = try container.decodeIfPresent(String.self, forKey: .pausedUntil) {
+            let f = ISO8601DateFormatter()
+            f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let d = f.date(from: s) {
+                pausedUntil = d
+            } else {
+                f.formatOptions = [.withInternetDateTime]
+                pausedUntil = f.date(from: s)
+            }
+        } else {
+            pausedUntil = nil
+        }
+    }
+}
+
 public struct EventNotifyParams: Codable, Sendable {
     public let kind: NotifyKind
     public let ruleId: String

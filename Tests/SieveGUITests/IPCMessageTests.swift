@@ -44,6 +44,38 @@ struct IPCMessageTests {
     }
 }
 
+@Suite("PausedChangedParams decode")
+struct PausedChangedParamsTests {
+    @Test func decodes_minimal() throws {
+        let json = #"{"paused":true,"source":"daemon_cli"}"#
+        let p = try JSONDecoder().decode(PausedChangedParams.self, from: Data(json.utf8))
+        #expect(p.paused == true)
+        #expect(p.source == "daemon_cli")
+        #expect(p.pausedUntil == nil)
+        #expect(p.reason == nil)
+        #expect(p.appliesTo == [])
+        #expect(p.originRequestId == nil)
+    }
+
+    @Test func decodes_full() throws {
+        let json = #"{"paused":true,"paused_until":"2099-01-01T00:00:00Z","reason":"user_request","applies_to":["claude","cursor"],"source":"gui","origin_request_id":"req-abc"}"#
+        let p = try JSONDecoder().decode(PausedChangedParams.self, from: Data(json.utf8))
+        #expect(p.paused == true)
+        #expect(p.source == "gui")
+        #expect(p.reason == "user_request")
+        #expect(p.appliesTo == ["claude", "cursor"])
+        #expect(p.originRequestId == "req-abc")
+        #expect(p.pausedUntil != nil)
+    }
+
+    @Test func decodes_false_paused() throws {
+        let json = #"{"paused":false,"applies_to":[],"source":"daemon_cli"}"#
+        let p = try JSONDecoder().decode(PausedChangedParams.self, from: Data(json.utf8))
+        #expect(p.paused == false)
+        #expect(p.pausedUntil == nil)
+    }
+}
+
 @Suite("IPC outbound encoding")
 struct IPCOutboundTests {
     @Test func notification_encodes_with_newline() {
