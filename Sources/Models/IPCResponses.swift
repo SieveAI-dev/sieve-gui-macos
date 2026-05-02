@@ -3,12 +3,33 @@ import Foundation
 /// IPC 响应体的 Codable 结构。命名对照 docs/api/ipc-protocol.md。
 
 public struct SetPausedResult: Decodable, Sendable {
-    public let pausedUntil: String
-    public let criticalStillBlocks: Bool
+    public let paused: Bool
+    public let pausedUntil: Date?
+    public let appliesTo: [String]
 
     enum CodingKeys: String, CodingKey {
+        case paused
         case pausedUntil = "paused_until"
-        case criticalStillBlocks = "critical_still_blocks"
+        case appliesTo = "applies_to"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        paused = try c.decode(Bool.self, forKey: .paused)
+        appliesTo = try c.decodeIfPresent([String].self, forKey: .appliesTo) ?? []
+        // paused_until is ISO8601 string, optional
+        if let s = try c.decodeIfPresent(String.self, forKey: .pausedUntil) {
+            let f = ISO8601DateFormatter()
+            f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let d = f.date(from: s) {
+                pausedUntil = d
+            } else {
+                f.formatOptions = [.withInternetDateTime]
+                pausedUntil = f.date(from: s)
+            }
+        } else {
+            pausedUntil = nil
+        }
     }
 }
 

@@ -145,6 +145,31 @@ struct PausedChangedParamsTests {
     }
 }
 
+@Suite("SetPausedResult decode")
+struct SetPausedResultTests {
+    @Test func decodes_paused_true_with_until() throws {
+        let json = """
+        {
+          "paused": true,
+          "paused_until": "2099-01-01T12:00:00Z",
+          "applies_to": ["claude", "cursor"]
+        }
+        """
+        let r = try JSONDecoder().decode(SetPausedResult.self, from: Data(json.utf8))
+        #expect(r.paused == true)
+        #expect(r.pausedUntil != nil)
+        #expect(r.appliesTo == ["claude", "cursor"])
+    }
+
+    @Test func decodes_paused_false_null_until() throws {
+        let json = #"{"paused":false,"applies_to":[]}"#
+        let r = try JSONDecoder().decode(SetPausedResult.self, from: Data(json.utf8))
+        #expect(r.paused == false)
+        #expect(r.pausedUntil == nil)
+        #expect(r.appliesTo.isEmpty)
+    }
+}
+
 @Suite("GraylistEntry decode")
 struct GraylistEntryTests {
     @Test func decodes_entry_with_unix_ms_timestamp() throws {

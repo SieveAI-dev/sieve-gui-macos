@@ -135,9 +135,10 @@ public final class MenuBarController: NSObject, NSPopoverDelegate {
                     params: ["minutes": bounded]
                 )
                 client.unregisterMutatingRequest(pauseId)
-                // SetPausedResult.pausedUntil will become Optional in Commit 8 (P1-8).
-                // Until then, keep existing decode logic compatible with current String type.
-                _ = data
+                if let resp = try? JSONDecoder().decode(SetPausedResult.self, from: data),
+                   let until = resp.pausedUntil {
+                    await MainActor.run { self.appState.updatePaused(true, until: until) }
+                }
             } catch {
                 client.unregisterMutatingRequest(pauseId)
                 // 失败 → 回滚
