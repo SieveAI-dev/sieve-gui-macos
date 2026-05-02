@@ -1,0 +1,21 @@
+# 默认所有文件由 doskey 评审
+*                               @doskey
+
+# 文档体系：任何 docs/ 修改都需要 doskey 确认
+/docs/                          @doskey
+/CLAUDE.md                      @doskey
+/README.md                      @doskey
+
+# IPC 契约（双仓库高危区）：必须 doskey 评审
+/docs/api/ipc-protocol.md       @doskey
+/docs/specs/SPEC-002-*.md       @doskey
+/docs/specs/SPEC-008-*.md       @doskey
+/docs/external/                 @doskey
+
+# ADR：决策只增不改，任何新增/Superseded 都需 doskey 拍板
+/docs/design/adr/               @doskey
+
+# 发布管线 / 签名：高危
+/docs/guides/deployment.md      @doskey
+/scripts/                       @doskey
+/.github/                       @doskey

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 安全漏洞
+    url: mailto:doskey.lee@gmail.com
+    about: 安全相关问题请直接邮件，不要在公开 issue 里披露
+  - name: 闭测期间反馈
+    url: mailto:doskey.lee@gmail.com
+    about: 闭测期间一般反馈也可走邮件

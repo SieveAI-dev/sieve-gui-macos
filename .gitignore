@@ -1,0 +1,109 @@
+# ─── macOS ───────────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+.TemporaryItems
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# ─── Xcode ───────────────────────────────────────────────────
+# 用户私有：UI 状态、断点、scheme 偏好等，不入仓
+**/xcuserdata/
+**/*.xcuserstate
+**/*.xcuserdatad/
+**/*.xcscheme
+!**/xcshareddata/xcschemes/*.xcscheme
+**/contents.xcworkspacedata
+!*.xcworkspace/contents.xcworkspacedata
+**/IDEWorkspaceChecks.plist
+**/WorkspaceSettings.xcsettings
+
+# Xcode build 产物
+build/
+DerivedData/
+**/Build/
+**/*.dSYM
+**/*.dSYM.zip
+*.hmap
+*.ipa
+*.xcarchive
+*.xcresult
+*.app
+*.app.dSYM
+
+# Xcode SwiftPM 缓存
+.swiftpm/
+Package.resolved.lock
+
+# ─── Swift Package Manager ───────────────────────────────────
+.build/
+Packages/
+Package.pins
+*.xcodeproj/xcuserdata/
+.netrc
+
+# ─── 工具与 IDE ──────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*.bak
+*~
+.fleet/
+
+# ─── 测试 / 覆盖率 ────────────────────────────────────────────
+*.gcno
+*.gcda
+*.profraw
+coverage/
+.coverage
+
+# ─── 发布产物 ────────────────────────────────────────────────
+# .dmg / appcast 资源走独立仓库（见 docs/guides/deployment.md）
+*.dmg
+*.pkg
+release/
+dist/
+
+# ─── Sparkle 密钥（绝不入仓）────────────────────────────────
+*_ed_priv.pem
+*_ed_pub.pem
+sparkle_*_priv*
+sparkle_keys/
+ed25519_priv*
+
+# ─── 签名 / 证书 / 凭证 ──────────────────────────────────────
+*.p12
+*.cer
+*.mobileprovision
+*.provisionprofile
+ExportOptions-private.plist
+secrets.env
+.env
+.env.local
+
+# ─── 诊断包 / 日志（本地实验产物）────────────────────────────
+sieve-diagnostic-*.zip
+*.log
+!docs/**/*.log         # docs 里的示例 log 例外
+
+# ─── 临时文件 ────────────────────────────────────────────────
+tmp/
+.tmp/
+*.tmp
+scratch/
+playground/
+
+# ─── 不该入仓的 IPC 测试副产物 ───────────────────────────────
+ipc.sock
+*.sock
+mock-output/

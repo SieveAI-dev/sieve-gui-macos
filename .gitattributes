@@ -1,0 +1,68 @@
+# 默认：自动检测 + 提交时统一为 LF
+* text=auto eol=lf
+
+# ─── Swift / 配置文本（强制 LF）─────────────────────────────
+*.swift          text eol=lf
+*.h              text eol=lf
+*.m              text eol=lf
+*.mm             text eol=lf
+*.c              text eol=lf
+*.cpp            text eol=lf
+*.json           text eol=lf
+*.yaml           text eol=lf
+*.yml            text eol=lf
+*.toml           text eol=lf
+*.md             text eol=lf
+*.txt            text eol=lf
+*.sh             text eol=lf
+*.html           text eol=lf
+*.css            text eol=lf
+*.js             text eol=lf
+Package.swift    text eol=lf
+.gitattributes   text eol=lf
+.gitignore       text eol=lf
+.editorconfig    text eol=lf
+
+# ─── Xcode 项目文件（保持 LF + 合并策略）─────────────────────
+# project.pbxproj 用 union merge 减少冲突
+*.pbxproj                    text eol=lf merge=union
+*.xcworkspacedata            text eol=lf
+*.xcsettings                 text eol=lf
+*.xcscheme                   text eol=lf
+*.xcprivacy                  text eol=lf
+*.xcstrings                  text eol=lf
+contents.xcworkspacedata     text eol=lf
+project.xcworkspace          text eol=lf
+
+# Info.plist / entitlements 本质是 XML
+*.plist          text eol=lf
+*.entitlements   text eol=lf
+
+# ─── 二进制（明确标记，不跑 diff）────────────────────────────
+*.png            binary
+*.jpg            binary
+*.jpeg           binary
+*.gif            binary
+*.heic           binary
+*.icns           binary
+*.pdf            binary
+*.ico            binary
+*.zip            binary
+*.tar            binary
+*.gz             binary
+*.dmg            binary
+*.pkg            binary
+*.framework      binary
+*.dylib          binary
+*.a              binary
+*.bundle         binary
+
+# ─── linguist 统计修正（GitHub 语言条）──────────────────────
+docs/**           linguist-documentation
+*.md              linguist-documentation
+mock/**           linguist-detectable=true
+docs/external/**  linguist-vendored
+
+# ─── 大文件 / LFS（暂未使用，留 hook）───────────────────────
+# *.psd     filter=lfs diff=lfs merge=lfs -text
+# *.sketch  filter=lfs diff=lfs merge=lfs -text
