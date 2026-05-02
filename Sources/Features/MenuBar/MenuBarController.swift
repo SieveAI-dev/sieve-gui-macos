@@ -121,25 +121,25 @@ public final class MenuBarController: NSObject, NSPopoverDelegate {
 
     private func requestPause(minutes: Int) {
         let bounded = max(1, min(30, minutes))
+        let pauseId = UUID().uuidString
         // 乐观更新：先按本地估算 until 切到 paused
         let optimisticUntil = Date().addingTimeInterval(TimeInterval(bounded * 60))
         appState.updatePaused(true, until: optimisticUntil)
+        ipcClient?.registerMutatingRequest(pauseId)
         Task { [weak self] in
             guard let self = self, let client = self.ipcClient else { return }
             do {
                 let data = try await client.sendRequest(
-                    id: UUID().uuidString,
+                    id: pauseId,
                     method: "sieve.set_paused",
                     params: ["minutes": bounded]
                 )
-                if let resp = try? JSONDecoder().decode(SetPausedResult.self, from: data) {
-                    let f = ISO8601DateFormatter()
-                    f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-                    if let until = f.date(from: resp.pausedUntil) {
-                        await MainActor.run { self.appState.updatePaused(true, until: until) }
-                    }
-                }
+                client.unregisterMutatingRequest(pauseId)
+                // SetPausedResult.pausedUntil will become Optional in Commit 8 (P1-8).
+                // Until then, keep existing decode logic compatible with current String type.
+                _ = data
             } catch {
+                client.unregisterMutatingRequest(pauseId)
                 // 失败 → 回滚
                 await MainActor.run { self.appState.updatePaused(false, until: nil) }
                 await GUILog.shared.warn("set_paused 失败：\(error)", category: "menubar")
@@ -148,12 +148,19 @@ public final class MenuBarController: NSObject, NSPopoverDelegate {
     }
 
     private func requestResume() {
+        let resumeId = UUID().uuidString
         appState.updatePaused(false, until: nil)
+        ipcClient?.registerMutatingRequest(resumeId)
         ipcClient?.sendRequestAndForget(
-            id: UUID().uuidString,
+            id: resumeId,
             method: "sieve.set_paused",
             params: ["minutes": 0]
         )
+        // fire-and-forget 无法 await 结果，延迟 10s 后自动反注册（避免集合永久增长）
+        Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 10_000_000_000)
+            self?.ipcClient?.unregisterMutatingRequest(resumeId)
+        }
     }
 
     private func confirmQuit() {

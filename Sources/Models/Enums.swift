@@ -44,10 +44,10 @@ public enum RecommendationConfidence: String, Codable, Sendable {
 }
 
 public enum Preset: String, Codable, CaseIterable, Sendable {
-    case strict = "Strict"
-    case standard = "Standard"
-    case relaxed = "Relaxed"
-    case custom = "Custom"
+    case strict = "strict"
+    case standard = "standard"
+    case relaxed = "relaxed"
+    case custom = "custom"
 }
 
 public enum NotifyKind: String, Codable, Sendable {

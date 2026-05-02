@@ -47,7 +47,7 @@ struct IPCMessageTests {
 @Suite("PresetChangedParams decode")
 struct PresetChangedParamsTests {
     @Test func decodes_with_origin_request_id() throws {
-        let json = #"{"preset":"Standard","mode":"standard","changed_at":"2099-01-01T00:00:00Z","source":"gui","origin_request_id":"req-xyz"}"#
+        let json = #"{"preset":"standard","mode":"standard","changed_at":"2099-01-01T00:00:00Z","source":"gui","origin_request_id":"req-xyz"}"#
         let p = try JSONDecoder().decode(PresetChangedParams.self, from: Data(json.utf8))
         #expect(p.preset == .standard)
         #expect(p.source == "gui")
@@ -57,7 +57,7 @@ struct PresetChangedParamsTests {
 
     @Test func decodes_without_origin_request_id() throws {
         // daemon CLI 触发，无 origin_request_id
-        let json = #"{"preset":"Strict","mode":"strict","changed_at":"2099-01-01T00:00:00Z","source":"daemon_cli"}"#
+        let json = #"{"preset":"strict","mode":"strict","changed_at":"2099-01-01T00:00:00Z","source":"daemon_cli"}"#
         let p = try JSONDecoder().decode(PresetChangedParams.self, from: Data(json.utf8))
         #expect(p.preset == .strict)
         #expect(p.originRequestId == nil)

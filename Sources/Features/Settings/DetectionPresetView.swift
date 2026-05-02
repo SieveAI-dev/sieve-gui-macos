@@ -91,10 +91,13 @@ public struct DetectionPresetView: View {
         let previousPreset = appState.preset
         appState.updatePreset(p)         // 乐观更新
         pendingPreset = nil
+        ipcClient.registerMutatingRequest(id)
         Task {
             do {
                 _ = try await ipcClient.sendRequest(id: id, method: "sieve.set_preset", params: ["mode": p.rawValue])
+                ipcClient.unregisterMutatingRequest(id)
             } catch {
+                ipcClient.unregisterMutatingRequest(id)
                 // critical_lock_violation / 其他错误 → 回滚
                 await MainActor.run { appState.updatePreset(previousPreset) }
                 await GUILog.shared.warn("set_preset failed: \(error)", category: "settings")
