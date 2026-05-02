@@ -42,11 +42,16 @@ docs/
 │   └── deployment.md
 ├── research/                 ← 对外部事物的调研（竞品、技术）
 ├── review/                   ← 对本项目产出物的评审
-└── external/                 ← 第三方参考资料 / 上游仓库引用
+├── external/                 ← 第三方参考资料 / 上游仓库引用
+└── review/_archive/          ← 历史 review 归档（超过 1 个月或被取代）
 tasks/
-├── todo.md                   ← 当前路线图（带可勾选 checklist）
-└── lessons.md                ← 经验沉淀
+├── PROGRESS.md               ← 单一进度真实源（任务前先看，完成后必更新）
+├── roadmap.md                ← 长期路线图（可选）
+├── lessons.md                ← 经验沉淀
+└── _archive/                 ← 过期 todo / status 快照 / 临时报告归档
 ```
+
+**`PROGRESS.md` 必含五段**：当前阶段一句话 / ✅ 已完成（按时间倒序）/ 🚧 进行中（≤3 项）/ ⏭ 下一步（按 P0/P1/P2 优先级，可勾选）/ 🚫 阻塞或等决策。任何时候打开应能在 30 秒内回答"现在做什么、做到哪、下一步是什么"。临时分析产物用 `_` 前缀（如 `_gap-*.md`），并入 PROGRESS 后立即删除。
 
 **禁止建立的目录**：`docs/notes/`、`docs/temp/`、`docs/wip/`、`docs/misc/`。所有内容必须找到合适的归属目录。
 
@@ -245,4 +250,4 @@ ADR / SPEC 编号规则：
 - [ ] 没有把上游 daemon 文档复制进本仓库（应通过 external/ 引用）
 - [ ] 修改了 IPC 相关文档时，`ipc-protocol.md` 与 `SPEC-008-ipc-client.md` 同步更新
 - [ ] 链接路径都是相对路径，没有 hardcode GitHub URL
-- [ ] CHANGELOG（首次发布前用 `tasks/todo.md` 代替）有同步条目
+- [ ] CHANGELOG（首次发布前用 `tasks/PROGRESS.md` 代替）有同步条目

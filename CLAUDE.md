@@ -24,7 +24,7 @@ Sieve GUI 是 [Sieve daemon](#上游-daemon) 的 native macOS 守门人壳：常
 - `LSUIElement = true`（accessory app，不进 Dock）
 - 菜单栏 `NSStatusItem` + 多个 SwiftUI `Window` scene（设置/历史/调试/Onboarding）
 - HIPS 弹窗是 `NSPanel` `.floating` 浮窗（独立生命周期）
-- IPC：Unix Domain Socket `~/.sieve/ipc.sock`（JSON-RPC 2.0，协议 v1）
+- IPC：Unix Domain Socket `~/.sieve/ipc.sock`（JSON-RPC 2.0，**协议 v2**，与上游 daemon SPEC-005 v2 对齐）
 
 ## 常用命令
 
@@ -146,10 +146,10 @@ Sources/
 
 ## 工作流增量
 
-- **任务规划**：所有进入 Phase 1 的实现任务都从 `tasks/todo.md` 拉取，完成后勾选并写一句话总结
+- **进度真实源**：所有任务从 [`tasks/PROGRESS.md`](tasks/PROGRESS.md) 拉取，完成后立即勾选 + 移到「已完成」段并写一句话总结。`tasks/` 顶层只保留 `PROGRESS.md` / `lessons.md` / `_archive/`，遵循全局 CLAUDE.md "`tasks/` 目录规范"
+- **当前阶段**：Phase 0 + Phase 1A 已完成；**Phase 1B（SPEC-005 v2 协议对齐 P0 × 7 / P1 × 8 / P2 × 4）进行中**——不修这些 P0，新 daemon 连不上
 - **PR 标题**：`feat(menu-bar): ...` / `fix(hips): ...` / `docs(adr): ...`
 - **commit 范围**：`menu-bar` / `hips` / `settings` / `history` / `debug` / `onboarding` / `toast` / `ipc` / `infra`
-- **Phase 0 期间**：禁止任何 `feat` / `fix` commit；只允许 `docs` / `chore`
 
 ---
 
@@ -163,5 +163,5 @@ Sources/
 - 上游引用：[`docs/external/upstream-references.md`](docs/external/upstream-references.md)
 - 开发指南：[`docs/guides/development.md`](docs/guides/development.md)
 - 发布指南：[`docs/guides/deployment.md`](docs/guides/deployment.md)
-- 当前路线图：[`tasks/todo.md`](tasks/todo.md)
+- 当前进度真实源：[`tasks/PROGRESS.md`](tasks/PROGRESS.md)
 - 经验沉淀：[`tasks/lessons.md`](tasks/lessons.md)

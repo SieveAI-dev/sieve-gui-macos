@@ -41,7 +41,7 @@ Sieve GUI 是单进程 macOS accessory app（`LSUIElement = true`），承担 da
 │                                         │         │            │
 │                  Unix Domain Socket     │         │  append-only │
 │                  ~/.sieve/ipc.sock      │         ▼            │
-│                  JSON-RPC 2.0 v1        │   ~/.sieve/audit.db │
+│                  JSON-RPC 2.0 v2        │   ~/.sieve/audit.db │
 │                                         │         ▲            │
 │                                         ▼         │ read-only  │
 │                                ┌────────────────────────────┐ │
