@@ -11,6 +11,33 @@ public final class ToastController: NSObject, IPCToastAdapter {
     private var panels: [String: NSPanel] = [:]   // key = id
     private let appState = AppState.shared
 
+    public func presentReconnect(_ kind: ReconnectKind) {
+        let message: String
+        switch kind {
+        case .daemonRestarted:
+            message = "Sieve daemon 已重启，状态可能丢失"
+        case .reconnected:
+            message = "已重新连接 daemon"
+        }
+        let entry = ToastEntry(
+            id: UUID().uuidString,
+            kind: .redacted,  // 复用 redacted 样式（info 图标）
+            ruleId: "reconnect",
+            severity: .low,
+            direction: .inbound,
+            summary: message,
+            count: 1,
+            firstSeenAt: Date(),
+            lastUpdatedAt: Date(),
+            auditEventId: nil
+        )
+        if stack.count < 3 {
+            stack.append(entry)
+            showPanel(for: entry)
+            scheduleDismiss(for: entry)
+        }
+    }
+
     public func presentEvent(_ params: EventNotifyParams) {
         // 合并：同 kind+rule_id 在 5s 内
         if let existingIdx = stack.firstIndex(where: { $0.kind == params.kind && $0.ruleId == params.ruleId && Date().timeIntervalSince($0.firstSeenAt) < 5 }) {

@@ -57,4 +57,54 @@ struct UserSettingsTests {
         let loaded = store.load()
         #expect(loaded.toastDurationSeconds == 10)
     }
+
+    @Test func lastSeenDaemonBootId_roundtrip() {
+        let d = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let store = UserSettingsStore(defaults: d)
+        #expect(store.lastSeenDaemonBootId() == nil)
+        store.setLastSeenDaemonBootId("boot-abc")
+        #expect(store.lastSeenDaemonBootId() == "boot-abc")
+    }
+}
+
+/// daemon_boot_id 三路判定的纯 store 层测试（AppStateIPCAdapter 在 App/ 层，SPM 测试用 store 验证）
+@Suite("daemon_boot_id 三路重连逻辑")
+struct DaemonBootIdTests {
+    /// 模拟 AppStateIPCAdapter.checkAndUpdateDaemonBootId 的判定逻辑
+    private func checkAndUpdate(store: UserSettingsStore, newBootId: String) -> ReconnectKind? {
+        let last = store.lastSeenDaemonBootId()
+        store.setLastSeenDaemonBootId(newBootId)
+        guard let last else { return nil }
+        return last != newBootId ? .daemonRestarted : .reconnected
+    }
+
+    @Test func first_connection_returns_nil() {
+        let d = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let store = UserSettingsStore(defaults: d)
+        let kind = checkAndUpdate(store: store, newBootId: "boot-new")
+        #expect(kind == nil)  // 首次连接：无 toast
+    }
+
+    @Test func same_boot_id_returns_reconnected() {
+        let d = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let store = UserSettingsStore(defaults: d)
+        store.setLastSeenDaemonBootId("boot-123")
+        let kind = checkAndUpdate(store: store, newBootId: "boot-123")
+        #expect(kind == .reconnected)  // 连接中断重连
+    }
+
+    @Test func different_boot_id_returns_daemon_restarted() {
+        let d = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let store = UserSettingsStore(defaults: d)
+        store.setLastSeenDaemonBootId("boot-old")
+        let kind = checkAndUpdate(store: store, newBootId: "boot-new")
+        #expect(kind == .daemonRestarted)  // daemon 重启
+    }
+
+    @Test func boot_id_persisted_after_check() {
+        let d = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let store = UserSettingsStore(defaults: d)
+        _ = checkAndUpdate(store: store, newBootId: "boot-xyz")
+        #expect(store.lastSeenDaemonBootId() == "boot-xyz")
+    }
 }

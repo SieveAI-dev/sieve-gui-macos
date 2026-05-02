@@ -3,6 +3,7 @@ import Foundation
 public struct HelloParams: Codable, Sendable {
     public let protocolVersion: String
     public let daemonVersion: String
+    public let daemonBootId: String
     public let paused: Bool
     public let preset: Preset
     public let uptimeSeconds: Int
@@ -11,6 +12,7 @@ public struct HelloParams: Codable, Sendable {
     enum CodingKeys: String, CodingKey {
         case protocolVersion = "protocol_version"
         case daemonVersion = "daemon_version"
+        case daemonBootId = "daemon_boot_id"
         case paused
         case preset
         case uptimeSeconds = "uptime_seconds"

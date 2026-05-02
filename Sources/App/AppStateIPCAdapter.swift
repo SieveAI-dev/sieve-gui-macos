@@ -4,8 +4,12 @@ import Foundation
 @MainActor
 public final class AppStateIPCAdapter: IPCAppStateAdapter {
     private let appState: AppState
+    private let store: UserSettingsStore
 
-    public init(appState: AppState) { self.appState = appState }
+    public init(appState: AppState, store: UserSettingsStore = UserSettingsStore()) {
+        self.appState = appState
+        self.store = store
+    }
 
     public func applyIPCState(_ state: IPCState) {
         switch state {
@@ -54,6 +58,20 @@ public final class AppStateIPCAdapter: IPCAppStateAdapter {
 
     public func applyPausedChanged(_ params: PausedChangedParams) {
         appState.updatePaused(params.paused, until: params.pausedUntil)
+    }
+
+    public func checkAndUpdateDaemonBootId(_ bootId: String) -> ReconnectKind? {
+        let last = store.lastSeenDaemonBootId()
+        store.setLastSeenDaemonBootId(bootId)
+        guard let last else {
+            // 首次连接，无 toast
+            return nil
+        }
+        if last != bootId {
+            return .daemonRestarted
+        } else {
+            return .reconnected
+        }
     }
 
     private func parseDate(_ s: String?) -> Date? {

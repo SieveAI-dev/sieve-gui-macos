@@ -17,6 +17,7 @@ public enum SettingsKey {
     public static let lastSeenDaemonVersion = "kLastSeenDaemonVersion"
     public static let lastIPCErrorTimestamp = "kLastIPCErrorTimestamp"
     public static let panelLastFramePrefix = "kPanelLastFrame_"
+    public static let lastSeenDaemonBootId = "kLastSeenDaemonBootId"
 
     public static let currentSchemaVersion: Int = 1
 }
@@ -90,6 +91,14 @@ public final class UserSettingsStore: @unchecked Sendable {
 
     public func setLastSeenDaemonVersion(_ version: String) {
         defaults.set(version, forKey: SettingsKey.lastSeenDaemonVersion)
+    }
+
+    public func lastSeenDaemonBootId() -> String? {
+        defaults.string(forKey: SettingsKey.lastSeenDaemonBootId)
+    }
+
+    public func setLastSeenDaemonBootId(_ bootId: String) {
+        defaults.set(bootId, forKey: SettingsKey.lastSeenDaemonBootId)
     }
 
     private func clampToast(_ v: Int) -> Int { max(3, min(10, v)) }

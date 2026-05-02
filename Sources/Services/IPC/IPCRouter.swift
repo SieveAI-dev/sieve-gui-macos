@@ -35,6 +35,10 @@ public final class IPCRouter: IPCDelegate {
             IPCMonitorRingBuffer.shared.recordHandshake()
             LiveEventsRingBuffer.shared.append(source: .ipc, level: .info, category: "ipc",
                                                message: "握手成功 daemon=\(params.daemonVersion) preset=\(params.preset.rawValue)")
+            // 三路 toast 判定（SPEC-005 §3.3）
+            if let kind = self.appStateAdapter?.checkAndUpdateDaemonBootId(params.daemonBootId) {
+                self.toastController?.presentReconnect(kind)
+            }
             self.appStateAdapter?.applyHello(params)
         }
     }
@@ -143,6 +147,8 @@ public protocol IPCAppStateAdapter: AnyObject {
     func applyEventNotify(_ params: EventNotifyParams)
     func applyPresetChanged(_ preset: Preset)
     func applyPausedChanged(_ params: PausedChangedParams)
+    /// 对比并更新 lastSeenDaemonBootId，返回重连类型（nil = 首次连接）。
+    func checkAndUpdateDaemonBootId(_ bootId: String) -> ReconnectKind?
 }
 
 @MainActor
@@ -152,7 +158,15 @@ public protocol IPCHipsAdapter: AnyObject {
     func failRequest(id: String, error: DecisionError)
 }
 
+public enum ReconnectKind: Sendable {
+    /// 连接中断后重连（daemon 未重启）
+    case reconnected
+    /// daemon 已重启（boot_id 不同）
+    case daemonRestarted
+}
+
 @MainActor
 public protocol IPCToastAdapter: AnyObject {
     func presentEvent(_ params: EventNotifyParams)
+    func presentReconnect(_ kind: ReconnectKind)
 }
