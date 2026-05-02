@@ -21,7 +21,7 @@ public final class ToastController: NSObject, IPCToastAdapter {
         }
         let entry = ToastEntry(
             id: UUID().uuidString,
-            kind: .redacted,  // 复用 redacted 样式（info 图标）
+            kind: .generic,  // 通用信息 toast（reconnect 通知）
             ruleId: "reconnect",
             severity: .low,
             direction: .inbound,

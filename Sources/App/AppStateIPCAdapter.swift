@@ -36,9 +36,10 @@ public final class AppStateIPCAdapter: IPCAppStateAdapter {
     public func applyEventNotify(_ params: EventNotifyParams) {
         let action: HitSummary.Action = {
             switch params.kind {
-            case .redacted: return .redact
-            case .statusMarked: return .marked
+            case .outboundRedacted: return .redact
             case .hookTerminal: return .terminal
+            case .sequenceHit, .userRulesLoadFailed, .userRulesReloaded: return .marked
+            case .generic: return .allow
             }
         }()
         let hit = HitSummary(

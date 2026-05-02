@@ -51,9 +51,12 @@ public enum Preset: String, Codable, CaseIterable, Sendable {
 }
 
 public enum NotifyKind: String, Codable, Sendable {
-    case redacted
-    case statusMarked = "status_marked"
+    case sequenceHit = "sequence_hit"
+    case outboundRedacted = "outbound_redacted"
     case hookTerminal = "hook_terminal"
+    case userRulesLoadFailed = "user_rules_load_failed"
+    case userRulesReloaded = "user_rules_reloaded"
+    case generic = "generic"
 }
 
 public enum HipsPhase: Sendable {

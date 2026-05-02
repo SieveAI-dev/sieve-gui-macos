@@ -145,6 +145,25 @@ struct PausedChangedParamsTests {
     }
 }
 
+@Suite("NotifyKind decode")
+struct NotifyKindTests {
+    @Test func decodes_all_six_values() throws {
+        let cases: [(String, NotifyKind)] = [
+            ("sequence_hit", .sequenceHit),
+            ("outbound_redacted", .outboundRedacted),
+            ("hook_terminal", .hookTerminal),
+            ("user_rules_load_failed", .userRulesLoadFailed),
+            ("user_rules_reloaded", .userRulesReloaded),
+            ("generic", .generic),
+        ]
+        for (raw, expected) in cases {
+            let data = Data("\"\(raw)\"".utf8)
+            let decoded = try JSONDecoder().decode(NotifyKind.self, from: data)
+            #expect(decoded == expected, "expected \(expected) for '\(raw)'")
+        }
+    }
+}
+
 @Suite("IPC outbound encoding")
 struct IPCOutboundTests {
     @Test func notification_encodes_with_newline() {
