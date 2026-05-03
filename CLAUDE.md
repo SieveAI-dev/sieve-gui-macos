@@ -147,7 +147,7 @@ Sources/
 ## 工作流增量
 
 - **进度真实源**：所有任务从 [`tasks/PROGRESS.md`](tasks/PROGRESS.md) 拉取，完成后立即勾选 + 移到「已完成」段并写一句话总结。`tasks/` 顶层只保留 `PROGRESS.md` / `lessons.md` / `_archive/`，遵循全局 CLAUDE.md "`tasks/` 目录规范"
-- **当前阶段**：Phase 0 + Phase 1A 已完成；**Phase 1B（SPEC-005 v2 协议对齐 P0 × 7 / P1 × 8 / P2 × 4）进行中**——不修这些 P0，新 daemon 连不上
+- **当前阶段**：Phase 1A + 1B + 1C 部分全部完成；**等用户手动联调反馈**。swift test 127 passed + xcodebuild BUILD SUCCEEDED。
 - **PR 标题**：`feat(menu-bar): ...` / `fix(hips): ...` / `docs(adr): ...`
 - **commit 范围**：`menu-bar` / `hips` / `settings` / `history` / `debug` / `onboarding` / `toast` / `ipc` / `infra`
 
