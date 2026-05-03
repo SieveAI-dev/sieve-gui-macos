@@ -4,6 +4,8 @@ public struct CountdownView: View {
     let remainingSeconds: Int
     let totalSeconds: Int
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     public init(remainingSeconds: Int, totalSeconds: Int) {
         self.remainingSeconds = remainingSeconds
         self.totalSeconds = totalSeconds
@@ -15,13 +17,25 @@ public struct CountdownView: View {
                 .font(.system(.body, design: .monospaced).weight(.medium))
                 .monospacedDigit()
                 .foregroundStyle(color)
+                // Phase3（red）闪烁动画：reduce-motion=true 时禁用，保留颜色切换
+                .opacity(shouldFlash ? flashOpacity : 1.0)
+                .animation(
+                    reduceMotion ? nil : (phase == .red ? .easeInOut(duration: 0.5).repeatForever(autoreverses: true) : nil),
+                    value: flashOpacity
+                )
 
             ProgressView(value: progress)
                 .progressViewStyle(.linear)
                 .tint(color)
                 .frame(maxWidth: .infinity)
+                // 进度条颜色切换不受 reduce-motion 影响（信息量不能丢）
         }
     }
+
+    // 是否处于红色闪烁阶段
+    private var shouldFlash: Bool { phase == .red && !reduceMotion }
+    // 闪烁时的不透明度驱动（通过 animation modifier 触发）
+    private var flashOpacity: Double { phase == .red ? 0.4 : 1.0 }
 
     public var phase: HipsPhase {
         guard totalSeconds > 0 else { return .red }

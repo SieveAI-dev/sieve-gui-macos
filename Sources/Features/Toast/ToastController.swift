@@ -101,6 +101,17 @@ public final class ToastController: NSObject, IPCToastAdapter {
 
     private func dismiss(id: String) {
         guard let panel = panels[id] else { return }
+        // reduce-motion：跳过淡出，直接隐藏（保留关闭行为，移除动画）
+        let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        if reduceMotion {
+            panel.orderOut(nil)
+            panels.removeValue(forKey: id)
+            stack.removeAll { $0.id == id }
+            for (i, e) in stack.enumerated() {
+                if let p = panels[e.id] { positionPanel(p, index: i) }
+            }
+            return
+        }
         NSAnimationContext.runAnimationGroup({ ctx in
             ctx.duration = 0.25
             panel.animator().alphaValue = 0
