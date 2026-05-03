@@ -96,17 +96,17 @@ open SieveGUI.xcodeproj
 
 ## 当前状态
 
-**Phase 1A：骨架 + 核心红线落地完成**（2026-05-02）。
+**Phase 1A + 1B + 1C 部分完成，等用户手动联调**（2026-05-03）。
 
-- ✅ 49 个 Swift 源文件 / 5593 行
-- ✅ `swift build` Core 库干净通过
-- ✅ `swift test` 20/20 测试全绿
-- ✅ `xcodebuild` 完整 App 构建成功，产物 `Sieve GUI.app` arm64
-- ✅ 所有 SPEC 红线已编码层落地（`allow_remember=false ⇒ remember=false` / 主按钮锁拒绝 / Phase3 ⌘-Click / rawJSON 关闭即清 / 多 issue 含 critical 禁「全部允许」/ 决策路径不联网）
+- ✅ 49 个 Swift 源文件 / 双仓库 SPEC-005 v2 协议完全对齐
+- ✅ `swift test` **127/127** 测试全绿（基线 20 → 127）
+- ✅ `xcodebuild` BUILD SUCCEEDED，产物 `Sieve GUI.app` arm64
+- ✅ Phase 1B 全部 UX/系统集成完成（HIPS/Settings/History/Debug/Onboarding/Toast）
+- ✅ mock daemon harness + IPCClient 集成测试 5 场景
+- ✅ Sparkle appcast.xml 模板 + .dmg 打包脚本 + String Catalogs i18n 关键 UX
+- 🔜 等用户 dogfood 反馈后进入 Phase 1C 发布流程
 
-下一步：Phase 1B（SPEC 像素级打磨）+ Phase 1C（CI / Notarization / Sparkle / GA）。
-
-完整路线图与待办见 [`tasks/todo.md`](tasks/todo.md)，
+完整进度见 [`tasks/PROGRESS.md`](tasks/PROGRESS.md)，
 本轮工程踩坑沉淀见 [`tasks/lessons.md`](tasks/lessons.md)。
 
 ---
