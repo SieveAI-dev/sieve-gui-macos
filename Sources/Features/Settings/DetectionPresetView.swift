@@ -10,6 +10,12 @@ public struct DetectionPresetView: View {
     // Custom 模式规则覆盖：rule_id → 当前编辑中的 override
     @State private var ruleOverrides: [String: RuleOverride] = [:]
 
+    // list_rules 状态
+    @State private var liveRules: [RuleSummary] = []
+    @State private var rulesLoading: Bool = false
+    @State private var rulesError: String?
+    @State private var rulesUnavailable: Bool = false   // -32601 降级标记
+
     public var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Detection Preset").font(.headline)
@@ -23,7 +29,7 @@ public struct DetectionPresetView: View {
             if appState.preset == .custom {
                 customRuleTable
             } else {
-                ruleTablePlaceholder
+                ruleOverviewSection
             }
             Spacer()
         }
@@ -38,7 +44,12 @@ public struct DetectionPresetView: View {
             Text("切换后会立即生效，正在弹出的 HIPS 弹窗会保留。")
         }
         .disabled(isDisconnected)
-        .onAppear { initOverridesIfNeeded() }
+        .onAppear {
+            initOverridesIfNeeded()
+            if !rulesUnavailable && liveRules.isEmpty {
+                Task { await refreshRules() }
+            }
+        }
         .onChange(of: appState.preset) { _ in initOverridesIfNeeded() }
     }
 
@@ -181,46 +192,155 @@ public struct DetectionPresetView: View {
         .font(.caption2)
     }
 
-    // MARK: - 非 Custom 模式占位
+    // MARK: - 规则总览区域（非 Custom 模式，接 list_rules 实时数据）
 
-    private var ruleTablePlaceholder: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("规则列表加载需 daemon 提供 list_rules method（暂未实现）。当前仅展示已知 critical_lock 规则。")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Divider()
-                ForEach(knownCriticalRules, id: \.id) { rule in
-                    readonlyRuleRow(rule)
+    private var ruleOverviewSection: some View {
+        Group {
+            if rulesUnavailable {
+                // -32601：daemon 版本过旧
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                    Text("daemon 版本过旧，不支持规则总览（需升级 daemon）")
+                        .font(.caption).foregroundStyle(.secondary)
                 }
+                .padding(8)
+                .background(Color.orange.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            } else if let err = rulesError {
+                // 其他错误 / -32006 重试中
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.red)
+                    Text(err).font(.caption).foregroundStyle(.secondary)
+                    Spacer()
+                    Button("重试") { Task { await refreshRules() } }
+                        .font(.caption).buttonStyle(.borderless)
+                }
+                .padding(8)
+                .background(Color.red.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            } else if rulesLoading {
+                HStack(spacing: 8) {
+                    ProgressView().scaleEffect(0.7)
+                    Text("加载规则列表…").font(.caption).foregroundStyle(.secondary)
+                }
+                .padding(8)
+            } else {
+                liveRuleTable
             }
         }
     }
 
-    private func readonlyRuleRow(_ rule: RuleDisplayItem) -> some View {
-        HStack {
-            if rule.criticalLock {
-                Image(systemName: "lock.fill").foregroundStyle(.secondary)
+    // MARK: - 实时规则 Table（7 列）
+
+    private var liveRuleTable: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 0) {
+                Text("title").font(.caption.weight(.semibold))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text("severity").font(.caption.weight(.semibold)).frame(width: 64, alignment: .leading)
+                Text("direction").font(.caption.weight(.semibold)).frame(width: 60, alignment: .leading)
+                Text("disposition").font(.caption.weight(.semibold)).frame(width: 90, alignment: .leading)
+                Text("timeout").font(.caption.weight(.semibold)).frame(width: 56, alignment: .trailing)
+                Text("default").font(.caption.weight(.semibold)).frame(width: 56, alignment: .trailing)
+                Text("on").font(.caption.weight(.semibold)).frame(width: 34, alignment: .center)
+            }
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 4)
+            Divider()
+            if liveRules.isEmpty {
+                Text("（暂无规则数据）").font(.caption).foregroundStyle(.secondary).padding(.vertical, 4)
             } else {
-                Image(systemName: "square.and.pencil").foregroundStyle(.secondary)
+                ScrollView {
+                    VStack(spacing: 2) {
+                        ForEach(liveRules) { rule in
+                            liveRuleRow(rule)
+                        }
+                    }
+                }
+                .frame(maxHeight: 320)
             }
-            Text(rule.id).font(.system(.callout, design: .monospaced))
-            if rule.criticalLock {
-                Text("critical_lock").font(.caption).foregroundStyle(.red)
+            HStack {
+                Spacer()
+                Button {
+                    Task { await refreshRules() }
+                } label: {
+                    Label("刷新", systemImage: "arrow.clockwise")
+                        .font(.caption)
+                }
+                .buttonStyle(.borderless)
+                .disabled(rulesLoading)
             }
-            Spacer()
-            HStack(spacing: 6) {
-                Text("disposition")
-                    .font(.caption2).padding(.horizontal, 6).padding(.vertical, 2)
-                    .background(Color.gray.opacity(0.12)).clipShape(RoundedRectangle(cornerRadius: 4))
-                Text("timeout")
-                    .font(.caption2).padding(.horizontal, 6).padding(.vertical, 2)
-                    .background(Color.gray.opacity(0.12)).clipShape(RoundedRectangle(cornerRadius: 4))
-            }
-            .disabled(rule.criticalLock).opacity(rule.criticalLock ? 0.4 : 1.0)
-            .help(rule.criticalLock ? "Critical 规则强制锁定，不可修改 [SPEC §5.4]" : "")
         }
-        .padding(.vertical, 4)
+    }
+
+    private func liveRuleRow(_ rule: RuleSummary) -> some View {
+        HStack(spacing: 0) {
+            HStack(spacing: 4) {
+                if rule.criticalLock {
+                    Image(systemName: "lock.fill")
+                        .font(.caption2)
+                        .foregroundStyle(.red)
+                }
+                Text(rule.title)
+                    .font(.caption)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            // severity chip
+            Text(rule.severity.rawValue)
+                .font(.system(.caption2, design: .monospaced))
+                .padding(.horizontal, 4).padding(.vertical, 2)
+                .background(severityColor(rule.severity).opacity(0.15))
+                .foregroundStyle(severityColor(rule.severity))
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+                .frame(width: 64, alignment: .leading)
+
+            // direction
+            Text(rule.direction.rawValue)
+                .font(.system(.caption2, design: .monospaced))
+                .frame(width: 60, alignment: .leading)
+
+            // disposition
+            Text(rule.disposition.rawValue)
+                .font(.system(.caption2, design: .monospaced))
+                .frame(width: 90, alignment: .leading)
+                .lineLimit(1)
+
+            // timeout
+            if let t = rule.timeoutSeconds {
+                Text("\(t)s").font(.caption2).frame(width: 56, alignment: .trailing)
+            } else {
+                Text("—").font(.caption2).foregroundStyle(.secondary).frame(width: 56, alignment: .trailing)
+            }
+
+            // default_on_timeout
+            if let dot = rule.defaultOnTimeout {
+                Text(dot.rawValue).font(.caption2).frame(width: 56, alignment: .trailing)
+            } else {
+                Text("—").font(.caption2).foregroundStyle(.secondary).frame(width: 56, alignment: .trailing)
+            }
+
+            // enabled toggle (read-only display)
+            Image(systemName: rule.enabled ? "checkmark.circle.fill" : "circle")
+                .font(.caption2)
+                .foregroundStyle(rule.enabled ? Color.green : Color.secondary)
+                .frame(width: 34, alignment: .center)
+        }
+        .padding(.vertical, 3).padding(.horizontal, 4)
+        .background(rule.criticalLock ? Color.red.opacity(0.04) : Color.clear)
+        .disabled(rule.criticalLock)
+        .opacity(rule.criticalLock ? 0.65 : 1.0)
+        .help(rule.criticalLock ? "Critical 规则强制锁定，不可修改 [SPEC §5.4]" : "")
+    }
+
+    private func severityColor(_ s: Severity) -> Color {
+        switch s {
+        case .critical: return .red
+        case .high: return .orange
+        case .medium: return .yellow
+        case .low: return .blue
+        }
     }
 
     // MARK: - 规则数据
@@ -300,6 +420,59 @@ public struct DetectionPresetView: View {
                     timeoutSeconds: rule.defaultTimeout,
                     defaultOnTimeout: rule.defaultOnTimeout
                 )
+            }
+        }
+    }
+
+    // MARK: - list_rules IPC
+
+    func refreshRules() async {
+        await MainActor.run {
+            rulesLoading = true
+            rulesError = nil
+        }
+        do {
+            let data = try await ipcClient.sendRequest(id: UUID().uuidString, method: "sieve.list_rules")
+            let result = try JSONDecoder().decode(ListRulesResult.self, from: data)
+            await MainActor.run {
+                liveRules = result.rules
+                rulesLoading = false
+            }
+        } catch let err as InflightQueue.AwaitError {
+            switch err {
+            case .rpcError(let code, let message, _):
+                if code == -32006 {
+                    // rules_loading：5s 后自动重试
+                    await MainActor.run {
+                        rulesLoading = false
+                        rulesError = "规则加载中，请稍后重试…"
+                    }
+                    try? await Task.sleep(nanoseconds: 5_000_000_000)
+                    await refreshRules()
+                } else if code == -32601 {
+                    // method_not_found：daemon 版本过旧，降级
+                    await MainActor.run {
+                        rulesLoading = false
+                        rulesUnavailable = true
+                        rulesError = nil
+                    }
+                    await GUILog.shared.warn("sieve.list_rules -32601: daemon 版本过旧", category: "settings")
+                } else {
+                    await MainActor.run {
+                        rulesLoading = false
+                        rulesError = "加载失败：\(message)"
+                    }
+                }
+            default:
+                await MainActor.run {
+                    rulesLoading = false
+                    rulesError = "加载失败，请检查 daemon 连接状态"
+                }
+            }
+        } catch {
+            await MainActor.run {
+                rulesLoading = false
+                rulesError = "解码失败：\(error.localizedDescription)"
             }
         }
     }

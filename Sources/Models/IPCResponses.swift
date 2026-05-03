@@ -123,6 +123,50 @@ public struct EvaluateResult: Decodable, Sendable {
     }
 }
 
+// MARK: - sieve.list_rules §11A
+
+public struct ListRulesResult: Decodable, Sendable {
+    public let rules: [RuleSummary]
+}
+
+/// 规则快照（11 字段）。对照 SPEC-005 §11A RuleSummary 字段表。
+public struct RuleSummary: Decodable, Sendable, Identifiable {
+    public var id: String { ruleId }
+
+    public let ruleId: String
+    public let title: String
+    public let severity: Severity
+    public let direction: Direction
+    public let disposition: Disposition
+    /// 仅 disposition == "gui_popup" 时有意义；其他情况 MUST 为 null
+    public let defaultOnTimeout: DefaultOnTimeout?
+    /// 仅 disposition == "gui_popup" 时有意义；其他情况 MUST 为 null
+    public let timeoutSeconds: UInt32?
+    public let criticalLock: Bool
+    public let enabled: Bool
+    public let ruleKind: RuleKind
+    public let description: String?
+
+    public enum RuleKind: String, Codable, Sendable {
+        case system
+        case user
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case ruleId = "rule_id"
+        case title
+        case severity
+        case direction
+        case disposition
+        case defaultOnTimeout = "default_on_timeout"
+        case timeoutSeconds = "timeout_seconds"
+        case criticalLock = "critical_lock"
+        case enabled
+        case ruleKind = "rule_kind"
+        case description
+    }
+}
+
 public struct HealthResultDTO: Decodable, Sendable {
     public let ok: Bool
     public let checks: [Check]
