@@ -1,12 +1,33 @@
 import SwiftUI
+import ServiceManagement
 
 public struct GeneralSettingsView: View {
     @ObservedObject var appState: AppState
+    @State private var loginItemError: String? = nil
+    @State private var showLoginItemAlert: Bool = false
 
     public var body: some View {
         Form {
             Section("启动") {
                 Toggle("登录时启动 Sieve GUI", isOn: $appState.settings.loginItemEnabled)
+                    .onChange(of: appState.settings.loginItemEnabled) { on in
+                        applyLoginItem(on)
+                    }
+                if let err = loginItemError {
+                    HStack(spacing: 6) {
+                        Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                        Text(err).font(.caption).foregroundStyle(.secondary)
+                        Spacer()
+                        Button("去 System Settings 启用") {
+                            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension")!)
+                        }
+                        .font(.caption)
+                    }
+                    .padding(.vertical, 4)
+                    .padding(.horizontal, 8)
+                    .background(Color.orange.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                }
             }
             Section("外观") {
                 Picker("主题", selection: $appState.settings.appearance) {
@@ -34,5 +55,35 @@ public struct GeneralSettingsView: View {
         }
         .formStyle(.grouped)
         .padding()
+        .alert("开机启动注册失败", isPresented: $showLoginItemAlert) {
+            Button("去 System Settings 启用") {
+                NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension")!)
+            }
+            Button("知道了", role: .cancel) {}
+        } message: {
+            Text(loginItemError ?? "请前往 System Settings → General → Login Items 手动启用 Sieve GUI。")
+        }
+    }
+
+    private func applyLoginItem(_ on: Bool) {
+        if #available(macOS 13.0, *) {
+            do {
+                if on {
+                    try SMAppService.mainApp.register()
+                } else {
+                    try SMAppService.mainApp.unregister()
+                }
+                // 注册成功，清除错误状态
+                loginItemError = nil
+            } catch {
+                // 注册失败 → 回滚 toggle + 显示错误 banner + alert
+                Task { @MainActor in
+                    appState.settings.loginItemEnabled = !on
+                    loginItemError = "开机启动注册失败：\(error.localizedDescription)。请去 System Settings → General → Login Items 手动启用。"
+                    showLoginItemAlert = true
+                    await GUILog.shared.warn("SMAppService register/unregister failed: \(error.localizedDescription)", category: "settings")
+                }
+            }
+        }
     }
 }
