@@ -18,6 +18,28 @@ public struct RemoveGraylistParams: Encodable, Sendable {
     public init(fingerprint: String) { self.fingerprint = fingerprint }
 }
 
+/// Custom preset 单条规则覆盖参数（SPEC-003 §4 / ipc-protocol §4.3）。
+public struct SetPresetOverridesParams: Encodable, Sendable {
+    /// 目标规则 ID（e.g. "OUT-01"）。
+    public let ruleId: String
+    /// 超时秒数（30~600，daemon 二次校验）。
+    public let timeoutSeconds: Int
+    /// 超时后默认行为（block / allow / redact）。
+    public let defaultOnTimeout: String
+
+    public init(ruleId: String, timeoutSeconds: Int, defaultOnTimeout: String) {
+        self.ruleId = ruleId
+        self.timeoutSeconds = timeoutSeconds
+        self.defaultOnTimeout = defaultOnTimeout
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case ruleId = "rule_id"
+        case timeoutSeconds = "timeout_seconds"
+        case defaultOnTimeout = "default_on_timeout"
+    }
+}
+
 public struct EvaluateParams: Encodable, Sendable {
     public let direction: String
     public let contentKind: String
