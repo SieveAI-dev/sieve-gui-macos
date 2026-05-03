@@ -21,6 +21,9 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
     /// 失联期间用户已经做出的决策，待重连后批量重发（IPCClient inflight 也会兜底，这里冗余防丢）
     private var disconnectedCache: [(id: String, payload: () async -> Void)] = []
 
+    /// 追踪每个 rule_id 上次 deny 时间，5s 内再次弹同 rule → 互换按钮位置
+    private var denyTracker = HipsDenyTracker()
+
     private var countdownTimer: Timer?
     private var visibleSince: Date?
 
@@ -86,9 +89,18 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
         visibleSince = Date()
 
         let panel = ensurePanel()
+        // 5s 内同 rule_id 再次弹窗 → 互换按钮位置（让肌肉记忆失效）
+        let swapped: Bool
+        if let ruleId = req.ruleId {
+            swapped = denyTracker.shouldSwapLayout(ruleId: ruleId)
+        } else {
+            swapped = false
+        }
+
         let view = HipsPopupView(
             request: req,
             appState: appState,
+            swappedLayout: swapped,
             onDecision: { [weak self] decision, remember, hint, phase in
                 self?.handleDecision(decision: decision, remember: remember, hint: hint, phase: phase)
             },
@@ -169,6 +181,11 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
 
     private func handleDecision(decision: Decision, remember: Bool, hint: String?, phase: HipsPhase) {
         guard let req = activeRequest else { return }
+
+        // deny 时记录时间，用于 5s 内同 rule_id 弹窗时互换按钮
+        if decision == .deny, let ruleId = req.ruleId {
+            denyTracker.recordDeny(ruleId: ruleId)
+        }
 
         // 编码层强制：allow_remember=false 时永远 false
         let safeRemember = req.allowRemember ? remember : false

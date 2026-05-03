@@ -4,6 +4,8 @@ import AppKit
 public struct HipsPopupView: View {
     let request: HipsRequest
     @ObservedObject var appState: AppState
+    /// 5s 内同 rule_id 再次弹窗时为 true，互换主副按钮位置（让肌肉记忆失效，主按钮锁拒绝）
+    let swappedLayout: Bool
     let onDecision: (_ decision: Decision, _ remember: Bool, _ hint: String?, _ phase: HipsPhase) -> Void
     let onCloseWithoutDecision: () -> Void
     let isClickSwallowed: () -> Bool
@@ -18,12 +20,14 @@ public struct HipsPopupView: View {
     public init(
         request: HipsRequest,
         appState: AppState,
+        swappedLayout: Bool = false,
         onDecision: @escaping (Decision, Bool, String?, HipsPhase) -> Void,
         onCloseWithoutDecision: @escaping () -> Void,
         isClickSwallowed: @escaping () -> Bool
     ) {
         self.request = request
         self.appState = appState
+        self.swappedLayout = swappedLayout
         self.onDecision = onDecision
         self.onCloseWithoutDecision = onCloseWithoutDecision
         self.isClickSwallowed = isClickSwallowed
@@ -164,30 +168,46 @@ public struct HipsPopupView: View {
 
             HStack(spacing: 10) {
                 Spacer()
-                if !shouldHideAllowAll {
-                    if mainActionLocked || phaseRequiresCmdClick {
-                        // 主按钮锁拒绝时，"允许"作为副选；红阶段需 Command-Click
+                // swappedLayout=true 时位置互换：拒绝在左（borderedProminent）+ 允许在右（bordered）
+                // 即使 swapped，mainActionLocked / phaseRequiresCmdClick 等约束依然生效
+                if swappedLayout {
+                    // 互换布局：拒绝首先渲染（视觉靠左），允许靠右（原来主按钮位置）
+                    Button(action: { tryDeny() }) { Text("拒绝") }
+                        .buttonStyle(.borderedProminent)
+                        .keyboardShortcut(.defaultAction)
+                    if !shouldHideAllowAll {
                         Button(action: { tryAllow() }) {
                             Label(allowLabel, systemImage: "checkmark.circle")
                         }
                         .help(phaseRequiresCmdClick ? "按住 ⌘ 点击允许" : "")
                         .buttonStyle(.bordered)
-                    } else {
-                        Button(action: { tryAllow() }) {
-                            Text("允许")
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .keyboardShortcut(.defaultAction)
                     }
-                }
-                if mainActionLocked {
-                    Button(action: { tryDeny() }) { Text("拒绝") }
-                        .buttonStyle(.borderedProminent)
-                        .keyboardShortcut(.defaultAction)
                 } else {
-                    Button(action: { tryDeny() }) { Text("拒绝") }
-                        .buttonStyle(.bordered)
-                        .keyboardShortcut("d", modifiers: [])
+                    if !shouldHideAllowAll {
+                        if mainActionLocked || phaseRequiresCmdClick {
+                            // 主按钮锁拒绝时，"允许"作为副选；红阶段需 Command-Click
+                            Button(action: { tryAllow() }) {
+                                Label(allowLabel, systemImage: "checkmark.circle")
+                            }
+                            .help(phaseRequiresCmdClick ? "按住 ⌘ 点击允许" : "")
+                            .buttonStyle(.bordered)
+                        } else {
+                            Button(action: { tryAllow() }) {
+                                Text("允许")
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .keyboardShortcut(.defaultAction)
+                        }
+                    }
+                    if mainActionLocked || swappedLayout {
+                        Button(action: { tryDeny() }) { Text("拒绝") }
+                            .buttonStyle(.borderedProminent)
+                            .keyboardShortcut(.defaultAction)
+                    } else {
+                        Button(action: { tryDeny() }) { Text("拒绝") }
+                            .buttonStyle(.bordered)
+                            .keyboardShortcut("d", modifiers: [])
+                    }
                 }
             }
         }
