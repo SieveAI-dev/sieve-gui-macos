@@ -55,7 +55,7 @@ public enum HipsRequestDecoder {
         }
 
         let ruleId = dict["rule_id"]?.asString
-        let context = decodeContext(dict["context"] ?? .null)
+        let context = decodeContextOptional(dict["context"])
         let recommendation = decodeRecommendation(dict["recommendation"] ?? .null)
 
         return HipsRequest(
@@ -95,6 +95,12 @@ public enum HipsRequestDecoder {
             context: decodeContext(d["context"] ?? .null),
             recommendation: decodeRecommendation(d["recommendation"] ?? .null)
         )
+    }
+
+    /// 顶层 context 解码：null / 缺失 → nil（SPEC §6.1.1 context no/null yes）
+    private static func decodeContextOptional(_ value: JSONValue?) -> HipsContext? {
+        guard let value, value != .null else { return nil }
+        return decodeContext(value)
     }
 
     private static func decodeContext(_ value: JSONValue) -> HipsContext {
