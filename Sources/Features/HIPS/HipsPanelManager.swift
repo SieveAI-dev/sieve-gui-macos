@@ -74,6 +74,13 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
     // MARK: - Present
 
     private func present(_ req: HipsRequest) {
+        // 渲染前置校验：单 issue 模式必须有 context
+        guard req.merged || req.context != nil else {
+            // 非 merged 但 context 缺失 → 视为渲染失败
+            handleRenderFailure(req: req, reason: "context missing for single-issue request")
+            return
+        }
+
         activeRequest = req
         appState.setActiveRequest(req)
         visibleSince = Date()
@@ -102,6 +109,28 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
         NSApp.activate(ignoringOtherApps: true)
 
         startCountdown()
+    }
+
+    /// 渲染失败兜底：系统通知 + IPC error -32101（gui_render_failed） + 关闭弹窗
+    /// 调用点：1) 前置校验失败（context 缺失）2) 未来可扩展其他渲染异常
+    func handleRenderFailure(req: HipsRequest, reason: String) {
+        // 日志
+        Task {
+            await GUILog.shared.error("hips render failed [\(req.id)]: \(reason)", category: "hips")
+        }
+        // 系统通知
+        Task {
+            await NotificationCenterAdapter.shared.notifyAutoDeny(ruleTitle: req.title)
+        }
+        // 发送 IPC error -32101 gui_render_failed
+        Task {
+            await ipcClient?.sendErrorResponse(id: req.id, error: .guiRenderFailed)
+        }
+        // 重置状态（不调 closePanel 以避免二次 scheduleNext 错误，直接清状态）
+        activeRequest?.clearRawJSON()
+        activeRequest = nil
+        appState.setActiveRequest(nil)
+        scheduleNext()
     }
 
     private func ensurePanel() -> HipsPanel {
