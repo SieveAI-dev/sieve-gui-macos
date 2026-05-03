@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 public struct DebugWindowView: View {
     @ObservedObject var appState: AppState
@@ -31,8 +32,13 @@ public struct LiveEventsTab: View {
     @ObservedObject var buffer: LiveEventsRingBuffer = .shared
     @State private var sourceFilter: String = "all"
     @State private var levelFilter: String = "all"
-    @State private var grep: String = ""
+    /// 用户正在输入的 grep 文本（原始值，未去抖）
+    @State private var grepInput: String = ""
+    /// 实际用于过滤的 grep 文本（200ms 去抖后生效）
+    @State private var grepDebounced: String = ""
     @State private var autoScroll: Bool = true
+    /// 200ms 去抖 DispatchWorkItem
+    @State private var debounceWork: DispatchWorkItem?
 
     public var body: some View {
         VStack(spacing: 0) {
@@ -43,12 +49,24 @@ public struct LiveEventsTab: View {
                 Picker("级别", selection: $levelFilter) {
                     Text("全部").tag("all"); Text("INFO").tag("info"); Text("WARN").tag("warn"); Text("ERROR").tag("error")
                 }.frame(width: 120)
-                TextField("grep…", text: $grep).textFieldStyle(.roundedBorder).frame(width: 180)
+                TextField("grep…", text: $grepInput)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 180)
+                    .onChange(of: grepInput) { newVal in
+                        debounceWork?.cancel()
+                        let work = DispatchWorkItem {
+                            grepDebounced = newVal
+                        }
+                        debounceWork = work
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: work)
+                    }
                 Toggle("自动滚动", isOn: $autoScroll).toggleStyle(.checkbox)
                 Text("\(buffer.entries.count)/\(LiveEventsRingBuffer.capacity)")
                     .font(.caption2).foregroundStyle(.secondary)
                 Spacer()
+                // 暂停：只冻结 UI 快照，ring buffer 继续记录
                 Button(buffer.paused ? "恢复" : "暂停") { buffer.paused.toggle() }
+                    .help(buffer.paused ? "恢复滚动（ring buffer 一直在记录）" : "暂停滚动查看快照（ring buffer 继续记录）")
                 Button("清空") { buffer.clear() }
             }
             .padding(8)
@@ -56,13 +74,14 @@ public struct LiveEventsTab: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0) {
-                        ForEach(buffer.filter(source: sourceFilter, level: levelFilter, grep: grep)) { e in
+                        ForEach(buffer.filter(source: sourceFilter, level: levelFilter, grep: grepDebounced)) { e in
                             row(e).id(e.id)
                         }
                     }
                 }
                 .onChange(of: buffer.entries.count) { _ in
-                    if autoScroll, let last = buffer.entries.last {
+                    // 暂停时不自动滚动（快照视图）
+                    if autoScroll && !buffer.paused, let last = buffer.entries.last {
                         proxy.scrollTo(last.id, anchor: .bottom)
                     }
                 }

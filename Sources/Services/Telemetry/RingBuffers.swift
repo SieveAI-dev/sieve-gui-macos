@@ -20,10 +20,11 @@ public final class LiveEventsRingBuffer: ObservableObject {
 
     public static let capacity: Int = 1000
     @Published public private(set) var entries: [Entry] = []
+    /// UI 暂停标志（只影响 LiveEventsTab 滚动，不影响 ring buffer 写入）
     @Published public var paused: Bool = false
 
     public func append(_ entry: Entry) {
-        guard !paused else { return }
+        // 始终写入 ring buffer，paused 只影响 UI 层滚动行为
         entries.append(entry)
         if entries.count > Self.capacity {
             entries.removeFirst(entries.count - Self.capacity)
