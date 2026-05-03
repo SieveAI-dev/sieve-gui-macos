@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 public struct HipsPopupView: View {
     let request: HipsRequest
@@ -10,6 +11,9 @@ public struct HipsPopupView: View {
     @State private var rememberChecked: Bool = false
     @State private var contextHint: String = ""
     @State private var lastHovered: Bool = false
+#if DEBUG
+    @State private var showCopyJSONAlert: Bool = false
+#endif
 
     public init(
         request: HipsRequest,
@@ -49,7 +53,47 @@ public struct HipsPopupView: View {
         }
         .frame(minWidth: 540, minHeight: 480)
         .onAppear { rememberChecked = false }
+#if DEBUG
+        .alert("原始 JSON 含敏感字段", isPresented: $showCopyJSONAlert) {
+            Button("确认复制", role: .destructive) { copyRawJSON() }
+            Button("取消", role: .cancel) {}
+        } message: {
+            Text("原始 JSON 可能含 evidence 等敏感字段，确认复制到剪贴板？\n5 秒后将自动清空剪贴板。")
+        }
+        .overlay(alignment: .topTrailing) {
+            if request.rawJSON != nil {
+                Button(action: { showCopyJSONAlert = true }) {
+                    Image(systemName: "doc.on.clipboard")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(8)
+                }
+                .buttonStyle(.plain)
+                .help("复制原始 JSON（DEBUG）")
+                .padding(4)
+            }
+        }
+#endif
     }
+
+#if DEBUG
+    private func copyRawJSON() {
+        guard let raw = request.rawJSON,
+              let str = String(data: raw, encoding: .utf8) else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(str, forType: .string)
+        // 5 秒后清空剪贴板
+        Task {
+            try? await Task.sleep(nanoseconds: 5_000_000_000)
+            await MainActor.run {
+                // 只在剪贴板内容未变时清空（避免清掉用户后续复制的内容）
+                if NSPasteboard.general.string(forType: .string) == str {
+                    NSPasteboard.general.clearContents()
+                }
+            }
+        }
+    }
+#endif
 
     // MARK: - Header
 
