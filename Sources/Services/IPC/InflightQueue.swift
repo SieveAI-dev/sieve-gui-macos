@@ -12,12 +12,22 @@ public actor InflightQueue {
         public let isDecisionResponse: Bool   // 决定优先级：true 优先重发
     }
 
-    public enum AwaitError: Error, Sendable {
+    public enum AwaitError: Error, Sendable, Equatable {
         case rpcError(code: Int, message: String, data: Data?)
         case canceled
         case versionMismatch
         /// 重连后旧 inflight 被丢弃（SPEC-005 §3.4）
         case reconnectedDiscarded
+
+        public static func == (lhs: AwaitError, rhs: AwaitError) -> Bool {
+            switch (lhs, rhs) {
+            case (.rpcError(let c1, let m1, _), .rpcError(let c2, let m2, _)): return c1 == c2 && m1 == m2
+            case (.canceled, .canceled): return true
+            case (.versionMismatch, .versionMismatch): return true
+            case (.reconnectedDiscarded, .reconnectedDiscarded): return true
+            default: return false
+            }
+        }
     }
 
     private var entries: [String: Entry] = [:]

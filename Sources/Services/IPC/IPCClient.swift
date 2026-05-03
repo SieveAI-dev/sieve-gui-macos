@@ -24,7 +24,9 @@ public protocol IPCDelegate: AnyObject, Sendable {
 /// - `NWConnection` 在 `ipcQueue` 上跑，所有 socket I/O 不阻塞主线程
 /// - 状态变更通过 `Task { @MainActor }` 投递到 delegate（delegate 必须在 MainActor 处理）
 public final class IPCClient: @unchecked Sendable {
-    public static let socketPath: String = NSHomeDirectory() + "/.sieve/ipc.sock"
+    public static let defaultSocketPath: String = NSHomeDirectory() + "/.sieve/ipc.sock"
+    /// 向后兼容别名，指向 defaultSocketPath。
+    public static var socketPath: String { defaultSocketPath }
     public static let supportedProtocolVersions: Set<String> = ["v2"]
 
     private static let backoff: [TimeInterval] = [1, 2, 5, 10, 30]
@@ -32,6 +34,9 @@ public final class IPCClient: @unchecked Sendable {
     private static let maxMessageBytes: Int = 1024 * 1024
 
     public weak var delegate: IPCDelegate?
+
+    /// 实例级 socket 路径。测试时注入 tempfile 路径；生产默认走 defaultSocketPath。
+    public let instanceSocketPath: String
 
     private let ipcQueue = DispatchQueue(label: "com.sieve.gui.ipc", qos: .userInitiated)
     private let inflight = InflightQueue()
@@ -48,8 +53,9 @@ public final class IPCClient: @unchecked Sendable {
     private var receiveBuffer = Data()
     private var shouldReconnect = true
 
-    public init(delegate: IPCDelegate? = nil) {
+    public init(delegate: IPCDelegate? = nil, socketPath: String? = nil) {
         self.delegate = delegate
+        self.instanceSocketPath = socketPath ?? IPCClient.defaultSocketPath
     }
 
     // MARK: - Public API
@@ -170,7 +176,7 @@ public final class IPCClient: @unchecked Sendable {
     // MARK: - Connection lifecycle
 
     private func openConnection() {
-        let path = IPCClient.socketPath
+        let path = instanceSocketPath
         guard FileManager.default.fileExists(atPath: path) else {
             logger.warning("ipc socket missing at \(path, privacy: .public)")
             scheduleRetry(reason: .socketMissing)
