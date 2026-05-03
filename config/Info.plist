@@ -32,5 +32,8 @@
 	<true/>
 	<key>SUFeedURL</key>
 	<string>https://updates.sieve.local/appcast.xml</string>
+	<!-- TODO: 用 sparkle generate_keys 生成 EdDSA 密钥对后，将公钥替换 PLACEHOLDER_EDDSA_PUBKEY。私钥不入 git。参考 docs/guides/deployment.md §1.3 -->
+	<key>SUPublicEDKey</key>
+	<string>PLACEHOLDER_EDDSA_PUBKEY</string>
 </dict>
 </plist>

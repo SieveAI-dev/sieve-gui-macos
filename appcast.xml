@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Sieve GUI appcast.xml — Sparkle 2 格式（EdDSA 签名）
+  上传到：https://updates.sieve.local/appcast.xml（与 Info.plist SUFeedURL 对应）
+
+  发布前必读：docs/guides/deployment.md §1.3（generate_keys）+ §3（sign_update + appcast 生成）
+
+  TODO 发布步骤：
+    1. 用 `generate_keys` 生成 EdDSA 密钥对（一次性）
+    2. 公钥填入 project.yml / Info.plist 的 SUPublicEDKey（替换 PLACEHOLDER_EDDSA_PUBKEY）
+    3. 构建 .dmg：见 scripts/build_dmg.sh
+    4. 签名：`sign_update dist/SieveGUI-<VERSION>.dmg -a ~/.sparkle_private_keys`
+    5. 把 sign_update 输出的 sparkle:edSignature + length 填入下方对应 item
+    6. 把 appcast.xml 上传到 CDN
+-->
+<rss version="2.0"
+     xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle"
+     xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>Sieve GUI</title>
+    <link>https://updates.sieve.local/appcast.xml</link>
+    <description>Sieve GUI macOS 自动更新频道</description>
+    <language>zh-Hans</language>
+
+    <!--
+      PLACEHOLDER RELEASE — 发布时替换此 item
+      版本号格式：MARKETING_VERSION（如 0.1.0）对应 CFBundleShortVersionString
+      CURRENT_PROJECT_VERSION 对应 sparkle:version（递增整数）
+    -->
+    <item>
+      <title>Version 0.0.0</title>
+      <pubDate>Sun, 03 May 2026 00:00:00 +0000</pubDate>
+      <description><![CDATA[
+        <h3>Initial template</h3>
+        <p>此 item 是模板占位，发布时替换。</p>
+      ]]></description>
+      <enclosure
+        url="https://updates.sieve.local/releases/SieveGUI-0.0.0.dmg"
+        sparkle:version="0"
+        sparkle:shortVersionString="0.0.0"
+        sparkle:edSignature="PLACEHOLDER_SIGNATURE"
+        length="0"
+        type="application/octet-stream" />
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+    </item>
+
+  </channel>
+</rss>
