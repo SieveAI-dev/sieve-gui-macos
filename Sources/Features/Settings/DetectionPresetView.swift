@@ -62,23 +62,74 @@ public struct DetectionPresetView: View {
     }
 
     private var ruleTablePlaceholder: some View {
-        // 真实实现：拉取 daemon 规则集 + 内联编辑
+        // 真实实现：拉取 daemon 规则集 + 内联编辑（依赖上游 sieve.list_rules，暂以已知规则展示）
         ScrollView {
             VStack(alignment: .leading, spacing: 4) {
-                Text("规则列表加载需 daemon 提供 list_rules method（v1 暂未规定）。当前仅展示已知 critical_lock 规则。")
+                Text("规则列表加载需 daemon 提供 list_rules method（暂未实现）。当前仅展示已知 critical_lock 规则。")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Divider()
-                ForEach(["IN-CR-01", "IN-CR-05", "OUT-07", "OUT-09"], id: \.self) { id in
-                    HStack {
-                        Image(systemName: "lock.fill").foregroundStyle(.secondary)
-                        Text(id).font(.system(.callout, design: .monospaced))
-                        Text("critical_lock").font(.caption).foregroundStyle(.red)
-                        Spacer()
-                    }
+                ForEach(knownCriticalRules, id: \.id) { rule in
+                    ruleRow(rule)
                 }
             }
         }
+    }
+
+    private struct RuleDisplayItem: Identifiable {
+        let id: String
+        let criticalLock: Bool
+    }
+
+    private var knownCriticalRules: [RuleDisplayItem] {
+        [
+            RuleDisplayItem(id: "IN-CR-01", criticalLock: true),
+            RuleDisplayItem(id: "IN-CR-05", criticalLock: true),
+            RuleDisplayItem(id: "OUT-07",   criticalLock: true),
+            RuleDisplayItem(id: "OUT-09",   criticalLock: true),
+            RuleDisplayItem(id: "OUT-01",   criticalLock: false),
+            RuleDisplayItem(id: "OUT-02",   criticalLock: false),
+        ]
+    }
+
+    @ViewBuilder
+    private func ruleRow(_ rule: RuleDisplayItem) -> some View {
+        HStack {
+            if rule.criticalLock {
+                Image(systemName: "lock.fill")
+                    .foregroundStyle(.secondary)
+            } else {
+                Image(systemName: "square.and.pencil")
+                    .foregroundStyle(.secondary)
+            }
+            Text(rule.id)
+                .font(.system(.callout, design: .monospaced))
+            if rule.criticalLock {
+                Text("critical_lock")
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+            Spacer()
+            // disposition / timeout / default 的占位控件，critical_lock 时 disabled
+            HStack(spacing: 6) {
+                Text("disposition")
+                    .font(.caption2)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.gray.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                Text("timeout")
+                    .font(.caption2)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.gray.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+            }
+            .disabled(rule.criticalLock)
+            .opacity(rule.criticalLock ? 0.4 : 1.0)
+            .help(rule.criticalLock ? "Critical 规则强制锁定，不可修改 [SPEC §5.4]" : "")
+        }
+        .padding(.vertical, 4)
     }
 
     private var isDisconnected: Bool {
