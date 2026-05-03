@@ -13,6 +13,7 @@ final class MockDaemonHarness: @unchecked Sendable {
 
     private var serverFd: Int32 = -1
     private var clientFd: Int32 = -1
+    private var acceptedCount: Int = 0  // 历史 accept 总数，用于 waitForNewConnection
     private let lock = NSLock()
     private var receivedLines: [Data] = []
 
@@ -174,10 +175,26 @@ final class MockDaemonHarness: @unchecked Sendable {
                 $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { accept(serverFd, $0, &len) }
             }
             if cfd < 0 { break }
-            clientFd = cfd
+            lock.withLock {
+                clientFd = cfd
+                acceptedCount += 1
+            }
             queue.async { [weak self] in self?.readLoop(fd: cfd) }
         }
     }
+
+    /// 等到 acceptedCount 严格大于 `after`（用于重连场景判断 IPCClient 是否已成功 accept 新连接）
+    func waitForNewConnection(after: Int = 0, timeout: TimeInterval = 5.0) async -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            let cur = lock.withLock { acceptedCount }
+            if cur > after { return true }
+            try? await Task.sleep(nanoseconds: 50_000_000)
+        }
+        return false
+    }
+
+    var connectionCount: Int { lock.withLock { acceptedCount } }
 
     private func readLoop(fd: Int32) {
         var lineBuf = Data()

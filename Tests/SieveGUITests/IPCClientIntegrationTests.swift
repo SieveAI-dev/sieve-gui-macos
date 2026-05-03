@@ -46,10 +46,12 @@ final class TestIPCDelegate: IPCDelegate, @unchecked Sendable {
         }
     }
 
-    func waitForHandshake(timeout: TimeInterval = 5.0) async -> HelloParams? {
+    /// 等到 handshakeParams.count 严格大于 `after` 时返回最新一条；用于多次握手场景区分新旧
+    func waitForHandshake(after: Int = 0, timeout: TimeInterval = 5.0) async -> HelloParams? {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
-            if let p = lock.withLock({ _handshakeParams.last }) { return p }
+            let snapshot = lock.withLock { _handshakeParams }
+            if snapshot.count > after { return snapshot.last }
             try? await Task.sleep(nanoseconds: 50_000_000)
         }
         return nil
@@ -177,13 +179,18 @@ struct IPCClientIntegrationTests {
             Issue.record("versionMismatch 后 inflight 应失败，不应成功")
         }
 
-        // 验证不再重连：状态不应变为 retrying 或 connecting
+        // 验证不再重连：versionMismatch 之后不应出现 connecting / retrying
+        // （初始连接时 connecting / connected 是合法过渡，只查 versionMismatch 之后的尾部）
         try await Task.sleep(nanoseconds: 500_000_000)
         let states = delegate.states
-        #expect(!states.contains(.connecting), "versionMismatch 后不应尝试重连（connecting 状态）")
-        // retrying 状态也不应出现（重连被 shouldReconnect=false 阻止）
-        let hasRetrying = states.contains { if case .retrying = $0 { return true }; return false }
-        #expect(!hasRetrying, "versionMismatch 后不应有 retrying 状态")
+        let mismatchIdx = states.firstIndex { if case .versionMismatch = $0 { return true }; return false }
+        #expect(mismatchIdx != nil, "应至少出现一次 versionMismatch 状态")
+        if let idx = mismatchIdx {
+            let tail = Array(states[(idx + 1)...])
+            #expect(!tail.contains(.connecting), "versionMismatch 后不应再尝试重连（connecting）")
+            let hasRetrying = tail.contains { if case .retrying = $0 { return true }; return false }
+            #expect(!hasRetrying, "versionMismatch 后不应有 retrying 状态")
+        }
     }
 
     // MARK: - Test 3: 重连丢 inflight（SPEC-005 §3.4）
@@ -218,14 +225,12 @@ struct IPCClientIntegrationTests {
         try await Task.sleep(nanoseconds: 150_000_000)  // 让请求入队
 
         // 断开连接（模拟 daemon 重启）
+        let connBefore = daemon.connectionCount
         daemon.disconnectClient()
 
-        // 等 IPCClient 检测到断连 + 发起重连
-        let retrying = await delegate.waitForState(.connecting, timeout: 5.0)
-        #expect(retrying || true)  // 可能直接跳到 retrying 状态，宽松判断
-
-        // 重新接受连接，发第二个 hello
-        try await Task.sleep(nanoseconds: 300_000_000)
+        // 等 IPCClient 退避重连成功（退避 1/2/5/10/30s，首次 1s+ 即可）
+        let reconnected = await daemon.waitForNewConnection(after: connBefore, timeout: 8.0)
+        #expect(reconnected, "IPCClient 应在 8s 内重连成功（退避序列 1/2/5/10/30s）")
         daemon.sendHello(daemonBootId: UUID().uuidString)
 
         // 等待 ipcDidDiscardInflightOnReconnect 回调
@@ -269,19 +274,25 @@ struct IPCClientIntegrationTests {
         #expect(handshakeCount1 == 1, "路径 1：handshake 次数应为 1")
 
         // ── 路径 2：boot_id 变化（daemon 重启）──
+        let conn1 = daemon.connectionCount
         daemon.disconnectClient()
-        try await Task.sleep(nanoseconds: 400_000_000)
+        // 等 IPCClient 退避重连成功（退避 1/2/5/10/30s，首次 1s+ 即可）
+        let reconnected2 = await daemon.waitForNewConnection(after: conn1, timeout: 8.0)
+        #expect(reconnected2, "路径 2：IPCClient 应在 8s 内重连成功")
         let bootId2 = UUID().uuidString  // 新 boot_id
         daemon.sendHello(daemonBootId: bootId2)
-        let h2 = await delegate.waitForHandshake(timeout: 5.0)
+        let h2 = await delegate.waitForHandshake(after: handshakeCount1, timeout: 5.0)
         #expect(h2 != nil, "路径 2：重启后应再次收到 handshake")
         #expect(h2?.daemonBootId == bootId2, "路径 2：boot_id 应是新值")
+        let handshakeCount2 = delegate.handshakeParams.count
 
         // ── 路径 3：boot_id 相同（仅断连，非 daemon 重启）──
+        let conn2 = daemon.connectionCount
         daemon.disconnectClient()
-        try await Task.sleep(nanoseconds: 400_000_000)
+        let reconnected3 = await daemon.waitForNewConnection(after: conn2, timeout: 8.0)
+        #expect(reconnected3, "路径 3：IPCClient 应在 8s 内重连成功")
         daemon.sendHello(daemonBootId: bootId2)  // 相同 boot_id
-        let h3 = await delegate.waitForHandshake(timeout: 5.0)
+        let h3 = await delegate.waitForHandshake(after: handshakeCount2, timeout: 5.0)
         #expect(h3 != nil, "路径 3：仅断连重连也应收到 handshake")
         #expect(h3?.daemonBootId == bootId2, "路径 3：boot_id 应保持不变")
     }
