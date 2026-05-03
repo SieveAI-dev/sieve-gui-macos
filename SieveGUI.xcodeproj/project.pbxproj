@@ -20,6 +20,7 @@
 		2548C7A924CC1CEA23A45E9A /* HelloParams.swift in Sources */ = {isa = PBXBuildFile; fileRef = D401085CF74B31E06809E435 /* HelloParams.swift */; };
 		25B19292FED176FA8EBCEB1C /* SparkleUpdaterBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DDFFBFED9776050AD8CFB7D /* SparkleUpdaterBridge.swift */; };
 		2D619DE9F005F03D9BFB24E5 /* NotificationCenterAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 566EA8D502DCC0819A716E13 /* NotificationCenterAdapter.swift */; };
+		2E8374CA40DD9545AC93343F /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 587532048D6289FDEA1656BD /* Localizable.xcstrings */; };
 		31B2311EEB3FA18A16AC4139 /* MockDaemonHarness.swift in Sources */ = {isa = PBXBuildFile; fileRef = 630ABAF23DBFE03E5D6BB2F3 /* MockDaemonHarness.swift */; };
 		4D06DA7C289DB1ED27F6925D /* HipsDisconnectedCacheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4283A6F0F35B96CA598EB49 /* HipsDisconnectedCacheTests.swift */; };
 		50B1261A8C34993CEAB0AA6D /* SeverityChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47B10A53B2BE0724FA318AAC /* SeverityChip.swift */; };
@@ -116,6 +117,7 @@
 		4F22B5797D704AC38DCB6C26 /* HipsRequestDecoderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HipsRequestDecoderTests.swift; sourceTree = "<group>"; };
 		52CF8B26839E8AB0C7AE0832 /* InspectorPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InspectorPanelView.swift; sourceTree = "<group>"; };
 		566EA8D502DCC0819A716E13 /* NotificationCenterAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationCenterAdapter.swift; sourceTree = "<group>"; };
+		587532048D6289FDEA1656BD /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		5B89837D14FF5F1C9AEB34D3 /* HipsPanelManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HipsPanelManager.swift; sourceTree = "<group>"; };
 		5DDFFBFED9776050AD8CFB7D /* SparkleUpdaterBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SparkleUpdaterBridge.swift; sourceTree = "<group>"; };
 		60B8F0223655226043514A56 /* HipsRedLineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HipsRedLineTests.swift; sourceTree = "<group>"; };
@@ -301,6 +303,7 @@
 				810B13CB7131D07C80CBF9D5 /* App */,
 				875D6FD3EBF5BA324D598270 /* Features */,
 				A4E7360CB033E1518E269404 /* Models */,
+				93A7A31010AC8EB4CDF3AA07 /* Resources */,
 				E3A021D59DED50828897F20C /* Services */,
 				B48965BF1BD22E9CB3F8685C /* UI */,
 			);
@@ -356,6 +359,14 @@
 				CDFBB3E2B67D2CE041EFAA6A /* GUILog.swift */,
 			);
 			path = Logger;
+			sourceTree = "<group>";
+		};
+		93A7A31010AC8EB4CDF3AA07 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				587532048D6289FDEA1656BD /* Localizable.xcstrings */,
+			);
+			path = Resources;
 			sourceTree = "<group>";
 		};
 		A4E7360CB033E1518E269404 /* Models */ = {
@@ -479,6 +490,7 @@
 			buildConfigurationList = 73E9C1B6A979834BA512FF39 /* Build configuration list for PBXNativeTarget "SieveGUI" */;
 			buildPhases = (
 				7B153B090E33F2EC69E3D8CC /* Sources */,
+				9D0974DBEF7F0029DA3C403B /* Resources */,
 				32538DCF4C71D8E51787F48A /* Frameworks */,
 			);
 			buildRules = (
@@ -529,6 +541,7 @@
 			knownRegions = (
 				Base,
 				en,
+				"zh-Hans",
 			);
 			mainGroup = ECD513E9C3126E4039D3FE7A;
 			minimizedProjectReferenceProxies = 1;
@@ -546,6 +559,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		9D0974DBEF7F0029DA3C403B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2E8374CA40DD9545AC93343F /* Localizable.xcstrings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		6B857CAC39A932426A19C8C9 /* Sources */ = {
