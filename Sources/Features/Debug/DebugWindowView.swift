@@ -4,6 +4,7 @@ import Combine
 public struct DebugWindowView: View {
     @ObservedObject var appState: AppState
     let ipcClient: IPCClient
+    @EnvironmentObject private var replayStore: DebugReplayStore
 
     public init(appState: AppState, ipcClient: IPCClient) {
         self.appState = appState
@@ -15,6 +16,7 @@ public struct DebugWindowView: View {
             LiveEventsTab(appState: appState)
                 .tabItem { Label("实时事件", systemImage: "waveform") }
             RuleEvaluationTab(ipcClient: ipcClient)
+                .environmentObject(replayStore)
                 .tabItem { Label("规则评估", systemImage: "function") }
             IPCMonitorTab()
                 .tabItem { Label("IPC 监视", systemImage: "antenna.radiowaves.left.and.right") }
@@ -118,14 +120,30 @@ public struct LiveEventsTab: View {
 
 public struct RuleEvaluationTab: View {
     let ipcClient: IPCClient
+    @EnvironmentObject private var replayStore: DebugReplayStore
     @State private var direction: String = "outbound"
     @State private var contentKind: String = "tool_use_input"
     @State private var payload: String = ""
     @State private var evaluating: Bool = false
     @State private var resultText: String = ""
+    @State private var replayBannerVisible: Bool = false
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 10) {
+            if replayBannerVisible {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.uturn.left.circle.fill").foregroundStyle(Color.accentColor)
+                    Text("已从历史记录填入 payload").font(.caption)
+                    Spacer()
+                    Button(action: { replayBannerVisible = false }) {
+                        Image(systemName: "xmark").font(.caption2)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 8).padding(.vertical, 4)
+                .background(Color.accentColor.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
             HStack {
                 Picker("方向", selection: $direction) {
                     Text("Outbound").tag("outbound"); Text("Inbound").tag("inbound")
@@ -158,6 +176,14 @@ public struct RuleEvaluationTab: View {
             .border(.gray.opacity(0.3))
         }
         .padding()
+        .onAppear { applyPrefilledIfNeeded() }
+        .onChange(of: replayStore.prefilledPrompt) { _ in applyPrefilledIfNeeded() }
+    }
+
+    private func applyPrefilledIfNeeded() {
+        guard let prompt = replayStore.consumePrefilled() else { return }
+        payload = prompt
+        replayBannerVisible = true
     }
 
     private func evaluate() {

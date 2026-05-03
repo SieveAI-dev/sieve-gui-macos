@@ -58,8 +58,10 @@ public struct InspectorPanelView: View {
                             .foregroundStyle(.green)
                     }
                     Spacer()
-                    Button("调试重放") {
-                        WindowManager.shared.openDebug()
+                    Button("在调试窗口重放") {
+                        // 用 ruleId 构建最小可用 evaluate payload（真实 prompt 不存储，ADR-011）
+                        let replayPayload = replayPayloadFor(row)
+                        WindowManager.shared.replayInDebug(prompt: replayPayload)
                     }
                     .disabled(row.requestId == nil)
                     Button("复制 ID") {
@@ -98,6 +100,20 @@ public struct InspectorPanelView: View {
                 MaskedField(row.evidenceMetaJSON ?? "", style: .clearWhenUnlocked, isUnlocked: false)
             }
         }
+    }
+
+    /// 构建 RuleEvaluation Tab 可用的最小重放 payload。
+    /// 真实 prompt 不存储（ADR-011），此处用 rule_id + request_id 构造参考 payload 供调试。
+    private func replayPayloadFor(_ row: AuditEventRow) -> String {
+        var lines: [String] = [
+            "# 重放来源：历史记录 #\(row.id)",
+            "# rule_id: \(row.ruleId)",
+            "# disposition: \(row.disposition)",
+        ]
+        if let reqId = row.requestId { lines.append("# request_id: \(reqId)") }
+        lines.append("")
+        lines.append("# 原始 prompt 不存储（ADR-011）。请在此输入要测试的内容后点「评估」。")
+        return lines.joined(separator: "\n")
     }
 
     private func fieldRow(_ key: String, _ value: String, mono: Bool = false) -> some View {

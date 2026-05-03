@@ -39,10 +39,19 @@ public final class WindowManager: NSObject {
     public func openDebug() {
         if let w = debugWindow { focus(w); return }
         let view = DebugWindowView(appState: AppState.shared, ipcClient: ipcClient ?? IPCClient())
+            .environmentObject(DebugReplayStore.shared)
         let host = NSHostingController(rootView: view)
         let w = makeWindow(title: "Sieve 调试", contentVC: host, size: NSSize(width: 960, height: 600))
         debugWindow = w
         focus(w)
+    }
+
+    /// History Inspector → Debug RuleEvaluation Tab 重放入口。
+    /// 设置 prefilledPrompt → 打开/聚焦 Debug 窗口。
+    /// RuleEvaluationTab.onAppear 会读取并填入 payload textarea。
+    public func replayInDebug(prompt: String) {
+        DebugReplayStore.shared.setPrefilled(prompt)
+        openDebug()
     }
 
     private var onboardingSession: NSApplication.ModalSession?
