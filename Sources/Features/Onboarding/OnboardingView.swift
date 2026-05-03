@@ -178,19 +178,66 @@ public struct OnboardingView: View {
         }
     }
 
+    @State private var demoRunning: Bool = false
+    @State private var demoResult: String = ""
+
     private var finishStep: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("完成").font(.title2.weight(.semibold))
             Text("Sieve 已就绪。你可以从菜单栏图标随时打开设置、历史与调试窗口。")
+            Text("试试下面的 demo：发一个包含 BIP39 助记词的示例 prompt，体验真实的 HIPS 弹窗拦截流程。")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+            if !demoResult.isEmpty {
+                HStack(spacing: 6) {
+                    Image(systemName: demoResult.hasPrefix("✓") ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                        .foregroundStyle(demoResult.hasPrefix("✓") ? .green : .orange)
+                    Text(demoResult).font(.caption)
+                }
+            }
             Spacer()
             HStack {
-                Button("运行 demo") { /* 占位：发一个 evaluate 请求触发 demo 弹窗 */ }
+                Button(demoRunning ? "请求中…" : "运行 demo") { runDemo() }
+                    .disabled(demoRunning)
                 Spacer()
                 Button("完成") {
                     appState.settings.onboardingCompletedAt = Date()
                     onClose()
                 }
                 .buttonStyle(.borderedProminent)
+            }
+        }
+    }
+
+    private func runDemo() {
+        demoRunning = true
+        demoResult = ""
+        // Demo payload: 触发 OUT-* 规则的 BIP39 助记词 + 地址片段
+        let demoPayload = """
+            transfer 0x71C7656EC7ab88b098defB751B7401B5f6d8976F amount=2.5 ETH
+            seed: abandon ability able about above absent absorb abstract absurd abuse access accident
+            """
+        Task {
+            do {
+                _ = try await ipcClient.sendRequest(
+                    id: UUID().uuidString,
+                    method: "sieve.evaluate",
+                    params: EvaluateParams(
+                        direction: "outbound",
+                        contentKind: "tool_use_input",
+                        payload: demoPayload,
+                        sourceAgent: "claude"
+                    )
+                )
+                await MainActor.run {
+                    demoRunning = false
+                    demoResult = "✓ evaluate 请求已发送，如 daemon 判断命中规则将弹出 HIPS 弹窗"
+                }
+            } catch {
+                await MainActor.run {
+                    demoRunning = false
+                    demoResult = "⚠ daemon 未连接，请先确保 sieve daemon 运行中（\(error.localizedDescription)）"
+                }
             }
         }
     }
