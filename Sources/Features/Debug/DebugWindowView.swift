@@ -193,30 +193,48 @@ public struct RuleEvaluationTab: View {
 
 public struct IPCMonitorTab: View {
     @ObservedObject var monitor: IPCMonitorRingBuffer = .shared
+    /// 当前选中行（点击展开详情面板）
+    @State private var selectedEntry: IPCMonitorRingBuffer.Entry?
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 12) {
-                StatCard(title: "握手次数", value: "\(monitor.handshakeCount)")
-                StatCard(title: "重连次数", value: "\(monitor.reconnectCount)")
-                StatCard(title: "Inflight", value: "\(monitor.inflightCount)")
-            }
-            Divider()
-            HStack {
-                Text("消息流").font(.caption.weight(.semibold))
-                Spacer()
-                Text("\(monitor.entries.count)/\(IPCMonitorRingBuffer.capacity)")
-                    .font(.caption2).foregroundStyle(.secondary)
-            }
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 0) {
-                    ForEach(monitor.entries.reversed()) { e in
-                        row(e)
+        HSplitView {
+            // 左侧：消息列表
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 12) {
+                    StatCard(title: "握手次数", value: "\(monitor.handshakeCount)")
+                    StatCard(title: "重连次数", value: "\(monitor.reconnectCount)")
+                    StatCard(title: "Inflight", value: "\(monitor.inflightCount)")
+                }
+                Divider()
+                HStack {
+                    Text("消息流").font(.caption.weight(.semibold))
+                    Spacer()
+                    Text("\(monitor.entries.count)/\(IPCMonitorRingBuffer.capacity)")
+                        .font(.caption2).foregroundStyle(.secondary)
+                }
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 0) {
+                        ForEach(monitor.entries.reversed()) { e in
+                            row(e)
+                                .background(selectedEntry?.id == e.id ? Color.accentColor.opacity(0.12) : Color.clear)
+                                .onTapGesture { selectedEntry = (selectedEntry?.id == e.id) ? nil : e }
+                        }
                     }
                 }
             }
+            .padding()
+            .frame(minWidth: 500)
+
+            // 右侧：详情面板
+            if let entry = selectedEntry {
+                IPCEntryDetailPanel(entry: entry)
+                    .frame(minWidth: 280, idealWidth: 320)
+            } else {
+                Text("点击左侧行查看详情")
+                    .foregroundStyle(.secondary)
+                    .frame(minWidth: 280, idealWidth: 320)
+            }
         }
-        .padding()
     }
 
     private func row(_ e: IPCMonitorRingBuffer.Entry) -> some View {
@@ -226,18 +244,65 @@ public struct IPCMonitorTab: View {
                 .frame(width: 16)
             Text(timeLabel(e.timestamp)).foregroundStyle(.secondary).frame(width: 90, alignment: .leading)
             Text(e.method).frame(width: 220, alignment: .leading).lineLimit(1)
-            Text(e.messageId ?? "—").foregroundStyle(.secondary).frame(width: 240, alignment: .leading).lineLimit(1)
+            Text(e.messageId ?? "—").foregroundStyle(.secondary).frame(width: 200, alignment: .leading).lineLimit(1)
             Text("\(e.bytes)B").foregroundStyle(.secondary).frame(width: 60, alignment: .trailing)
-            // params 列硬显示「不展示」（SPEC-005 红线）
+            // params 硬红线：永不展示（SPEC-005）
             Text("params: 不展示").foregroundStyle(.tertiary)
             Spacer()
         }
         .font(.system(.caption, design: .monospaced))
-        .padding(.horizontal, 4).padding(.vertical, 2)
+        .padding(.horizontal, 4).padding(.vertical, 3)
+        .contentShape(Rectangle())
     }
 
     private func timeLabel(_ d: Date) -> String {
         let f = DateFormatter(); f.dateFormat = "HH:mm:ss.SSS"
+        return f.string(from: d)
+    }
+}
+
+/// IPC 条目详情面板（展示 method / id / bytes / timestamp，永不展示 params）
+public struct IPCEntryDetailPanel: View {
+    let entry: IPCMonitorRingBuffer.Entry
+
+    public var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("消息详情").font(.headline)
+            Divider()
+            detailRow(label: "Method", value: entry.method)
+            detailRow(label: "ID", value: entry.messageId ?? "—")
+            detailRow(label: "Bytes", value: "\(entry.bytes) B")
+            detailRow(label: "Timestamp", value: timeLabel(entry.timestamp))
+            detailRow(label: "Direction", value: entry.direction == .inbound ? "↓ inbound" : "↑ outbound")
+            Divider()
+            // 硬红线：params 永不展示
+            HStack(spacing: 6) {
+                Image(systemName: "eye.slash").foregroundStyle(.secondary)
+                Text("params 不展示（SPEC-005 红线）")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+        }
+        .padding()
+    }
+
+    private func detailRow(label: String, value: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Text(label)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 80, alignment: .leading)
+            Text(value)
+                .font(.system(.caption, design: .monospaced))
+                .textSelection(.enabled)
+            Spacer()
+        }
+    }
+
+    private func timeLabel(_ d: Date) -> String {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return f.string(from: d)
     }
 }
