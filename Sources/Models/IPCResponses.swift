@@ -167,6 +167,40 @@ public struct RuleSummary: Decodable, Sendable, Identifiable {
     }
 }
 
+// MARK: - sieve.purge_history §11B
+
+/// purge_history 操作结果。对照 SPEC-005 §11B result 字段表。
+public struct PurgeHistoryResult: Decodable, Sendable {
+    /// daemon 实际完成删除的时刻（UTC）
+    public let purgedAt: Date
+    /// 本次删除的 audit event 行数（0 = 历史本就为空，也算成功）
+    public let rowsDeleted: UInt64
+
+    enum CodingKeys: String, CodingKey {
+        case purgedAt = "purged_at"
+        case rowsDeleted = "rows_deleted"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        rowsDeleted = try c.decode(UInt64.self, forKey: .rowsDeleted)
+        let s = try c.decode(String.self, forKey: .purgedAt)
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let d = f.date(from: s) {
+            purgedAt = d
+        } else {
+            f.formatOptions = [.withInternetDateTime]
+            guard let d = f.date(from: s) else {
+                throw DecodingError.dataCorruptedError(
+                    forKey: .purgedAt, in: c,
+                    debugDescription: "purged_at is not a valid ISO8601 date: \(s)")
+            }
+            purgedAt = d
+        }
+    }
+}
+
 public struct HealthResultDTO: Decodable, Sendable {
     public let ok: Bool
     public let checks: [Check]

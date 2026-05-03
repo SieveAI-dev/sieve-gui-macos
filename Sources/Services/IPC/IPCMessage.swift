@@ -40,6 +40,22 @@ public struct SetPresetOverridesParams: Encodable, Sendable {
     }
 }
 
+/// sieve.purge_history 请求参数（SPEC-005 §11B）。
+/// confirmed_at：Touch ID 通过时刻（UTC ISO8601），用于 daemon 审计日志。
+public struct PurgeHistoryParams: Encodable, Sendable {
+    public let confirmedAt: String
+
+    public init(confirmedAt: Date) {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        self.confirmedAt = f.string(from: confirmedAt)
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case confirmedAt = "confirmed_at"
+    }
+}
+
 public struct EvaluateParams: Encodable, Sendable {
     public let direction: String
     public let contentKind: String

@@ -6,6 +6,12 @@ public struct PrivacyDataSettingsView: View {
 
     @State private var showGraylist: Bool = false
     @State private var showClearConfirm: Bool = false
+    @State private var purging: Bool = false
+    @State private var purgeResultMessage: String?
+    @State private var showPurgeResult: Bool = false
+    @State private var purgeErrorMessage: String?
+    @State private var showPurgeError: Bool = false
+    @State private var purgeUnavailable: Bool = false   // -32601 降级标记
 
     public var body: some View {
         Form {
@@ -16,10 +22,24 @@ public struct PrivacyDataSettingsView: View {
                 Button("管理灰名单…") { showGraylist = true }
             }
             Section("危险操作") {
-                Button(role: .destructive) {
-                    showClearConfirm = true
-                } label: {
-                    Label("清空历史…", systemImage: "trash")
+                VStack(alignment: .leading, spacing: 6) {
+                    Button(role: .destructive) {
+                        showClearConfirm = true
+                    } label: {
+                        HStack {
+                            if purging {
+                                ProgressView().scaleEffect(0.7).padding(.trailing, 2)
+                            }
+                            Label("清空历史…", systemImage: "trash")
+                        }
+                    }
+                    .disabled(purging || purgeUnavailable)
+
+                    if purgeUnavailable {
+                        Text("daemon 版本过旧，不支持清空历史（需升级 daemon）")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                    }
                 }
             }
         }
@@ -36,13 +56,82 @@ public struct PrivacyDataSettingsView: View {
         } message: {
             Text("此操作不可逆，且需要 Touch ID 二次确认。")
         }
+        .alert("清空完成", isPresented: $showPurgeResult) {
+            Button("好") {}
+        } message: {
+            Text(purgeResultMessage ?? "")
+        }
+        .alert("清空失败", isPresented: $showPurgeError) {
+            Button("好") {}
+        } message: {
+            Text(purgeErrorMessage ?? "")
+        }
     }
 
-    private func clearHistoryWithUnlock() async {
+    // MARK: - 清空历史流程（SPEC-005 §11B）
+
+    func clearHistoryWithUnlock() async {
+        // Step 1：Touch ID 二次确认
         let ok = await TouchIDService.shared.authenticate(reason: "确认清空 Sieve 历史记录")
-        guard ok else { return }
-        // 清空通过 daemon API 完成（GUI 不写 audit.db）。这里仅占位：未来添加 sieve.purge_history 方法。
-        await GUILog.shared.warn("用户触发清空历史（待 daemon 实现 sieve.purge_history）")
+        guard ok else {
+            // Touch ID 失败 → 不调 IPC
+            await GUILog.shared.warn("Touch ID 失败，清空历史已取消", category: "privacy")
+            return
+        }
+
+        // Step 2：调 IPC sieve.purge_history
+        let confirmedAt = Date()
+        await MainActor.run { purging = true }
+        do {
+            let data = try await ipcClient.sendRequest(
+                id: UUID().uuidString,
+                method: "sieve.purge_history",
+                params: PurgeHistoryParams(confirmedAt: confirmedAt)
+            )
+            let result = try JSONDecoder().decode(PurgeHistoryResult.self, from: data)
+            await MainActor.run {
+                purging = false
+                // 成功：显示结果 + 广播刷新通知（History 窗口监听后 reload）
+                purgeResultMessage = "已清空 \(result.rowsDeleted) 条历史记录"
+                showPurgeResult = true
+                NotificationCenter.default.post(name: .sieveHistoryPurged, object: nil)
+            }
+            await GUILog.shared.info("purge_history 成功：rows_deleted=\(result.rowsDeleted)", category: "privacy")
+        } catch let err as InflightQueue.AwaitError {
+            await MainActor.run { purging = false }
+            switch err {
+            case .rpcError(let code, let message, _):
+                if code == -32007 {
+                    // purge_in_progress：提示正在进行
+                    await MainActor.run {
+                        purgeErrorMessage = "清空操作正在进行中，请稍候"
+                        showPurgeError = true
+                    }
+                } else if code == -32601 {
+                    // method_not_found：daemon 版本过旧，降级禁用按钮
+                    await MainActor.run {
+                        purgeUnavailable = true
+                    }
+                    await GUILog.shared.warn("sieve.purge_history -32601: daemon 版本过旧", category: "privacy")
+                } else {
+                    await MainActor.run {
+                        purgeErrorMessage = "清空失败：\(message)"
+                        showPurgeError = true
+                    }
+                }
+            default:
+                await MainActor.run {
+                    purgeErrorMessage = "清空失败，请检查 daemon 连接状态"
+                    showPurgeError = true
+                }
+            }
+        } catch {
+            await MainActor.run {
+                purging = false
+                purgeErrorMessage = "清空失败：\(error.localizedDescription)"
+                showPurgeError = true
+            }
+        }
     }
 }
 

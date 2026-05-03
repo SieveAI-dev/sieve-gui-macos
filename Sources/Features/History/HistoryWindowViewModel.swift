@@ -1,6 +1,13 @@
 import Foundation
 import Combine
 
+// MARK: - Notification 名称
+
+public extension Notification.Name {
+    /// purge_history 成功后广播：History 窗口监听后重新 reload。
+    static let sieveHistoryPurged = Notification.Name("com.sieve.gui.historyPurged")
+}
+
 @MainActor
 public final class HistoryWindowViewModel: ObservableObject {
     @Published public private(set) var rows: [AuditEventRow] = []
@@ -13,6 +20,7 @@ public final class HistoryWindowViewModel: ObservableObject {
     private var lastSeenId: Int64 = 0
     private let maxKept: Int = 200
     private var keywordCancellable: AnyCancellable?
+    private var purgeObserverToken: AnyCancellable?
 
     public init(reader: AuditDBReader) {
         self.reader = reader
@@ -21,6 +29,14 @@ public final class HistoryWindowViewModel: ObservableObject {
             .debounce(for: .milliseconds(200), scheduler: DispatchQueue.main)
             .sink { [weak self] kw in
                 self?.filter.keyword = kw.isEmpty ? nil : kw
+                self?.reload()
+            }
+        // 监听清空历史通知 → 刷新列表（用 Combine publisher 管理生命周期，避免 deinit @MainActor 隔离问题）
+        purgeObserverToken = NotificationCenter.default
+            .publisher(for: .sieveHistoryPurged)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.lastSeenId = 0
                 self?.reload()
             }
     }
