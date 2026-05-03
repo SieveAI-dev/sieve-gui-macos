@@ -119,9 +119,7 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
             await GUILog.shared.error("hips render failed [\(req.id)]: \(reason)", category: "hips")
         }
         // 系统通知
-        Task {
-            await NotificationCenterAdapter.shared.notifyAutoDeny(ruleTitle: req.title)
-        }
+        NotificationCenterAdapter.shared.notifyAutoDeny(ruleTitle: req.title)
         // 发送 IPC error -32101 gui_render_failed
         Task {
             await ipcClient?.sendErrorResponse(id: req.id, error: .guiRenderFailed)
