@@ -5,6 +5,13 @@
 
 ---
 
+## [Unreleased] — 2026-05-04
+
+### 文档（联调阶段）
+- 新增 `docs/guides/integration-test-checklist.md`（1571 行，20 章节，125 项 checklist）
+- 覆盖手动联调全部场景：协议握手 / HIPS 11 项 / 三态决策 / 菜单栏 / Settings 六 Tab / History / Debug 四 Tab / Onboarding 6 步 / Toast / 重连 / v2.0+ 兼容扩展 / OUT/IN 规则 / 安全红线 / 性能预算 / 问题登记
+- 每项含操作步骤 / 代码 file:line 跳转链接 / 触发条件 / 预期效果 / 失败排查路径 / 复选框（`[ ]` `[x]` `[!]` `[s]`）
+
 ## [Unreleased] — 2026-05-03
 
 ### 协议侧（SPEC-005 v2 上游同步，BREAKING）
