@@ -1,0 +1,100 @@
+Sieve GUI for macOS — License Status
+=====================================
+
+> Project state: Pre-GA (private repo, public at GA together with sieve daemon).
+> Linked decisions: sieve daemon ADR-011 (private until GA) / ADR-029 (free-first).
+
+This repository contains TWO categories of content with DIFFERENT license terms,
+mirroring the sieve daemon repository (../sieve/LICENSE).
+
+---
+
+## 1. Documentation
+
+Scope: `docs/`, `README.md`, `CHANGELOG.md`, `CLAUDE.md`, `tasks/PROGRESS.md`,
+       `tasks/lessons.md`, and any other Markdown / config files NOT inside the
+       Swift source tree.
+
+License: **Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International
+         (CC BY-NC-SA 4.0)**
+URL:     https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+You are free to:
+
+  - Share — copy and redistribute in any medium or format
+  - Adapt — remix, transform, build upon
+
+Under the following terms:
+
+  - Attribution — credit to "Sieve project" with link to the upstream repo
+  - NonCommercial — not for commercial purposes (commercial reuse requires
+    written permission: doskey.lee@gmail.com)
+  - ShareAlike — derivatives must use the same license
+
+Rationale: GUI documentation includes architecture, IPC contract, ADRs, and
+HIPS UX design rationale. These are "trust artifacts" — published at GA so
+users can verify the security model before installing the binary, but should
+not be repackaged as competitor material without permission.
+
+---
+
+## 2. Source Code
+
+Scope: All Swift source code under `Sources/`, `Tests/`, `Package.swift`,
+       `project.yml`, `config/Info.plist`, `config/SieveGUI.entitlements`,
+       `appcast.xml`, `scripts/`, and any Swift / shell / configuration files
+       required to build and ship the macOS app.
+
+License: **MIT License** — see Section 4 below for the full text.
+
+The MIT terms apply at GA (when the repository is made public). Pre-GA the
+repository is private and not licensed for redistribution.
+
+---
+
+## 3. Trademarks
+
+"Sieve" is the project codename. See ../sieve/LICENSE §3 for trademark notes
+that apply equally to GUI assets (icon, app name, menu-bar branding).
+
+Use of the name "Sieve" or the Sieve menu-bar icon for derivative products
+requires written permission.
+
+---
+
+## 4. MIT License (applies to source code per Section 2)
+
+Copyright (c) 2026 Sieve project contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+## 5. Contact
+
+For commercial licensing, partnership, or trademark inquiries:
+
+  - Email: doskey.lee@gmail.com
+  - Subject prefix: [SIEVE-LICENSE]
+
+For security vulnerabilities: see [SECURITY.md](./SECURITY.md).
+
+---
+
+Last updated: 2026-05-07
