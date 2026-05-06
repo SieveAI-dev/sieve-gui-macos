@@ -103,6 +103,10 @@ tmp/
 scratch/
 playground/
 
+# ─── tasks 历史归档（含个人 todo / 历史快照，不公开）──────────
+# 公开三件套（PROGRESS.md / lessons.md）保留入库
+tasks/_archive/
+
 # ─── 不该入仓的 IPC 测试副产物 ───────────────────────────────
 ipc.sock
 *.sock
