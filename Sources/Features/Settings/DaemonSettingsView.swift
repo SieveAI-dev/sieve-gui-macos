@@ -4,6 +4,9 @@ public struct DaemonSettingsView: View {
     @ObservedObject var appState: AppState
     let ipcClient: IPCClient
 
+    @State private var health: HealthResultDTO?
+    @State private var healthFetchedAt: Date?
+
     public var body: some View {
         Form {
             Section("运行状态") {
@@ -19,6 +22,19 @@ public struct DaemonSettingsView: View {
                 }
                 LabeledContent("最后握手") {
                     Text(appState.lastHandshakeAt.map { dateLabel($0) } ?? "—")
+                }
+            }
+            Section(listenersHeader) {
+                if let listeners = listenerRows, !listeners.isEmpty {
+                    ForEach(listeners) { l in
+                        LabeledContent("\(l.providerId)（:\(l.port)）") {
+                            Text(l.protocol).font(.system(.caption, design: .monospaced))
+                        }
+                    }
+                } else if health == nil {
+                    Text("点击下方 “Health Check” 拉取 listener 列表").foregroundStyle(.secondary).font(.callout)
+                } else {
+                    Text("daemon 暂未上报 listener").foregroundStyle(.secondary).font(.callout)
                 }
             }
             Section("配置") {
@@ -40,11 +56,7 @@ public struct DaemonSettingsView: View {
                             }
                         }
                     }
-                    Button("Health Check") {
-                        Task {
-                            _ = try? await ipcClient.sendRequest(id: UUID().uuidString, method: "sieve.health")
-                        }
-                    }
+                    Button("Health Check") { Task { await fetchHealth() } }
                     Button("运行 sieve doctor…") {
                         runSieveDoctor()
                     }
@@ -54,6 +66,35 @@ public struct DaemonSettingsView: View {
         }
         .formStyle(.grouped)
         .padding()
+        .task {
+            // 首次进入时拉一次，让 Listeners 段非空。
+            await fetchHealth()
+        }
+    }
+
+    private var listenersHeader: String {
+        if let at = healthFetchedAt {
+            return "Listeners（health @ \(dateLabel(at))）"
+        }
+        return "Listeners"
+    }
+
+    /// 优先用 listeners[]；旧 daemon 退化到 listen 单值。
+    private var listenerRows: [HealthResultDTO.ListenerSnapshot]? {
+        health?.effectiveListeners
+    }
+
+    private func fetchHealth() async {
+        do {
+            let data = try await ipcClient.sendRequest(id: UUID().uuidString, method: "sieve.health")
+            let dto = try JSONDecoder().decode(HealthResultDTO.self, from: data)
+            await MainActor.run {
+                self.health = dto
+                self.healthFetchedAt = Date()
+            }
+        } catch {
+            await GUILog.shared.warn("sieve.health failed: \(error)", category: "settings")
+        }
     }
 
     private var isDisconnected: Bool {

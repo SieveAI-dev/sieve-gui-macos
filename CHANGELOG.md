@@ -13,6 +13,14 @@
 
 ### Added
 
+- **Phase 1D：unix-style 协议适配（ADR-026 + ADR-028）**
+  - `HealthResultDTO` 全量重写，对齐 SPEC-005 §9.5 真实 schema（之前是 `ok/checks/metrics{p99/throughput/goroutines}` 早期 mock 占位，从未真联调）
+  - 新增 `ListenerSnapshot { addr, port, provider_id, protocol }` 与 `effectiveListeners` 兼容访问器（优先 `listeners[]`，旧 daemon 退化到 `listen` 单值）
+  - `DaemonSettingsView` 加 "Listeners" 段，渲染 multi-listener；首次进入自动拉一次 `sieve.health`
+  - `OnboardingView.runDoctor` 基于真实 health 字段构造 5 项 checks（替换占位）
+  - 新增 `HealthResultDTOTests`（7 个 case：完整字段 / 旧 daemon 兼容 / 暂停态 / custom preset overrides / id 派生 / 必填缺失 / 非法时间戳）
+  - 测试基线：127 → 134（+7）
+  - **协议契约**：未 bump `protocol_version`（v2 内向后兼容扩展）；wire 字段 `gui_popup` / method 名 `sieve.request_decision*` 全部保留向后兼容（ADR-028 选择最大兼容路径）
 - **Phase 1A 完成**：49 个 Swift 源文件 / 5593 行；`xcodebuild` 干净通过；20/20 单元测试全绿
 - 单 Xcode target 工程骨架（`project.yml` + XcodeGen），目录布局符合 [ADR-009](docs/design/adr/ADR-009-project-layout-single-target.md)
 - Models 层全套：HipsRequest 五模板解码 + 编码层强制 `remember=false` 红线

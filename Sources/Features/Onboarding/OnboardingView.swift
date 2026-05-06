@@ -262,21 +262,39 @@ public struct OnboardingView: View {
                 let data = try await ipcClient.sendRequest(id: UUID().uuidString, method: "sieve.health")
                 let dto = try JSONDecoder().decode(HealthResultDTO.self, from: data)
                 await MainActor.run {
-                    self.doctorResults = dto.checks.map { DoctorCheck(name: $0.name + ($0.detail.map { "（\($0)）" } ?? ""), ok: $0.ok) }
+                    self.doctorResults = Self.checks(from: dto)
                 }
             } catch {
                 // 失联：daemon 不通也展示一组占位条目，引导用户跑 sieve setup
                 await MainActor.run {
                     self.doctorResults = [
                         DoctorCheck(name: "ipc.sock 可连接", ok: false),
-                        DoctorCheck(name: "ANTHROPIC_BASE_URL 配置", ok: false),
-                        DoctorCheck(name: "PreToolUse hook 注册", ok: false),
-                        DoctorCheck(name: "launchd plist 存在", ok: false),
-                        DoctorCheck(name: "Canary 自检", ok: false)
+                        DoctorCheck(name: "daemon listener 已绑定", ok: false),
+                        DoctorCheck(name: "audit.db 可访问", ok: false),
+                        DoctorCheck(name: "规则引擎已加载", ok: false),
+                        DoctorCheck(name: "client 握手成功", ok: false)
                     ]
                 }
             }
         }
+    }
+
+    /// 基于 SPEC-005 §9.5 health 字段构造体检条目（ADR-026 后 listeners[] 优先）。
+    static func checks(from dto: HealthResultDTO) -> [DoctorCheck] {
+        let listeners = dto.effectiveListeners
+        let listenerSummary = listeners
+            .map { "\($0.port) [\($0.providerId)/\($0.`protocol`)]" }
+            .joined(separator: ", ")
+        let auditOK = dto.auditDb.schemaVersion >= 2
+        let rulesOK = dto.rules.systemCount > 0
+        let ipcOK = dto.ipc.connectedClients >= 1
+        return [
+            DoctorCheck(name: "ipc.sock 可连接（daemon v\(dto.daemonVersion) / 协议 \(dto.protocolVersion)）", ok: true),
+            DoctorCheck(name: "daemon listener 已绑定：\(listenerSummary.isEmpty ? "无" : listenerSummary)", ok: !listeners.isEmpty),
+            DoctorCheck(name: "audit.db schema v\(dto.auditDb.schemaVersion)（\(dto.auditDb.eventsTotal) 条事件）", ok: auditOK),
+            DoctorCheck(name: "规则引擎已加载（系统 \(dto.rules.systemCount) / 用户 \(dto.rules.userCount)）", ok: rulesOK),
+            DoctorCheck(name: "client 握手成功（在线 \(dto.ipc.connectedClients) 个）", ok: ipcOK)
+        ]
     }
 
     private func runSetup() {

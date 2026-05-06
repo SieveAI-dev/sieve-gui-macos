@@ -74,6 +74,29 @@
 - **违反这条 = 与 v1.5.4 P0 同级别安全漏洞**
 - **本仓库实现端**：[`SPEC-002`](../specs/SPEC-002-hips-popup-window.md) §5.6 / [`CLAUDE.md`](../../CLAUDE.md) 硬约束 §1
 
+### ADR-026：port-based-listener-routing（unix-style 改造 §1）
+- **决策**：daemon `Config.upstream_url` + `Config.port` 升级为 `Config.upstreams: Vec<UpstreamListener>`，每个 listener 显式声明 `provider_id` + `protocol`
+- **本仓库依赖**：
+  - `sieve.health` 响应新增顶层 `listeners: ListenerSnapshot[]` 字段（每项 `addr / port / provider_id / protocol`）
+  - 旧 `listen: ListenSnapshot` 字段保留为 `listeners[0]` 别名（deprecated since v2.x），仅向后兼容
+  - 协议版本号**不 bump**（v2 内向后兼容扩展，client 用 `decodeIfPresent ?? []` 兜底旧 daemon）
+  - GUI doctor / Settings → Daemon Tab 应优先消费 `listeners[]`，空时回落到 `listen` 单值展示
+- **本仓库实现端**：[`Sources/Models/IPCResponses.swift`](../../Sources/Models/IPCResponses.swift) `HealthResultDTO.effectiveListeners` / [`Tests/SieveGUITests/HealthResultDTOTests.swift`](../../Tests/SieveGUITests/HealthResultDTOTests.swift)
+
+### ADR-027：network-jail-enforcement
+- **决策（v3.x 范畴）**：按 LLM endpoint host 切片做 daemon 进程 network jail
+- **本仓库依赖**：当前无（GUI 决策路径不联网，与 jail 规则无交集）
+- **未来需关注**：v3.x 起 doctor 输出可能新增 jail 状态字段，到时同步 health DTO
+
+### ADR-028：ipc-protocol-neutralization（unix-style 改造 §3）
+- **决策**：SPEC-005 协议术语中性化（"GUI 端" → "client 端"，"弹窗" → "decision request / decision event"），sieve-ipc crate 内部模块化为 `protocol/` + `server/` + `client/`，新增 headless decision path（`sieve decisions watch / show / resolve` CLI 子命令）
+- **本仓库依赖**：
+  - **wire 字段名 + method 名全部不变**（`sieve.request_decision` / `sieve.request_decision_canceled` / `gui_popup` disposition 枚举值均保留向后兼容）—— GUI 代码无需迁移
+  - 协议版本号**不 bump**（仍 v2）
+  - SPEC-005 §3.3 加 admonition：「以下行为属于 sieve-gui-macos 仓的 GUI 实现细节，不是 daemon IPC 协议契约」—— 我方文档保持「GUI 实现注解」定位即可
+  - daemon 协议层不再视 GUI 为特权 client；GUI 与 CLI / TUI 等 headless client 在协议层地位平等
+- **本仓库实现端**：仅文档同步（[`docs/api/ipc-protocol.md`](../api/ipc-protocol.md) 协议变更日志）；代码侧无改动
+
 ---
 
 ## 3. 上游 SPEC
@@ -81,7 +104,7 @@
 ### SPEC-005：ipc-protocol（**双仓库唯一权威 IPC 协议规格**）
 - **路径（上游仓库内）**：`docs/specs/SPEC-005-ipc-protocol.md`
 - **覆盖**：所有 IPC 方法名、字段、枚举、错误码、握手、心跳、版本协商、协议升级流程、schema 一致性测试约定
-- **当前 pinned commit**：`<待 GUI 代码 PR 时填入 SPEC-005 commit hash>`
+- **当前 pinned upstream HEAD**：`2e38e44`（2026-05-05；含 ADR-028 中性化 commit `69664c3` + ADR-026 listeners[] 同步未提交 working tree 改动；待上游提交后回填具体 commit hash）
 - **本仓库依赖**：所有 IPC 字段定义都来自此文件；GUI 端不复刻 schema 表
 - **本仓库实现端**：
   - [`docs/api/ipc-protocol.md`](../api/ipc-protocol.md) v2.0（GUI 实现注解，不再定义 schema）
@@ -149,6 +172,7 @@ GUI 必须 0700 / 0600 权限校验 `~/.sieve/`，不符合时引导修复（[`S
 |------------------|----------------|-------------|------|
 | `v1` | daemon v0.x（v1.5 实现） | GUI v0.x | **Deprecated**（schema drift 严重，已弃用） |
 | `v2` | daemon v0.7+（SPEC-005 v2.0 落地后） | GUI v1.0 | Active（双仓库统一 schema） |
+| `v2.x`（向后兼容扩展） | daemon v0.8+（ADR-026/028 落地后） | GUI v1.0+ | Active（health 新增 `listeners[]`、协议术语中性化；不 bump 主版本号） |
 
 未来递增策略：
 - 字段新增（向后兼容） → 不递增 `protocol_version`，但更新 `ipc-protocol.md` 标注引入版本

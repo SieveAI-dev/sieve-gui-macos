@@ -1,10 +1,10 @@
 # IPC 协议参考 — GUI 实现注解
 
-> Version: v2.0 — 2026-05-02
+> Version: v2.1 — 2026-05-07
 > Status: Stable
 > Owner: doskey
 > **权威协议规格**：[upstream `SPEC-005-ipc-protocol.md`](../external/upstream-references.md#spec-005ipc-protocol)（daemon 仓库 `docs/specs/SPEC-005-ipc-protocol.md`）
-> 上游 ADR：[ADR-013](../external/upstream-references.md#adr-013ipc-protocol) · [SPEC-002](../external/upstream-references.md#spec-002hips-popup-behavior)
+> 上游 ADR：[ADR-013](../external/upstream-references.md#adr-013ipc-protocol) · [ADR-026](../external/upstream-references.md#adr-026port-based-listener-routingunix-style-改造-1) · [ADR-028](../external/upstream-references.md#adr-028ipc-protocol-neutralizationunix-style-改造-3) · [SPEC-002](../external/upstream-references.md#spec-002hips-popup-behavior)
 > GUI 实现端：[SPEC-008](../specs/SPEC-008-ipc-client.md)
 
 ---
@@ -282,3 +282,45 @@ GUI 自身的 IPC 行为日志写入 `~/.sieve/gui.log`（详见 SPEC-006 / SPEC
 |---|---|---|---|
 | v1.0 | 2026-05-02（早晨） | doskey | 首次起草，描述协议 v1（已弃用） |
 | v2.0 | 2026-05-02（午后） | doskey | 重写为 GUI 实现注解。所有 schema 定义迁移到上游 SPEC-005，本文件仅保留 GUI 端本地行为。协议升至 v2，落锤 D1–D8 决策（详见会话记录）。 |
+| v2.1 | 2026-05-07 | doskey | unix-style 改造适配。新增 §12 health.listeners[] GUI 实现注解（ADR-026），加 ADR-028 协议术语中性化说明（method 名 / wire 字段保持向后兼容，GUI 代码无改动）。 |
+
+---
+
+## 12. `sieve.health` `listeners[]` 字段（GUI 实现注解，ADR-026）
+
+> **权威 schema**：上游 SPEC-005 §9.5 + §9.5.4 ListenerSnapshot
+> **GUI 实现**：`Sources/Models/IPCResponses.swift` `HealthResultDTO`
+
+### 12.1 双兼容策略
+
+`sieve.health` 响应的 `listeners: ListenerSnapshot[]` 字段自 ADR-026 起新增（v2.x 向后兼容扩展，**未 bump 协议版本号**）。GUI 端按以下规则消费：
+
+1. **新 daemon**（已 ship ADR-026）：返回 `listeners[]`（每项 `addr / port / provider_id / protocol`）+ `listen` 字段（= `listeners[0]` 别名，向后兼容旧 client）
+2. **旧 daemon**（ADR-026 落地前的 v0.7.x）：仅返回 `listen` 单值，不发 `listeners[]`
+3. **GUI 解码侧**：用 `decodeIfPresent(...) ?? []` 兜底，旧 daemon → `listeners` 为空数组
+4. **GUI 渲染侧**：通过 `HealthResultDTO.effectiveListeners` 统一访问 —— 优先 `listeners[]`，空时回落到 `listen` 派生的单元素数组（`provider_id / protocol` 字段填 `"(legacy)"`）
+
+### 12.2 UI 展示约束
+
+- Settings → Daemon Tab "Listeners" 段：列每个 listener 的 `port + provider_id + protocol`；旧 daemon 退化路径展示 `addr:port`（不假装有 provider_id）
+- Onboarding step 2 doctor：基于真实 health 字段构造 checks（`listeners.isEmpty` → "daemon listener 已绑定" 项标红，引导用户检查 `sieve.toml [[upstream]]` 配置）
+
+### 12.3 错位告警（不在 GUI 范围）
+
+ADR-026 §决策 4 规定：listener `protocol` 与请求 path 错位时 daemon 直接 fail-closed 400，注入 `sieve_blocked` event。GUI 不主动检测错位（daemon 端硬约束），但可通过 History → 事件列表观察到 `kind=sieve_blocked` 条目。
+
+---
+
+## 13. ADR-028 协议术语中性化（GUI 实现影响）
+
+ADR-028 在 SPEC-005 v2.x 落地了协议层术语清洗 + 内部模块化 + headless decision path。**对 GUI 端 wire 行为零影响**：
+
+| 项 | 状态 |
+|---|---|
+| 协议版本号 | 不变（仍 v2） |
+| `sieve.request_decision` / `sieve.request_decision_canceled` method 名 | 保留（**未** rename 为 `decision.pending` / `decision.canceled`，与 ADR-028 §1 表格中的"理想新名"不同；上游为最大向后兼容选择保留旧名） |
+| `gui_popup` disposition 枚举值 | 保留（向后兼容硬要求） |
+| GUI Codable 结构 | 无改动 |
+| GUI 客户端在协议层的"特权"地位 | 取消（daemon 不再视 GUI 为特权 client；CLI / TUI 等 headless client 在协议层平等） |
+
+**GUI 端唯一动作**：上游引用文档（本文件 + `docs/external/upstream-references.md`）同步标注 ADR-028 决策与 SPEC-005 §3.3 的 admonition 段落（"以下行为属于 GUI 实现细节，不是协议契约"）。

@@ -201,27 +201,192 @@ public struct PurgeHistoryResult: Decodable, Sendable {
     }
 }
 
-public struct HealthResultDTO: Decodable, Sendable {
-    public let ok: Bool
-    public let checks: [Check]
-    public let metrics: Metrics?
+// MARK: - sieve.health §9.5
 
-    public struct Check: Decodable, Sendable, Identifiable {
-        public var id: String { name }
-        public let name: String
-        public let ok: Bool
-        public let detail: String?
+/// `sieve.health` 响应。对照 SPEC-005 §9.5（v2 + ADR-026 listeners[] 扩展）。
+///
+/// 字段语义：
+/// - `listen` 与 `listeners[0]` 等价；`listen` 自 v2.x ADR-026 起标注 deprecated，
+///   仅向后兼容旧 client 读取，本 client 优先消费 `listeners`。
+/// - `listeners` 在旧 daemon 不发本字段时退化为空数组（`decodeIfPresent ?? []`），
+///   client 应回落到 `listen` 单值展示。
+public struct HealthResultDTO: Decodable, Sendable {
+    public let daemonVersion: String
+    public let protocolVersion: String
+    public let startedAt: Date
+    public let uptimeSeconds: UInt64
+    public let preset: PresetSnapshot
+    public let paused: Bool
+    public let pausedUntil: Date?
+    public let listen: ListenSnapshot
+    public let listeners: [ListenerSnapshot]
+    public let auditDb: AuditDbSnapshot
+    public let rules: RulesSnapshot
+    public let graylist: GraylistSnapshot
+    public let ipc: IpcSnapshot
+
+    enum CodingKeys: String, CodingKey {
+        case daemonVersion = "daemon_version"
+        case protocolVersion = "protocol_version"
+        case startedAt = "started_at"
+        case uptimeSeconds = "uptime_seconds"
+        case preset
+        case paused
+        case pausedUntil = "paused_until"
+        case listen
+        case listeners
+        case auditDb = "audit_db"
+        case rules
+        case graylist
+        case ipc
     }
 
-    public struct Metrics: Decodable, Sendable {
-        public let p99LatencyMs: Int?
-        public let throughput1h: Int?
-        public let goroutines: Int?
+    public struct PresetSnapshot: Decodable, Sendable {
+        public let mode: Preset
+        public let overrides: [String: PresetOverrideValue]
+
+        public init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            mode = try c.decode(Preset.self, forKey: .mode)
+            overrides = try c.decodeIfPresent([String: PresetOverrideValue].self, forKey: .overrides) ?? [:]
+        }
+
+        enum CodingKeys: String, CodingKey { case mode, overrides }
+    }
+
+    public struct PresetOverrideValue: Decodable, Sendable {
+        public let timeoutSeconds: UInt32
+        public let defaultOnTimeout: DefaultOnTimeout
 
         enum CodingKeys: String, CodingKey {
-            case p99LatencyMs = "p99_latency_ms"
-            case throughput1h = "throughput_1h"
-            case goroutines
+            case timeoutSeconds = "timeout_seconds"
+            case defaultOnTimeout = "default_on_timeout"
         }
     }
+
+    /// 旧字段，等价于 `listeners[0]`（ADR-026 起 deprecated）。
+    public struct ListenSnapshot: Decodable, Sendable {
+        public let addr: String
+        public let port: UInt16
+    }
+
+    /// 单 listener 完整快照（ADR-026 §决策 6 + Stage F）。
+    public struct ListenerSnapshot: Decodable, Sendable, Identifiable {
+        public var id: String { "\(addr):\(port)" }
+        public let addr: String
+        public let port: UInt16
+        public let providerId: String
+        public let `protocol`: String
+
+        enum CodingKeys: String, CodingKey {
+            case addr, port
+            case providerId = "provider_id"
+            case `protocol`
+        }
+    }
+
+    public struct AuditDbSnapshot: Decodable, Sendable {
+        public let path: String
+        public let sizeBytes: UInt64
+        public let schemaVersion: UInt32
+        public let eventsTotal: UInt64
+        public let eventsToday: UInt64
+
+        enum CodingKeys: String, CodingKey {
+            case path
+            case sizeBytes = "size_bytes"
+            case schemaVersion = "schema_version"
+            case eventsTotal = "events_total"
+            case eventsToday = "events_today"
+        }
+    }
+
+    public struct RulesSnapshot: Decodable, Sendable {
+        public let systemCount: UInt32
+        public let userCount: UInt32
+        public let lastReload: Date?
+
+        enum CodingKeys: String, CodingKey {
+            case systemCount = "system_count"
+            case userCount = "user_count"
+            case lastReload = "last_reload"
+        }
+
+        public init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            systemCount = try c.decode(UInt32.self, forKey: .systemCount)
+            userCount = try c.decode(UInt32.self, forKey: .userCount)
+            lastReload = try Self.decodeISO8601(c, key: .lastReload)
+        }
+
+        private static func decodeISO8601(_ c: KeyedDecodingContainer<CodingKeys>, key: CodingKeys) throws -> Date? {
+            guard let s = try c.decodeIfPresent(String.self, forKey: key) else { return nil }
+            return HealthResultDTO.parseISO8601(s)
+        }
+    }
+
+    public struct GraylistSnapshot: Decodable, Sendable {
+        public let activeCount: UInt32
+
+        enum CodingKeys: String, CodingKey { case activeCount = "active_count" }
+    }
+
+    public struct IpcSnapshot: Decodable, Sendable {
+        public let connectedClients: UInt32
+        public let totalDecisionsInflight: UInt32
+
+        enum CodingKeys: String, CodingKey {
+            case connectedClients = "connected_clients"
+            case totalDecisionsInflight = "total_decisions_inflight"
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        daemonVersion = try c.decode(String.self, forKey: .daemonVersion)
+        protocolVersion = try c.decode(String.self, forKey: .protocolVersion)
+        uptimeSeconds = try c.decode(UInt64.self, forKey: .uptimeSeconds)
+        preset = try c.decode(PresetSnapshot.self, forKey: .preset)
+        paused = try c.decode(Bool.self, forKey: .paused)
+        listen = try c.decode(ListenSnapshot.self, forKey: .listen)
+        // listeners 自 v2.x 起新增；旧 daemon 不发此字段时退化为空数组，
+        // 调用方应回落到 listen 单值展示。
+        listeners = try c.decodeIfPresent([ListenerSnapshot].self, forKey: .listeners) ?? []
+        auditDb = try c.decode(AuditDbSnapshot.self, forKey: .auditDb)
+        rules = try c.decode(RulesSnapshot.self, forKey: .rules)
+        graylist = try c.decode(GraylistSnapshot.self, forKey: .graylist)
+        ipc = try c.decode(IpcSnapshot.self, forKey: .ipc)
+
+        let startedAtStr = try c.decode(String.self, forKey: .startedAt)
+        guard let startedAtDate = Self.parseISO8601(startedAtStr) else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .startedAt, in: c,
+                debugDescription: "started_at is not a valid ISO8601 date: \(startedAtStr)")
+        }
+        startedAt = startedAtDate
+
+        if let pausedUntilStr = try c.decodeIfPresent(String.self, forKey: .pausedUntil) {
+            pausedUntil = Self.parseISO8601(pausedUntilStr)
+        } else {
+            pausedUntil = nil
+        }
+    }
+
+    /// 解析 SPEC-005 §4A 约束的 RFC 3339 时间戳（毫秒精度 + Z 后缀）。
+    fileprivate static func parseISO8601(_ s: String) -> Date? {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let d = f.date(from: s) { return d }
+        f.formatOptions = [.withInternetDateTime]
+        return f.date(from: s)
+    }
+
+    /// 优先返回 `listeners`；空时回落 `listen` 派生单元素数组（旧 daemon 兼容路径）。
+    public var effectiveListeners: [ListenerSnapshot] {
+        if !listeners.isEmpty { return listeners }
+        return [ListenerSnapshot(
+            addr: listen.addr, port: listen.port,
+            providerId: "(legacy)", protocol: "(legacy)")]
+    }
 }
+
