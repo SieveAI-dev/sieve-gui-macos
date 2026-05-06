@@ -61,9 +61,10 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSHumanReadableCopyright: "© 2026 Sieve. All rights reserved."
         NSAppleEventsUsageDescription: "Sieve GUI needs to display HIPS prompts above all windows."
-        SUFeedURL: "https://updates.sieve.local/appcast.xml"
-        # TODO: 用 sparkle generate_keys 生成 EdDSA 密钥对后，将公钥替换此占位（私钥不入 git）
-        # 参考：docs/guides/deployment.md §1.3
+        SUFeedURL: "https://updates.sieveai.dev/appcast.xml"
+        # ⚠️ GA 前必须替换：用 sparkle generate_keys 生成 EdDSA 密钥对，公钥填这里。
+        # 私钥绝不入 git（落 CI secret）。Pre-GA PLACEHOLDER 公钥会让 Sparkle 拒绝所有更新（设计如此）。
+        # 参考：docs/guides/deployment.md §1.3 / appcast.xml 头部 TODO 步骤
         SUPublicEDKey: "PLACEHOLDER_EDDSA_PUBKEY"
         SUEnableInstallerLauncherService: true
         LSMinimumSystemVersion: "13.0"

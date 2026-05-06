@@ -46,9 +46,9 @@ public struct AboutSettingsView: View {
                 }
             }
             HStack(spacing: 16) {
-                Link("帮助文档", destination: URL(string: "https://sieve.local/docs")!)
-                Link("反馈", destination: URL(string: "https://sieve.local/feedback")!)
-                Link("开源声明", destination: URL(string: "https://sieve.local/licenses")!)
+                Link("帮助文档", destination: URL(string: "https://sieveai.dev/docs")!)
+                Link("反馈", destination: URL(string: "https://github.com/sieveai/sieve-gui-macos/issues")!)
+                Link("开源声明", destination: URL(string: "https://sieveai.dev/licenses")!)
             }
             .font(.caption)
             Spacer()
