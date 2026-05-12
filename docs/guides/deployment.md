@@ -60,8 +60,8 @@ generate_keys
 
 闭测期间用 [Cloudflare Pages](https://pages.cloudflare.com)：
 - 仓库：`<待补充>`
-- 域名：`<待补充>`
-- appcast 路径：`https://<host>/appcast.xml`
+- 域名：`updates.sieveai.dev`（已迁移，跟进上游 ADR-030）
+- appcast 路径：`https://updates.sieveai.dev/appcast.xml`
 
 ---
 

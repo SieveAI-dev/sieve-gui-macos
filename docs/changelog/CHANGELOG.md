@@ -5,6 +5,28 @@
 
 ---
 
+## [Unreleased] — 2026-05-12
+
+### 基础设施
+- 域名迁移 `sieve.local` → `sieveai.dev`（跟进上游 ADR-030）
+  - Sparkle `SUFeedURL`：`updates.sieve.local` → `updates.sieveai.dev`（`Info.plist` + `project.yml`）
+  - `appcast.xml` link / enclosure url 同步
+  - `UpdatesSettingsView` About 段三个链接（docs / 反馈 / 开源声明）同步
+- 补 `LICENSE` 与 `SECURITY.md`
+
+### Phase 1D：unix-style 协议适配（ADR-026 + ADR-028）
+- `HealthResultDTO` 全量重写，对齐 SPEC-005 §9.5 真实 schema
+  （旧版是 `ok/checks/metrics{p99/throughput/goroutines}` 早期 mock 占位，从未真联调）
+- 新增 `ListenerSnapshot { addr, port, provider_id, protocol }` + `effectiveListeners` 兼容访问器
+  （优先 `listeners[]`，旧 daemon 退化到 `listen` 单值）
+- `DaemonSettingsView` 加 "Listeners" 段；首次进入自动拉一次 `sieve.health`
+- `OnboardingView.runDoctor` 基于真实 health 字段构造 5 项 checks（替换占位）
+- 新增 `HealthResultDTOTests`（7 case：完整字段 / 旧 daemon 兼容 / 暂停态 / custom preset / id 派生 / 必填缺失 / 非法时间戳）
+- 测试基线：127 → 134（+7）
+- 协议契约：未 bump `protocol_version`（v2 内向后兼容扩展）；wire 字段 / method 名全部保留
+- 文档同步：`docs/external/upstream-references.md` 加 ADR-026/027/028 + SPEC-005 commit pin；
+  `docs/api/ipc-protocol.md` v2.0 → v2.1，加 §12 listeners[] 实现注解 + §13 ADR-028 影响说明
+
 ## [Unreleased] — 2026-05-04
 
 ### 文档（联调阶段）

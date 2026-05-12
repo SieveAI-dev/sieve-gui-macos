@@ -13,6 +13,12 @@
 
 ### Added
 
+- **域名迁移 `sieve.local` → `sieveai.dev`（跟进上游 ADR-030）**
+  - Sparkle `SUFeedURL`：`updates.sieve.local` → `updates.sieveai.dev`（`Info.plist` + `project.yml`）
+  - `appcast.xml` link / enclosure url 同步
+  - `UpdatesSettingsView` About 段三个链接（docs / 反馈 / 开源声明）同步
+- **`LICENSE` 与 `SECURITY.md` 补齐**
+
 - **Phase 1D：unix-style 协议适配（ADR-026 + ADR-028）**
   - `HealthResultDTO` 全量重写，对齐 SPEC-005 §9.5 真实 schema（之前是 `ok/checks/metrics{p99/throughput/goroutines}` 早期 mock 占位，从未真联调）
   - 新增 `ListenerSnapshot { addr, port, provider_id, protocol }` 与 `effectiveListeners` 兼容访问器（优先 `listeners[]`，旧 daemon 退化到 `listen` 单值）

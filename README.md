@@ -96,14 +96,15 @@ open SieveGUI.xcodeproj
 
 ## 当前状态
 
-**Phase 1A + 1B + 1C 部分完成，等用户手动联调**（2026-05-03）。
+**Phase 1A + 1B + 1D 全部完成，等用户手动联调**（2026-05-07）。
 
-- ✅ 49 个 Swift 源文件 / 双仓库 SPEC-005 v2 协议完全对齐
-- ✅ `swift test` **127/127** 测试全绿（基线 20 → 127）
+- ✅ 49 个 Swift 源文件 / 双仓库 SPEC-005 v2.x 协议完全对齐（含 ADR-026 listeners[] + ADR-028 中性化）
+- ✅ `swift test` **134/134** 测试全绿（基线 20 → 127 → 134）
 - ✅ `xcodebuild` BUILD SUCCEEDED，产物 `Sieve GUI.app` arm64
 - ✅ Phase 1B 全部 UX/系统集成完成（HIPS/Settings/History/Debug/Onboarding/Toast）
-- ✅ mock daemon harness + IPCClient 集成测试 5 场景
-- ✅ Sparkle appcast.xml 模板 + .dmg 打包脚本 + String Catalogs i18n 关键 UX
+- ✅ Phase 1D：`HealthResultDTO` 全量重写 + multi-listener 支持（ADR-026 + ADR-028）
+- ✅ 域名迁移 `sieve.local` → `sieveai.dev`（Sparkle SUFeedURL + appcast + About 链接）
+- ✅ `LICENSE` 与 `SECURITY.md` 补齐
 - 🔜 等用户 dogfood 反馈后进入 Phase 1C 发布流程
 
 完整进度见 [`tasks/PROGRESS.md`](tasks/PROGRESS.md)，
