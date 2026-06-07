@@ -12,7 +12,7 @@
 
 由提交者手动协调。建议步骤：
 
-1. 在 daemon 仓库改 `SPEC-002`（IPC 行为）/ `data-model.md`（audit.db schema）/ `PRD v2.0`
+1. 在 daemon 仓库改 `SPEC-005`（IPC 协议权威源）/ `data-model.md`（audit.db schema）/ `PRD v2.0`
 2. 在本仓库同步改 `docs/api/ipc-protocol.md` + `docs/specs/SPEC-008-ipc-client.md` + 相关 SPEC
 3. 协议版本号 `protocol_version` 递增（不向后兼容）
 4. 两个仓库的 PR 互相关联，同 review 同 merge
@@ -22,7 +22,7 @@
 ## 1. 上游 PRD
 
 ### PRD v2.0
-- **路径（上游仓库内）**：`docs/requirements/sieve-prd-v2.0.md`
+- **路径（上游仓库内）**：`docs/prd/sieve-prd-v2.0.md`
 - **本仓库依赖章节**：
   - §1 产品定位（"daemon 不弹窗"约束的根源）
   - §5.4 处置矩阵（disposition 字段的语义）
@@ -104,7 +104,8 @@
 ### SPEC-005：ipc-protocol（**双仓库唯一权威 IPC 协议规格**）
 - **路径（上游仓库内）**：`docs/specs/SPEC-005-ipc-protocol.md`
 - **覆盖**：所有 IPC 方法名、字段、枚举、错误码、握手、心跳、版本协商、协议升级流程、schema 一致性测试约定
-- **当前 pinned upstream HEAD**：`2e38e44`（2026-05-05；含 ADR-028 中性化 commit `69664c3` + ADR-026 listeners[] 同步未提交 working tree 改动；待上游提交后回填具体 commit hash）
+- **SPEC-005 最后改动 commit**：`7108a45`（ADR-026 listeners[] 数组扩展，向后兼容、未 bump `protocol_version`）。截至 daemon HEAD `016ba2e`，SPEC-005 最后改动为 `7108a45`。
+- **复核命令**（在 daemon 仓库执行）：`git log --oneline -- docs/specs/SPEC-005-ipc-protocol.md | head -1`
 - **本仓库依赖**：所有 IPC 字段定义都来自此文件；GUI 端不复刻 schema 表
 - **本仓库实现端**：
   - [`docs/api/ipc-protocol.md`](../api/ipc-protocol.md) v2.0（GUI 实现注解，不再定义 schema）
