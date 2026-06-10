@@ -41,7 +41,10 @@ let package = Package(
         .testTarget(
             name: "SieveGUICoreTests",
             dependencies: ["SieveGUICore"],
-            path: "Tests/SieveGUITests"
+            path: "Tests/SieveGUITests",
+            // SPEC-005 §14.2：daemon 权威 fixture 副本，IPCSchemaV2FixtureTests 经
+            // Bundle.module 消费，校验 GUI 解码与 daemon 序列化对齐（防 schema 漂移）。
+            resources: [.copy("Fixtures")]
         )
     ]
 )
