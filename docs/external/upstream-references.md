@@ -104,7 +104,8 @@
 ### SPEC-005：ipc-protocol（**双仓库唯一权威 IPC 协议规格**）
 - **路径（上游仓库内）**：`docs/specs/SPEC-005-ipc-protocol.md`
 - **覆盖**：所有 IPC 方法名、字段、枚举、错误码、握手、心跳、版本协商、协议升级流程、schema 一致性测试约定
-- **SPEC-005 最后改动 commit**：`7108a45`（ADR-026 listeners[] 数组扩展，向后兼容、未 bump `protocol_version`）。截至 daemon HEAD `016ba2e`，SPEC-005 最后改动为 `7108a45`。
+- **SPEC-005 最后改动 commit**：`7108a45`（ADR-026 listeners[] 数组扩展，向后兼容、未 bump `protocol_version`）。截至 daemon HEAD `8d68912`，SPEC-005 文档最后改动仍为 `7108a45`。
+- **fixture 副本来源（SPEC §14.2）**：`Tests/SieveGUITests/Fixtures/v2/sieve.health/` 的 daemon 权威 fixture 副本对应 daemon commit `8d68912`（含 ADR-026 `listeners[]` + preset mode v2 `standard`，见 daemon `2c51c96` / `ae20fd3`）；`IPCSchemaV2FixtureTests` 消费这些副本校验跨仓解码一致。
 - **复核命令**（在 daemon 仓库执行）：`git log --oneline -- docs/specs/SPEC-005-ipc-protocol.md | head -1`
 - **本仓库依赖**：所有 IPC 字段定义都来自此文件；GUI 端不复刻 schema 表
 - **本仓库实现端**：
