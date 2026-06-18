@@ -1,48 +1,54 @@
 # Sieve GUI for macOS
 
-> Sieve daemon 的 native macOS 守门人壳。常驻菜单栏，在不可逆动作发生前用 HIPS 弹窗强制插入认知摩擦，平时几乎不可见。
+> The native macOS gatekeeper shell for the Sieve daemon — lives in the menu bar and forces a moment of cognitive friction (HIPS prompt) before irreversible actions happen.
+
+English | [中文](./README.zh-CN.md)
+
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
+[![Platform: macOS 13+](https://img.shields.io/badge/platform-macOS%2013%2B-lightgrey.svg)](#tech-stack)
+[![UI: SwiftUI](https://img.shields.io/badge/UI-SwiftUI-orange.svg)](#tech-stack)
 
 ---
 
-## 这是什么
+## What is this
 
-[Sieve](https://github.com/doskey/sieve) 是一个本地、不联网的 LLM 代理守门人。它在 `127.0.0.1:11453` 拦截 Anthropic / OpenAI 流量，按规则在出站前脱敏、在入站后阻拦危险动作（钓鱼地址替换、签名 tool_use、密钥外泄等）。
+[Sieve](https://github.com/SieveAI-dev/sieve) is a fully local, no-cloud LLM-traffic security proxy — a single Rust daemon that sits between your AI coding agent (Claude Code / Codex CLI / Cursor) and the upstream model API (Anthropic / OpenAI / relays). It inspects traffic in both directions: redacting secrets on the way out, and blocking dangerous tool calls on the way in (fail-closed).
 
-daemon 是非交互的 Rust 守护进程——**它无法弹窗，也不该弹窗**。本仓库实现的 macOS GUI 是 daemon 的视觉延伸：
+The daemon is a non-interactive background process — **it cannot, and should not, draw windows.** This repository is its visual extension. The GUI is where a human actually meets Sieve:
 
-- 收 daemon 推过来的 HIPS 决策请求，渲染弹窗等用户答复
-- 菜单栏状态指示（normal / warning / hold / paused / disconnected）
-- 历史 / 调试 / 设置 / Onboarding 几个常驻窗口
+- **HIPS prompts** — receives decision requests pushed from the daemon, renders the confirmation panel, and waits for the user's answer before an irreversible action proceeds.
+- **Menu-bar status** — at-a-glance state indicator (normal / warning / hold / paused / disconnected).
+- **History / Debug / Settings / Onboarding** — the persistent windows around the daemon.
 
-完整产品需求见 [`docs/requirements/sieve-gui-macos-prd-v1.0.md`](docs/requirements/sieve-gui-macos-prd-v1.0.md)。
-
----
-
-## 技术栈
-
-| 层 | 选择 |
-|----|-----|
-| 平台 | macOS 13 Ventura+，Apple Silicon + Intel 通用 |
-| UI | SwiftUI + Combine（部分场景 AppKit 桥接） |
-| 持久化 | SQLite.swift（只读 audit.db）+ UserDefaults |
-| IPC | `~/.sieve/ipc.sock` Unix Domain Socket，JSON-RPC 2.0 |
-| 分发 | hardened runtime + Apple notarization + Sparkle 自动更新 |
-
-栈锁定见 [ADR-001](docs/design/adr/ADR-001-swiftui-native-only-stack.md)，硬约束见 [`CLAUDE.md`](CLAUDE.md)。
+Detection logic stays 100% in the daemon; the GUI never invents protocol fields and never rewrites the values the daemon pushes. See the daemon repository at [SieveAI-dev/sieve](https://github.com/SieveAI-dev/sieve), and the full product spec in [`docs/requirements/sieve-gui-macos-prd-v1.0.md`](docs/requirements/sieve-gui-macos-prd-v1.0.md).
 
 ---
 
-## 文档地图
+## Tech stack
+
+| Layer | Choice |
+|-------|--------|
+| Platform | macOS 13 Ventura+, universal (Apple Silicon + Intel) |
+| UI | SwiftUI + Combine (AppKit bridging where required) |
+| Persistence | SQLite.swift (read-only `audit.db`) + UserDefaults |
+| IPC | `~/.sieve/ipc.sock` Unix domain socket, JSON-RPC 2.0 |
+| Distribution | Hardened runtime + Apple notarization + Sparkle auto-update |
+
+Stack lock-in is recorded in [ADR-001](docs/design/adr/ADR-001-swiftui-native-only-stack.md); hard constraints live in [`CLAUDE.md`](CLAUDE.md).
+
+---
+
+## Documentation map
 
 ```
 docs/
-├── DOCS-STANDARD.md            ← 文档体系规范
-├── glossary.md                 ← 术语表
+├── DOCS-STANDARD.md            ← documentation system standard
+├── glossary.md                 ← glossary
 ├── requirements/
 │   └── sieve-gui-macos-prd-v1.0.md
 ├── design/
-│   ├── architecture.md         ← GUI 进程架构
-│   ├── data-model.md           ← 本地数据模型
+│   ├── architecture.md         ← GUI process architecture
+│   ├── data-model.md           ← local data model
 │   └── adr/
 │       ├── INDEX.md
 │       └── ADR-001 … ADR-011
@@ -50,68 +56,83 @@ docs/
 │   ├── INDEX.md
 │   └── SPEC-001 … SPEC-008
 ├── api/
-│   └── ipc-protocol.md         ← GUI ↔ daemon 完整 IPC 参考
+│   └── ipc-protocol.md         ← full GUI ↔ daemon IPC reference
 ├── guides/
 │   ├── development.md
 │   └── deployment.md
 └── external/
-    └── upstream-references.md  ← daemon 仓库的 PRD/ADR/SPEC 引用
+    └── upstream-references.md  ← PRD/ADR/SPEC references from the daemon repo
 ```
 
-新人推荐阅读顺序：
+Recommended reading order for newcomers:
 
-1. 本 README
-2. `docs/requirements/sieve-gui-macos-prd-v1.0.md`
-3. `docs/design/architecture.md`
-4. `docs/api/ipc-protocol.md`
-5. 按需查 SPEC
+1. This README
+2. [`docs/requirements/sieve-gui-macos-prd-v1.0.md`](docs/requirements/sieve-gui-macos-prd-v1.0.md)
+3. [`docs/design/architecture.md`](docs/design/architecture.md)
+4. [`docs/api/ipc-protocol.md`](docs/api/ipc-protocol.md)
+5. SPECs as needed
 
 ---
 
-## 本地开发
+## Local development
 
-详见 [`docs/guides/development.md`](docs/guides/development.md)。简版：
+See [`docs/guides/development.md`](docs/guides/development.md) for the full guide. Quick version:
 
 ```bash
-# 1. 装 Xcode 15+ 和 xcodegen
+# 1. Install Xcode 15+ and xcodegen
 brew install xcodegen
 
-# 2. 生成 Xcode 工程
+# 2. Generate the Xcode project
 xcodegen generate
 
-# 3. 编译 + 测试 Core 库（不依赖 Xcode）
-swift build              # 编译 Models / IPC / AuditDB / Logger / Telemetry
-swift test               # 跑单元测试（当前 20 个，全绿）
+# 3. Build + test the Core libraries (no Xcode required)
+swift build              # compiles Models / IPC / AuditDB / Logger / Telemetry
+swift test               # runs unit tests
 
-# 4. 完整 App 构建
+# 4. Full app build
 xcodebuild -project SieveGUI.xcodeproj -scheme SieveGUI -destination 'platform=macOS' build
 
-# 5. Xcode 里 Run
+# 5. Run from Xcode
 open SieveGUI.xcodeproj
 ```
 
-> mock daemon 子项目尚未开工；当前可以连真的 sieve daemon（监听 `~/.sieve/ipc.sock`）联调，daemon 不在时 GUI 进入 disconnected 状态并弹失联视图。
+> The project is dual-track: `Package.swift` compiles only the Core libraries (Models / IPC / AuditDB / Logger / Telemetry) for fast command-line testing; the full app is built via the XcodeGen-generated `.xcodeproj`. App-target code (UI / Features / Sparkle) is only compiled by `xcodebuild` — `swift test` will not catch UI-layer compile errors, so always run `xcodebuild` to validate UI changes.
+
+> The mock-daemon subproject is not wired up yet. For now, run against a real `sieve` daemon (listening on `~/.sieve/ipc.sock`); when the daemon is absent the GUI enters the disconnected state and shows the lost-connection view.
 
 ---
 
-## 当前状态
+## Project status
 
-**Phase 1A + 1B + 1D 全部完成，等用户手动联调**（2026-05-07）。
+**Public repository · pre-GA closed beta (invite-only testers).** The source is public to honor Sieve's core promise — *verifiable, not merely trusted*: users can read the security model before installing the signed binary.
 
-- ✅ 49 个 Swift 源文件 / 双仓库 SPEC-005 v2.x 协议完全对齐（含 ADR-026 listeners[] + ADR-028 中性化）
-- ✅ `swift test` **134/134** 测试全绿（基线 20 → 127 → 134）
-- ✅ `xcodebuild` BUILD SUCCEEDED，产物 `Sieve GUI.app` arm64
-- ✅ Phase 1B 全部 UX/系统集成完成（HIPS/Settings/History/Debug/Onboarding/Toast）
-- ✅ Phase 1D：`HealthResultDTO` 全量重写 + multi-listener 支持（ADR-026 + ADR-028）
-- ✅ 域名迁移 `sieve.local` → `sieveai.dev`（Sparkle SUFeedURL + appcast + About 链接）
-- ✅ `LICENSE` 与 `SECURITY.md` 补齐
-- 🔜 等用户 dogfood 反馈后进入 Phase 1C 发布流程
+Current engineering baseline:
 
-完整进度见 [`tasks/PROGRESS.md`](tasks/PROGRESS.md)，
-本轮工程踩坑沉淀见 [`tasks/lessons.md`](tasks/lessons.md)。
+- 50+ Swift source files; IPC fully aligned with the cross-repo SPEC-005 v2.x protocol (ADR-026 `listeners[]` + ADR-028 neutralization).
+- `swift test` — all tests green (extensive unit suite covering IPC decoding, HIPS state machine, masking, and audit-DB access).
+- `xcodebuild` — **BUILD SUCCEEDED**, producing `Sieve GUI.app` (universal).
+- All Phase 1B UX / system integration shipped (HIPS / Settings / History / Debug / Onboarding / Toast).
+- Domain migrated to `sieveai.dev` (Sparkle `SUFeedURL` + appcast + About links).
+
+The progress source of truth is [`tasks/PROGRESS.md`](tasks/PROGRESS.md); engineering lessons are captured in [`tasks/lessons.md`](tasks/lessons.md).
+
+---
+
+## Contributing
+
+Pull requests and issues are welcome. Please read [`./CONTRIBUTING.md`](./CONTRIBUTING.md) and our [`./CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md) before opening a PR.
+
+## Security
+
+Found a vulnerability? Please follow the responsible-disclosure process in [`./SECURITY.md`](./SECURITY.md) rather than opening a public issue.
 
 ---
 
 ## License
 
-Phase 1 闭测期间未公开。
+- **Code** — [Apache License 2.0](./LICENSE)
+- **Documentation** — [CC BY-NC-SA 4.0](./LICENSE-DOCS) (everything under `docs/`, plus `README*.md`, `CLAUDE.md`, and other non-source Markdown / config)
+
+---
+
+[sieveai.dev](https://sieveai.dev)
