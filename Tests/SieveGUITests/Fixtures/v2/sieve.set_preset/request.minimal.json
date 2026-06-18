@@ -1,0 +1,8 @@
+{
+  "jsonrpc": "2.0",
+  "method": "sieve.set_preset",
+  "params": {
+    "mode": "standard"
+  },
+  "id": "req-preset-1"
+}
