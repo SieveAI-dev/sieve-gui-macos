@@ -1,0 +1,90 @@
+Sieve GUI for macOS — Documentation License
+===========================================
+
+This repository ships TWO categories of content under DIFFERENT license terms,
+mirroring the Sieve daemon repository (SieveAI-dev/sieve):
+
+  - Source code  → Apache License 2.0 (see ./LICENSE)
+  - Documentation → CC BY-NC-SA 4.0 (this file)
+
+This file governs the documentation only. For the source-code license, see
+./LICENSE (Apache License, Version 2.0).
+
+---
+
+## Scope
+
+The CC BY-NC-SA 4.0 terms below apply to all non-source-code content, i.e. every
+file NOT inside the Swift source tree, including but not limited to:
+
+  - `docs/`                  (PRD, architecture, ADRs, SPECs, API reference, guides)
+  - `README.md`, `README.zh-CN.md`
+  - `CHANGELOG.md`
+  - `CLAUDE.md`, `.cursorrules`
+  - `SECURITY.md`
+  - `tasks/` (`PROGRESS.md`, `lessons.md`, roadmaps, archived notes)
+  - any other Markdown / configuration / prose files NOT required to build and
+    ship the macOS app
+
+Everything required to build and run the app — all Swift source under `Sources/`
+and `Tests/`, `Package.swift`, `project.yml`, `config/Info.plist`,
+`config/SieveGUI.entitlements`, `appcast.xml`, and `scripts/` — is licensed under
+the Apache License 2.0 (see ./LICENSE), NOT under this documentation license.
+
+---
+
+## License
+
+Documentation is licensed under the **Creative Commons
+Attribution-NonCommercial-ShareAlike 4.0 International** license
+(CC BY-NC-SA 4.0).
+
+  Full legal code: https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode
+  Human-readable summary: https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+### Summary of terms
+
+You are free to:
+
+  - Share — copy and redistribute the material in any medium or format
+  - Adapt — remix, transform, and build upon the material
+
+Under the following terms:
+
+  - Attribution — You must give appropriate credit to the "Sieve project"
+    (https://sieveai.dev) with a link to the upstream repository
+    (https://github.com/SieveAI-dev/sieve-gui-macos), provide a link to this
+    license, and indicate if changes were made.
+  - NonCommercial — You may not use the material for commercial purposes.
+    Commercial reuse requires prior written permission (see Contact below).
+  - ShareAlike — If you remix, transform, or build upon the material, you must
+    distribute your contributions under the same license as the original.
+
+No additional restrictions — You may not apply legal terms or technological
+measures that legally restrict others from doing anything the license permits.
+
+This is a human-readable summary of (and not a substitute for) the license.
+The legally binding terms are the full CC BY-NC-SA 4.0 legal code linked above.
+
+---
+
+## Rationale
+
+Sieve GUI documentation includes the architecture, the IPC contract with the
+daemon, the ADRs, and the HIPS UX design rationale. These are "trust artifacts" —
+published so users can verify the security model before installing the signed
+binary, not just take it on faith. They are deliberately kept open for study,
+citation, and forking-for-research, while NonCommercial prevents them from being
+repackaged as competitor material without permission.
+
+---
+
+## Contact
+
+For commercial licensing, partnership, or trademark inquiries:
+
+  - Email: doskey.lee@gmail.com
+  - Subject prefix: [SIEVE-LICENSE]
+
+For the source-code license, see ./LICENSE (Apache License, Version 2.0).
+For security vulnerabilities, see ./SECURITY.md.
