@@ -21,14 +21,12 @@ public struct HelloParams: Codable, Sendable {
 }
 
 public struct PresetChangedParams: Codable, Sendable {
-    public let preset: Preset
     public let mode: String
     public let changedAt: Date
     public let source: String
     public let originRequestId: String?
 
     enum CodingKeys: String, CodingKey {
-        case preset
         case mode
         case changedAt = "changed_at"
         case source
@@ -37,7 +35,6 @@ public struct PresetChangedParams: Codable, Sendable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        preset = try container.decode(Preset.self, forKey: .preset)
         mode = try container.decode(String.self, forKey: .mode)
         source = try container.decode(String.self, forKey: .source)
         originRequestId = try container.decodeIfPresent(String.self, forKey: .originRequestId)
@@ -104,22 +101,64 @@ public struct PausedChangedParams: Codable, Sendable {
     }
 }
 
+/// `sieve.notify_status_bar` 通知 payload。对照 SPEC-005 §10.1 daemon `StatusBarNotify`：
+/// daemon 发 notify_id / created_at / kind(snake_case) / title / detail? / rule_id? /
+/// auto_dismiss_seconds。GUI 解码字段逐一对齐 daemon wire（无 severity/direction/summary 等）。
 public struct EventNotifyParams: Codable, Sendable {
+    /// 通知唯一 ID（UUID 串）
+    public let notifyId: String
+    /// 通知生成时刻（ISO8601 串）
+    public let createdAt: Date
     public let kind: NotifyKind
-    public let ruleId: String
-    public let severity: Severity
-    public let direction: Direction
-    public let disposition: String
-    public let summary: String
-    public let count: Int?
-    public let auditEventId: Int64?
-    public let occurredAt: String?
+    /// 主标题（用户可见）
+    public let title: String
+    /// 可选详情（用户可见，可空）
+    public let detail: String?
+    /// 关联规则 ID（可空）
+    public let ruleId: String?
+    /// 建议自动消失秒数（0 = 不自动消失）
+    public let autoDismissSeconds: UInt32
 
     enum CodingKeys: String, CodingKey {
+        case notifyId = "notify_id"
+        case createdAt = "created_at"
         case kind
+        case title
+        case detail
         case ruleId = "rule_id"
-        case severity, direction, disposition, summary, count
-        case auditEventId = "audit_event_id"
-        case occurredAt = "occurred_at"
+        case autoDismissSeconds = "auto_dismiss_seconds"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        notifyId = try c.decode(String.self, forKey: .notifyId)
+        kind = try c.decode(NotifyKind.self, forKey: .kind)
+        title = try c.decode(String.self, forKey: .title)
+        detail = try c.decodeIfPresent(String.self, forKey: .detail)
+        ruleId = try c.decodeIfPresent(String.self, forKey: .ruleId)
+        autoDismissSeconds = try c.decode(UInt32.self, forKey: .autoDismissSeconds)
+        // created_at 是 ISO8601 字符串
+        let s = try c.decode(String.self, forKey: .createdAt)
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let d = f.date(from: s) {
+            createdAt = d
+        } else {
+            f.formatOptions = [.withInternetDateTime]
+            createdAt = f.date(from: s) ?? Date()
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(notifyId, forKey: .notifyId)
+        try c.encode(kind, forKey: .kind)
+        try c.encode(title, forKey: .title)
+        try c.encodeIfPresent(detail, forKey: .detail)
+        try c.encodeIfPresent(ruleId, forKey: .ruleId)
+        try c.encode(autoDismissSeconds, forKey: .autoDismissSeconds)
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        try c.encode(f.string(from: createdAt), forKey: .createdAt)
     }
 }

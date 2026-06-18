@@ -39,9 +39,11 @@ public final class ToastController: NSObject, IPCToastAdapter {
     }
 
     public func presentEvent(_ params: EventNotifyParams) {
+        // StatusBarNotify wire（SPEC-005 §10.1）：title 即展示文案，rule_id 可空。
+        let ruleId = params.ruleId ?? params.kind.rawValue
         // 合并：同 kind+rule_id 在 5s 内
-        if let existingIdx = stack.firstIndex(where: { $0.kind == params.kind && $0.ruleId == params.ruleId && Date().timeIntervalSince($0.firstSeenAt) < 5 }) {
-            stack[existingIdx].count += (params.count ?? 1)
+        if let existingIdx = stack.firstIndex(where: { $0.kind == params.kind && $0.ruleId == ruleId && Date().timeIntervalSince($0.firstSeenAt) < 5 }) {
+            stack[existingIdx].count += 1
             stack[existingIdx].lastUpdatedAt = Date()
             redrawPanel(stack[existingIdx])
             return
@@ -51,17 +53,26 @@ public final class ToastController: NSObject, IPCToastAdapter {
             // appState 已在 IPCAdapter 累计 warningHitCount
             return
         }
+        // direction/severity wire 不再携带，由 kind 派生展示语义（仅 Toast 图标用）。
+        let direction: Direction = (params.kind == .outboundRedacted) ? .outbound : .inbound
+        let severity: Severity = {
+            switch params.kind {
+            case .userRulesLoadFailed: return .high
+            case .outboundRedacted, .hookTerminal, .sequenceHit: return .medium
+            case .userRulesReloaded, .generic: return .low
+            }
+        }()
         let entry = ToastEntry(
             id: UUID().uuidString,
             kind: params.kind,
-            ruleId: params.ruleId,
-            severity: params.severity,
-            direction: params.direction,
-            summary: params.summary,
-            count: params.count ?? 1,
+            ruleId: ruleId,
+            severity: severity,
+            direction: direction,
+            summary: params.title,
+            count: 1,
             firstSeenAt: Date(),
             lastUpdatedAt: Date(),
-            auditEventId: params.auditEventId
+            auditEventId: nil
         )
         stack.append(entry)
         showPanel(for: entry)

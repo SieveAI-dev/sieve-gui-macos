@@ -46,20 +46,20 @@ struct IPCMessageTests {
 
 @Suite("PresetChangedParams decode")
 struct PresetChangedParamsTests {
+    // D3：daemon 只发 mode(String)（SPEC §10.1，无 preset 字段）；GUI DTO 已删 preset。
     @Test func decodes_with_origin_request_id() throws {
-        let json = #"{"preset":"standard","mode":"standard","changed_at":"2099-01-01T00:00:00Z","source":"gui","origin_request_id":"req-xyz"}"#
+        let json = #"{"mode":"standard","changed_at":"2099-01-01T00:00:00Z","source":"gui","origin_request_id":"req-xyz"}"#
         let p = try JSONDecoder().decode(PresetChangedParams.self, from: Data(json.utf8))
-        #expect(p.preset == .standard)
+        #expect(p.mode == "standard")
         #expect(p.source == "gui")
         #expect(p.originRequestId == "req-xyz")
-        #expect(p.mode == "standard")
     }
 
     @Test func decodes_without_origin_request_id() throws {
         // daemon CLI 触发，无 origin_request_id
-        let json = #"{"preset":"strict","mode":"strict","changed_at":"2099-01-01T00:00:00Z","source":"daemon_cli"}"#
+        let json = #"{"mode":"strict","changed_at":"2099-01-01T00:00:00Z","source":"daemon_cli"}"#
         let p = try JSONDecoder().decode(PresetChangedParams.self, from: Data(json.utf8))
-        #expect(p.preset == .strict)
+        #expect(p.mode == "strict")
         #expect(p.originRequestId == nil)
         #expect(p.source == "daemon_cli")
     }
@@ -273,7 +273,11 @@ struct EvaluateResultMatchTests {
             "evaluated_at": 1746000000000,
             "rule_kind": "pattern",
             "would_decision": "redact",
-            "would_recommendation": "block"
+            "would_recommendation": {
+              "decision": "deny",
+              "confidence": "high",
+              "reason": "wallet address detected"
+            }
           }],
           "no_match": ["IN-CR-01"]
         }
@@ -287,7 +291,9 @@ struct EvaluateResultMatchTests {
         #expect(m.fieldsTriggered == ["tool_input"])
         #expect(m.ruleKind == "pattern")
         #expect(m.wouldDecision == "redact")
-        #expect(m.wouldRecommendation == "block")
+        // D7：would_recommendation 改为 Recommendation 对象（SPEC §6.1.4）
+        #expect(m.wouldRecommendation?.decision == .deny)
+        #expect(m.wouldRecommendation?.confidence == .high)
         #expect(m.evaluatedAt != nil)
         #expect(result.noMatch == ["IN-CR-01"])
     }

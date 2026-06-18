@@ -121,8 +121,10 @@ public final class IPCRouter: IPCDelegate {
                 let adapter = appStateAdapter
                 Task { @MainActor in
                     let isEcho = await client?.isMutatingEcho(originRequestId: p.originRequestId) ?? false
-                    if !isEcho {
-                        adapter?.applyPresetChanged(p.preset)
+                    // daemon 只发 mode(String)（SPEC-005 §10.1，无独立 preset 字段）；
+                    // 映射到 Preset enum，未知值忽略（不污染状态）。
+                    if !isEcho, let preset = Preset(rawValue: p.mode) {
+                        adapter?.applyPresetChanged(preset)
                     }
                 }
             }

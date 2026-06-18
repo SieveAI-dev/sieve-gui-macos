@@ -90,7 +90,9 @@ public struct EvaluateResult: Decodable, Sendable {
         public let evaluatedAt: Date?
         public let ruleKind: String
         public let wouldDecision: String
-        public let wouldRecommendation: String?
+        /// SPEC-005 §6.1.4：would_recommendation 是 Recommendation 对象（可 null/省略），
+        /// 与主 recommendation 字段同结构 {decision, confidence, reason}。
+        public let wouldRecommendation: Recommendation?
 
         enum CodingKeys: String, CodingKey {
             case ruleId = "rule_id"
@@ -112,7 +114,7 @@ public struct EvaluateResult: Decodable, Sendable {
             fieldsTriggered = try c.decodeIfPresent([String].self, forKey: .fieldsTriggered)
             ruleKind = try c.decode(String.self, forKey: .ruleKind)
             wouldDecision = try c.decode(String.self, forKey: .wouldDecision)
-            wouldRecommendation = try c.decodeIfPresent(String.self, forKey: .wouldRecommendation)
+            wouldRecommendation = try c.decodeIfPresent(Recommendation.self, forKey: .wouldRecommendation)
             // evaluated_at is Unix ms integer
             if let ms = try c.decodeIfPresent(Int64.self, forKey: .evaluatedAt) {
                 evaluatedAt = Date(timeIntervalSince1970: Double(ms) / 1000.0)

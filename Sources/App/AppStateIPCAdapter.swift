@@ -42,13 +42,23 @@ public final class AppStateIPCAdapter: IPCAppStateAdapter {
             case .generic: return .allow
             }
         }()
+        // StatusBarNotify wire（SPEC-005 §10.1）不含 direction/severity；
+        // 由 kind 派生展示语义（仅菜单栏命中摘要用，非决策路径）。
+        let direction: Direction = (params.kind == .outboundRedacted) ? .outbound : .inbound
+        let severity: Severity = {
+            switch params.kind {
+            case .userRulesLoadFailed: return .high
+            case .outboundRedacted, .hookTerminal, .sequenceHit: return .medium
+            case .userRulesReloaded, .generic: return .low
+            }
+        }()
         let hit = HitSummary(
-            ruleId: params.ruleId,
+            ruleId: params.ruleId ?? params.kind.rawValue,
             action: action,
-            direction: params.direction,
-            severity: params.severity,
-            occurredAt: parseDate(params.occurredAt) ?? Date(),
-            auditEventId: params.auditEventId
+            direction: direction,
+            severity: severity,
+            occurredAt: params.createdAt,
+            auditEventId: nil
         )
         appState.recordHit(hit)
     }
@@ -73,14 +83,5 @@ public final class AppStateIPCAdapter: IPCAppStateAdapter {
         } else {
             return .reconnected
         }
-    }
-
-    private func parseDate(_ s: String?) -> Date? {
-        guard let s else { return nil }
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let d = f.date(from: s) { return d }
-        f.formatOptions = [.withInternetDateTime]
-        return f.date(from: s)
     }
 }
