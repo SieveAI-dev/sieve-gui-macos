@@ -221,7 +221,7 @@ GUI 端按 SPEC-005 §12 段位划分处理：
 
 | Code | 显示文案（已本地化） |
 |---|---|
-| `-32001` `critical_lock_violated` | "此规则受 Critical 锁保护，不能调整。" + 引导用户读 [PRD §9 #3](../requirements/sieve-gui-macos-prd-v1.0.md) |
+| `-32001` `critical_lock_violated` | "此规则受 Critical 锁保护，不能调整。" + 引导用户读 PRD §9 #3 |
 | `-32002` `daemon_busy` | "daemon 正在重载，请几秒后重试。" |
 | `-32003` `payload_too_large` | "粘贴内容超过 64KB 上限，请压缩后重试。" |
 | `-32004` `unknown_fingerprint` | "该灰名单条目已不存在（可能被另一窗口删除）。"（同时刷新 graylist 列表） |

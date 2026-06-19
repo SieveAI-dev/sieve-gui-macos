@@ -12,7 +12,7 @@
 Sieve GUI 的发布走 **hardened runtime + Apple notarization + Sparkle EdDSA 签名** 三层。
 分发载体是 `.dmg`（用户拖拽到 Applications）+ Sparkle appcast（自动检查更新）。
 
-reproducible build 与 sigstore 推迟到 v1.1（[OQ-G-09](../requirements/sieve-gui-macos-prd-v1.0.md#12-未决事项oq)）。
+reproducible build 与 sigstore 推迟到 v1.1（OQ-G-09）。
 
 ---
 

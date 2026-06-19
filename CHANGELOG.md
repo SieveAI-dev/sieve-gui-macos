@@ -50,7 +50,7 @@
 - 协议版本：`v1`（IPC 客户端硬编码白名单 `["v1"]`，不识别终态 versionMismatch）
 - macOS 13+，Apple Silicon + Intel 通用，`SWIFT_STRICT_CONCURRENCY=complete`
 - 入站决策路径不联网（entitlements `com.apple.security.network.client = false`）
-- 详细进度见 [`tasks/todo.md`](tasks/todo.md)，本轮踩坑沉淀见 [`tasks/lessons.md`](tasks/lessons.md) L-011~L-016
+- 详细进度见 [`tasks/todo.md`](tasks/todo.md)，本轮踩坑沉淀见 `tasks/lessons.md` L-011~L-016
 
 ---
 

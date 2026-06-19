@@ -20,7 +20,7 @@ The daemon is a non-interactive background process — **it cannot, and should n
 - **Menu-bar status** — at-a-glance state indicator (normal / warning / hold / paused / disconnected).
 - **History / Debug / Settings / Onboarding** — the persistent windows around the daemon.
 
-Detection logic stays 100% in the daemon; the GUI never invents protocol fields and never rewrites the values the daemon pushes. See the daemon repository at [SieveAI-dev/sieve](https://github.com/SieveAI-dev/sieve), and the full product spec in [`docs/requirements/sieve-gui-macos-prd-v1.0.md`](docs/requirements/sieve-gui-macos-prd-v1.0.md).
+Detection logic stays 100% in the daemon; the GUI never invents protocol fields and never rewrites the values the daemon pushes. See the daemon repository at [SieveAI-dev/sieve](https://github.com/SieveAI-dev/sieve), and the full product spec in `docs/requirements/sieve-gui-macos-prd-v1.0.md`.
 
 ---
 
@@ -67,7 +67,7 @@ docs/
 Recommended reading order for newcomers:
 
 1. This README
-2. [`docs/requirements/sieve-gui-macos-prd-v1.0.md`](docs/requirements/sieve-gui-macos-prd-v1.0.md)
+2. `docs/requirements/sieve-gui-macos-prd-v1.0.md`
 3. [`docs/design/architecture.md`](docs/design/architecture.md)
 4. [`docs/api/ipc-protocol.md`](docs/api/ipc-protocol.md)
 5. SPECs as needed
@@ -114,7 +114,7 @@ Current engineering baseline:
 - All Phase 1B UX / system integration shipped (HIPS / Settings / History / Debug / Onboarding / Toast).
 - Domain migrated to `sieveai.dev` (Sparkle `SUFeedURL` + appcast + About links).
 
-The progress source of truth is [`tasks/PROGRESS.md`](tasks/PROGRESS.md); engineering lessons are captured in [`tasks/lessons.md`](tasks/lessons.md).
+The progress source of truth is `tasks/PROGRESS.md`; engineering lessons are captured in `tasks/lessons.md`.
 
 ---
 

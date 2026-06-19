@@ -76,6 +76,6 @@ Sieve GUI 需要一个 macOS 原生客户端，负责 HIPS 弹窗、菜单栏、
 ## References
 
 - 上游 [ADR-012（native-gui-app-phase1）](../../external/upstream-references.md#adr-012native-gui-app-phase1)
-- PRD §1.3（不是什么）：[`docs/requirements/sieve-gui-macos-prd-v1.0.md`](../../requirements/sieve-gui-macos-prd-v1.0.md)
+- PRD §1.3（不是什么）：`docs/requirements/sieve-gui-macos-prd-v1.0.md`
 - PRD §9 条 9、11（硬约束）
 - [`CLAUDE.md`](../../../CLAUDE.md) 技术栈硬约束

@@ -20,7 +20,7 @@ daemon 是非交互的后台进程——**它无法弹窗，也不该弹窗。**
 - **菜单栏状态** —— 一眼可见的状态指示（normal / warning / hold / paused / disconnected）。
 - **历史 / 调试 / 设置 / Onboarding** —— 环绕 daemon 的常驻窗口。
 
-检测逻辑 100% 留在 daemon；GUI 从不发明协议字段，从不改写 daemon 推送的值。daemon 仓库见 [SieveAI-dev/sieve](https://github.com/SieveAI-dev/sieve)，完整产品规格见 [`docs/requirements/sieve-gui-macos-prd-v1.0.md`](docs/requirements/sieve-gui-macos-prd-v1.0.md)。
+检测逻辑 100% 留在 daemon；GUI 从不发明协议字段，从不改写 daemon 推送的值。daemon 仓库见 [SieveAI-dev/sieve](https://github.com/SieveAI-dev/sieve)，完整产品规格见 `docs/requirements/sieve-gui-macos-prd-v1.0.md`。
 
 ---
 
@@ -67,7 +67,7 @@ docs/
 新人推荐阅读顺序：
 
 1. 本 README
-2. [`docs/requirements/sieve-gui-macos-prd-v1.0.md`](docs/requirements/sieve-gui-macos-prd-v1.0.md)
+2. `docs/requirements/sieve-gui-macos-prd-v1.0.md`
 3. [`docs/design/architecture.md`](docs/design/architecture.md)
 4. [`docs/api/ipc-protocol.md`](docs/api/ipc-protocol.md)
 5. 按需查 SPEC
@@ -114,7 +114,7 @@ open SieveGUI.xcodeproj
 - Phase 1B 全部 UX / 系统集成已交付（HIPS / Settings / History / Debug / Onboarding / Toast）。
 - 域名迁移至 `sieveai.dev`（Sparkle `SUFeedURL` + appcast + About 链接）。
 
-进度真实源见 [`tasks/PROGRESS.md`](tasks/PROGRESS.md)；工程踩坑沉淀见 [`tasks/lessons.md`](tasks/lessons.md)。
+进度真实源见 `tasks/PROGRESS.md`；工程踩坑沉淀见 `tasks/lessons.md`。
 
 ---
 

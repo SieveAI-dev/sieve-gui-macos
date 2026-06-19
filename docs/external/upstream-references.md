@@ -2,7 +2,7 @@
 
 > 本仓库（`sieve-gui-macos`）严格依赖上游 Rust daemon 仓库（`sieve`）的若干契约。
 > 上游文档**不复制**到本仓库；本文件只列出依赖项 + 说明依赖的是哪部分。
-> 上游仓库 URL：`<待补充 — 闭测期间私有>`（v1.0 GA 后公开）
+> 上游仓库 URL：`https://github.com/SieveAI-dev/sieve`
 
 ---
 

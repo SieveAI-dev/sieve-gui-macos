@@ -52,7 +52,7 @@
 - 修复发布前请勿公开（包括会议演讲 / 博客 / Twitter / 漏洞数据库）
 - 修复发布同时致谢报告者（除非要求匿名）
 - 涉及 Sieve 用户资产损失风险时，立即通过 Sparkle 推送强制升级
-- 不提供 bounty 现金奖励（[redacted]无预算），但对重大发现会在 advisory 与 changelog 中署名致谢
+- 不提供 bounty 现金奖励（项目资源有限），但对重大发现会在 advisory 与 changelog 中署名致谢
 
 ---
 

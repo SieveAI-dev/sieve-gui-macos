@@ -18,14 +18,14 @@
 
 | 编号 | 状态 | 模块 | PRD 章节 |
 |-----|------|------|---------|
-| [SPEC-001](SPEC-001-menu-bar-and-quick-menu.md) | Stable | 菜单栏 + Quick Menu | [§5.1](../requirements/sieve-gui-macos-prd-v1.0.md#51-菜单栏menu-bar) |
-| [SPEC-002](SPEC-002-hips-popup-window.md) | Stable | HIPS 弹窗（GUI 渲染规格）| [§5.2](../requirements/sieve-gui-macos-prd-v1.0.md#52-hips-弹窗) |
-| [SPEC-003](SPEC-003-settings-window.md) | Stable | 设置窗口 6 个 Tab | [§5.3](../requirements/sieve-gui-macos-prd-v1.0.md#53-设置settings-窗口) |
-| [SPEC-004](SPEC-004-history-window.md) | Stable | 历史窗口 + Touch ID + 导出 | [§5.4](../requirements/sieve-gui-macos-prd-v1.0.md#54-历史记录history-窗口) |
-| [SPEC-005](SPEC-005-debug-window.md) | Stable | 调试窗口 4 个 Tab | [§5.5](../requirements/sieve-gui-macos-prd-v1.0.md#55-调试debug-窗口) |
-| [SPEC-006](SPEC-006-onboarding-flow.md) | Stable | 6 步引导 + 权限矩阵 | [§5.6](../requirements/sieve-gui-macos-prd-v1.0.md#56-安装与授权引导onboarding) |
-| [SPEC-007](SPEC-007-toast-and-system-notifications.md) | Stable | 状态栏 Toast + macOS 通知 | [§5.7](../requirements/sieve-gui-macos-prd-v1.0.md#57-通知与反馈toast--系统通知) |
-| [SPEC-008](SPEC-008-ipc-client.md) | Stable | GUI 侧 IPC 客户端实现 | [§6](../requirements/sieve-gui-macos-prd-v1.0.md#6-与-daemon-的-ipc-契约) |
+| [SPEC-001](SPEC-001-menu-bar-and-quick-menu.md) | Stable | 菜单栏 + Quick Menu | §5.1 |
+| [SPEC-002](SPEC-002-hips-popup-window.md) | Stable | HIPS 弹窗（GUI 渲染规格）| §5.2 |
+| [SPEC-003](SPEC-003-settings-window.md) | Stable | 设置窗口 6 个 Tab | §5.3 |
+| [SPEC-004](SPEC-004-history-window.md) | Stable | 历史窗口 + Touch ID + 导出 | §5.4 |
+| [SPEC-005](SPEC-005-debug-window.md) | Stable | 调试窗口 4 个 Tab | §5.5 |
+| [SPEC-006](SPEC-006-onboarding-flow.md) | Stable | 6 步引导 + 权限矩阵 | §5.6 |
+| [SPEC-007](SPEC-007-toast-and-system-notifications.md) | Stable | 状态栏 Toast + macOS 通知 | §5.7 |
+| [SPEC-008](SPEC-008-ipc-client.md) | Stable | GUI 侧 IPC 客户端实现 | §6 |
 
 ---
 

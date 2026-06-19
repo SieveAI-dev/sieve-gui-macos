@@ -8,7 +8,7 @@
 
 Sieve GUI 是 [Sieve daemon](#上游-daemon) 的 native macOS 守门人壳：常驻菜单栏、HIPS 弹窗、读 audit.db 给历史。**daemon 做检测，GUI 只做交互。**
 
-完整定位见 [`docs/requirements/sieve-gui-macos-prd-v1.0.md`](docs/requirements/sieve-gui-macos-prd-v1.0.md)。
+完整定位见 `docs/requirements/sieve-gui-macos-prd-v1.0.md`。
 
 ---
 
@@ -146,7 +146,7 @@ Sources/
 
 ## 工作流增量
 
-- **进度真实源**：所有任务从 [`tasks/PROGRESS.md`](tasks/PROGRESS.md) 拉取，完成后立即勾选 + 移到「已完成」段并写一句话总结。`tasks/` 顶层只保留 `PROGRESS.md` / `lessons.md` / `_archive/`，遵循全局 CLAUDE.md "`tasks/` 目录规范"
+- **进度真实源**：所有任务从 `tasks/PROGRESS.md` 拉取，完成后立即勾选 + 移到「已完成」段并写一句话总结。`tasks/` 顶层只保留 `PROGRESS.md` / `lessons.md` / `_archive/`，遵循全局 CLAUDE.md "`tasks/` 目录规范"
 - **PR 标题**：`feat(menu-bar): ...` / `fix(hips): ...` / `docs(adr): ...`
 - **commit 范围**：`menu-bar` / `hips` / `settings` / `history` / `debug` / `onboarding` / `toast` / `ipc` / `infra`
 
@@ -154,7 +154,7 @@ Sources/
 
 ## 关键文档导航
 
-- 产品需求：[`docs/requirements/sieve-gui-macos-prd-v1.0.md`](docs/requirements/sieve-gui-macos-prd-v1.0.md)
+- 产品需求：`docs/requirements/sieve-gui-macos-prd-v1.0.md`
 - 系统架构：[`docs/design/architecture.md`](docs/design/architecture.md)
 - IPC 协议：[`docs/api/ipc-protocol.md`](docs/api/ipc-protocol.md)
 - ADR 索引：[`docs/design/adr/INDEX.md`](docs/design/adr/INDEX.md)
@@ -162,5 +162,5 @@ Sources/
 - 上游引用：[`docs/external/upstream-references.md`](docs/external/upstream-references.md)
 - 开发指南：[`docs/guides/development.md`](docs/guides/development.md)
 - 发布指南：[`docs/guides/deployment.md`](docs/guides/deployment.md)
-- 当前进度真实源：[`tasks/PROGRESS.md`](tasks/PROGRESS.md)
-- 经验沉淀：[`tasks/lessons.md`](tasks/lessons.md)
+- 当前进度真实源：`tasks/PROGRESS.md`
+- 经验沉淀：`tasks/lessons.md`
