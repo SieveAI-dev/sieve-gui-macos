@@ -60,6 +60,9 @@ Package.pins
 *~
 .fleet/
 
+# Claude Code 本地配置：settings.local.json 是本地覆盖（不入仓）；团队共享走 settings.json
+.claude/settings.local.json
+
 # ─── 测试 / 覆盖率 ────────────────────────────────────────────
 *.gcno
 *.gcda
