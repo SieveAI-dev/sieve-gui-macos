@@ -40,6 +40,8 @@ public final class IPCRouter: IPCDelegate {
                 self.toastController?.presentReconnect(kind)
             }
             self.appStateAdapter?.applyHello(params)
+            // SPEC-002 §6：握手成功 → 重发失联期间用户已作出的决策
+            self.hipsManager?.resendDisconnectedDecisions()
         }
     }
 
@@ -166,6 +168,8 @@ public protocol IPCHipsAdapter: AnyObject {
     func failRequest(id: String, error: DecisionError)
     /// 重连后关闭所有 active HIPS 弹窗（避免 stale UI，SPEC-005 §3.4）。
     func closeAllActiveDialogs()
+    /// SPEC-002 §6：重连握手成功后，重发失联期间缓存的全部决策（daemon 按 request_id 去重）。
+    func resendDisconnectedDecisions()
 }
 
 public enum ReconnectKind: Sendable {

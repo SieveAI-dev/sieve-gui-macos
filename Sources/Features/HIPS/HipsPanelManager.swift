@@ -18,8 +18,8 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
     private var pendingQueue: [HipsRequest] = []
     public private(set) var activeRequest: HipsRequest?
 
-    /// 失联期间用户已经做出的决策，待重连后批量重发（IPCClient inflight 也会兜底，这里冗余防丢）
-    private var disconnectedCache: [(id: String, payload: () async -> Void)] = []
+    /// SPEC-002 §6：失联期间用户作出的决策缓存，重连握手后由 resendDisconnectedDecisions() 遍历重发。
+    private var disconnectedCache = DisconnectedDecisionCache()
 
     /// 追踪每个 rule_id 上次 deny 时间，5s 内再次弹同 rule → 互换按钮位置
     private var denyTracker = HipsDenyTracker()
@@ -179,6 +179,12 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
 
     // MARK: - Decision handling
 
+    /// 当前是否与 daemon 失联（决定决策是直发还是入失联缓存）。
+    private var isDisconnected: Bool {
+        if case .disconnected = appState.daemonStatus { return true }
+        return false
+    }
+
     private func handleDecision(decision: Decision, remember: Bool, hint: String?, phase: HipsPhase) {
         guard let req = activeRequest else { return }
 
@@ -198,23 +204,42 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
             byUser: true,   // 用户主动点按钮触发
             uiPhaseWhenClicked: phase
         )
+        let payload = PendingDecisionPayload.single(response, allowRemember: req.allowRemember)
 
-        Task { [weak self] in
-            await self?.ipcClient?.sendDecisionResponse(id: req.id, result: response.resultJSON(allowRemember: req.allowRemember))
-            // 命中本地最近列表
-            await MainActor.run {
-                self?.appState.recordHit(.init(
-                    ruleId: req.ruleId ?? "merged",
-                    action: decision == .allow ? .allow : .deny,
-                    direction: req.direction,
-                    severity: req.severity,
-                    occurredAt: Date(),
-                    auditEventId: nil
-                ))
+        if isDisconnected {
+            // SPEC-002 §6 场景 D：失联期间不直发，缓存到 disconnectedCache，重连握手后重发
+            disconnectedCache.store(payload)
+        } else {
+            Task { [weak self] in
+                await self?.ipcClient?.sendDecisionResponse(id: req.id, result: payload.resultJSON())
             }
         }
 
+        recordHit(for: req, decision: decision)
         closePanel(notifyDaemon: false)
+    }
+
+    /// 命中本地最近列表（决策路径终点，无论是否失联都记录用户动作）。
+    private func recordHit(for req: HipsRequest, decision: Decision) {
+        appState.recordHit(.init(
+            ruleId: req.ruleId ?? "merged",
+            action: decision == .allow ? .allow : .deny,
+            direction: req.direction,
+            severity: req.severity,
+            occurredAt: Date(),
+            auditEventId: nil
+        ))
+    }
+
+    /// SPEC-002 §6：重连握手后重发失联期间缓存的全部决策（daemon 按 request_id 去重，双发安全）。
+    public func resendDisconnectedDecisions() {
+        let pending = disconnectedCache.drain()
+        guard !pending.isEmpty else { return }
+        Task { [weak self] in
+            for p in pending {
+                await self?.ipcClient?.sendDecisionResponse(id: p.requestId, result: p.resultJSON())
+            }
+        }
     }
 
     private func handleClose() {

@@ -53,6 +53,11 @@ public struct HipsPopupView: View {
                 .padding(16)
             }
             Divider()
+            // SPEC-002 §6 场景 D：失联期间弹窗底部提示，决策将在重连后发送
+            if case .disconnected = appState.daemonStatus {
+                disconnectedDecisionBanner
+                Divider()
+            }
             footer.padding(16)
         }
         .frame(minWidth: 540, minHeight: 480)
@@ -133,6 +138,23 @@ public struct HipsPopupView: View {
         case .low: name = "info.circle.fill"; color = .secondary
         }
         return Image(systemName: name).foregroundStyle(color)
+    }
+
+    // MARK: - Disconnected banner
+
+    /// SPEC-002 §6 场景 D：失联期间的底部提示条（决策将在重连后发送）。
+    private var disconnectedDecisionBanner: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+            Text("与 daemon 失联，你的决策将在连接恢复后发送")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(Color.orange.opacity(0.10))
     }
 
     // MARK: - Footer
