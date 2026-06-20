@@ -38,7 +38,7 @@ swift test
 swift test --filter SieveGUICoreTests.HipsRequestDecoderTests
 swift test --filter SieveGUICoreTests.HipsRequestDecoderTests/testRejectsUnknownProtocolVersion
 
-# Full App build (produces Sieve GUI.app)
+# Full App build (produces SieveGUI.app)
 xcodebuild -project SieveGUI.xcodeproj -scheme SieveGUI -destination 'platform=macOS' build
 
 # Open in Xcode for interactive Run / debugging

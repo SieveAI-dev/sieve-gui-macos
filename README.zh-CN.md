@@ -110,7 +110,7 @@ open SieveGUI.xcodeproj
 
 - 50+ 个 Swift 源文件；IPC 与跨仓库 SPEC-005 v2.x 协议完全对齐（ADR-026 `listeners[]` + ADR-028 中性化）。
 - `swift test` —— 全部测试通过（覆盖 IPC 解码、HIPS 状态机、脱敏、audit-db 访问的大量单元测试）。
-- `xcodebuild` —— **BUILD SUCCEEDED**，产出 `Sieve GUI.app`（通用，universal）。
+- `xcodebuild` —— **BUILD SUCCEEDED**，产出 `SieveGUI.app`（通用，universal）。
 - Phase 1B 全部 UX / 系统集成已交付（HIPS / Settings / History / Debug / Onboarding / Toast）。
 - 域名迁移至 `sieveai.dev`（Sparkle `SUFeedURL` + appcast + About 链接）。
 

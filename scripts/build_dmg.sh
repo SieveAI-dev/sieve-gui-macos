@@ -39,12 +39,12 @@ echo "==> Step 2: xcodebuild exportArchive"
     -exportOptionsPlist scripts/exportOptions.plist
 
 echo "==> Step 3: 验证代码签名"
-codesign --verify --deep --strict --verbose=2 "${EXPORT_PATH}/Sieve GUI.app"
+codesign --verify --deep --strict --verbose=2 "${EXPORT_PATH}/SieveGUI.app"
 
 echo "==> Step 4: hdiutil create .dmg"
 # 用 hdiutil（系统内置，无第三方依赖）
 TMP_DIR="$(mktemp -d)"
-cp -R "${EXPORT_PATH}/Sieve GUI.app" "${TMP_DIR}/"
+cp -R "${EXPORT_PATH}/SieveGUI.app" "${TMP_DIR}/"
 ln -s /Applications "${TMP_DIR}/Applications"
 hdiutil create \
     -volname "Sieve GUI ${VERSION}" \

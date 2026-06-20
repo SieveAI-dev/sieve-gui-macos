@@ -42,7 +42,7 @@ swift test
 swift test --filter SieveGUICoreTests.HipsRequestDecoderTests
 swift test --filter SieveGUICoreTests.HipsRequestDecoderTests/testRejectsUnknownProtocolVersion
 
-# 完整 App 构建（产物 Sieve GUI.app）
+# 完整 App 构建（产物 SieveGUI.app，用户可见显示名仍为 Sieve GUI）
 xcodebuild -project SieveGUI.xcodeproj -scheme SieveGUI -destination 'platform=macOS' build
 
 # Xcode 内 Run / 调试

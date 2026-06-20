@@ -110,7 +110,7 @@ Current engineering baseline:
 
 - 50+ Swift source files; IPC fully aligned with the cross-repo SPEC-005 v2.x protocol (ADR-026 `listeners[]` + ADR-028 neutralization).
 - `swift test` — all tests green (extensive unit suite covering IPC decoding, HIPS state machine, masking, and audit-DB access).
-- `xcodebuild` — **BUILD SUCCEEDED**, producing `Sieve GUI.app` (universal).
+- `xcodebuild` — **BUILD SUCCEEDED**, producing `SieveGUI.app` (universal).
 - All Phase 1B UX / system integration shipped (HIPS / Settings / History / Debug / Onboarding / Toast).
 - Domain migrated to `sieveai.dev` (Sparkle `SUFeedURL` + appcast + About links).
 

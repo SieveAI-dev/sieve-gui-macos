@@ -81,10 +81,10 @@ GUI 与 daemon 共享相同的 "[redacted]" 叙事：
 
 ```bash
 # 1. 验证代码签名
-codesign --verify --deep --strict --verbose=4 "Sieve GUI.app"
+codesign --verify --deep --strict --verbose=4 "SieveGUI.app"
 
 # 2. 验证公证状态
-spctl --assess --type execute --verbose=4 "Sieve GUI.app"
+spctl --assess --type execute --verbose=4 "SieveGUI.app"
 
 # 3. 验证 Sparkle EdDSA 签名（自动更新前 Sparkle 自身做）
 # 公钥见 Info.plist 的 SUPublicEDKey
