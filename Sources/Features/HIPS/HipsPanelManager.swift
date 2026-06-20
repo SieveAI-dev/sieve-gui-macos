@@ -109,6 +109,9 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
             },
             isClickSwallowed: { [weak self] in
                 self?.isClickSwallowed() ?? false
+            },
+            onMergedDecision: { [weak self] action in
+                self?.handleMergedDecision(action: action)
             }
         )
         let host = hostingController ?? NSHostingController(rootView: view)
@@ -216,6 +219,26 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
         }
 
         recordHit(for: req, decision: decision)
+        closePanel(notifyDaemon: false)
+    }
+
+    /// SPEC-002 §4.8：多 issue 合并的整体决策（按动作生成 per-issue → MergedDecisionResponse）。
+    private func handleMergedDecision(action: MergedAction) {
+        guard let req = activeRequest else { return }
+        let perIssue = MergedDecisionBuilder.perIssues(for: req.issues, action: action)
+        let merged = MergedDecisionResponse(id: req.id, perIssue: perIssue, byUser: true)
+        let payload = PendingDecisionPayload.merged(merged)
+
+        if isDisconnected {
+            // 失联期间缓存，重连握手后重发（复用 §6 路径）
+            disconnectedCache.store(payload)
+        } else {
+            Task { [weak self] in
+                await self?.ipcClient?.sendDecisionResponse(id: req.id, result: payload.resultJSON())
+            }
+        }
+
+        recordHit(for: req, decision: action == .denyAll ? .deny : .allow)
         closePanel(notifyDaemon: false)
     }
 

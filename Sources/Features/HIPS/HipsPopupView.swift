@@ -9,6 +9,8 @@ public struct HipsPopupView: View {
     let onDecision: (_ decision: Decision, _ remember: Bool, _ hint: String?, _ phase: HipsPhase) -> Void
     let onCloseWithoutDecision: () -> Void
     let isClickSwallowed: () -> Bool
+    /// 多 issue 合并模式的整体决策（拒绝全部 / 仅允许非 Critical / 全部允许）
+    let onMergedDecision: (MergedAction) -> Void
 
     @State private var rememberChecked: Bool = false
     @State private var contextHint: String = ""
@@ -21,7 +23,8 @@ public struct HipsPopupView: View {
         swappedLayout: Bool = false,
         onDecision: @escaping (Decision, Bool, String?, HipsPhase) -> Void,
         onCloseWithoutDecision: @escaping () -> Void,
-        isClickSwallowed: @escaping () -> Bool
+        isClickSwallowed: @escaping () -> Bool,
+        onMergedDecision: @escaping (MergedAction) -> Void = { _ in }
     ) {
         self.request = request
         self.appState = appState
@@ -29,6 +32,7 @@ public struct HipsPopupView: View {
         self.onDecision = onDecision
         self.onCloseWithoutDecision = onCloseWithoutDecision
         self.isClickSwallowed = isClickSwallowed
+        self.onMergedDecision = onMergedDecision
     }
 
     public var body: some View {
@@ -183,7 +187,9 @@ public struct HipsPopupView: View {
                 Spacer()
                 // swappedLayout=true 时位置互换：拒绝在左（borderedProminent）+ 允许在右（bordered）
                 // 即使 swapped，mainActionLocked / phaseRequiresCmdClick 等约束依然生效
-                if swappedLayout {
+                if request.merged {
+                    mergedActionButtons
+                } else if swappedLayout {
                     // 互换布局：拒绝首先渲染（视觉靠左），允许靠右（原来主按钮位置）
                     Button(action: { tryDeny() }) { Text("拒绝") }
                         .buttonStyle(.borderedProminent)
@@ -224,6 +230,34 @@ public struct HipsPopupView: View {
                 }
             }
         }
+    }
+
+    /// SPEC-002 §4.8：多 issue 合并三按钮组（红线：含 Critical 时禁止渲染"全部允许"）。
+    @ViewBuilder
+    private var mergedActionButtons: some View {
+        if MergedDecisionBuilder.canAllowAll(request.issues) {
+            // 无 Critical：拒绝全部（副）+ 全部允许（主）
+            Button(action: { tryMerged(.denyAll) }) { Text("拒绝全部") }
+                .buttonStyle(.bordered)
+            Button(action: { tryMerged(.allowAll) }) { Text("全部允许") }
+                .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.defaultAction)
+        } else {
+            // 有 Critical：仅允许非 Critical 项（副）+ 拒绝全部（主，Return 默认拒绝）
+            Button(action: { tryMerged(.allowNonCritical) }) {
+                Text("仅允许非 Critical 项（\(MergedDecisionBuilder.nonCriticalCount(request.issues)) 项）")
+            }
+            .buttonStyle(.bordered)
+            .disabled(MergedDecisionBuilder.nonCriticalCount(request.issues) == 0)
+            Button(action: { tryMerged(.denyAll) }) { Text("拒绝全部") }
+                .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.defaultAction)
+        }
+    }
+
+    private func tryMerged(_ action: MergedAction) {
+        guard !isClickSwallowed() else { return }
+        onMergedDecision(action)
     }
 
     private var mainActionLocked: Bool {
