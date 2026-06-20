@@ -13,9 +13,7 @@ public struct HipsPopupView: View {
     @State private var rememberChecked: Bool = false
     @State private var contextHint: String = ""
     @State private var lastHovered: Bool = false
-#if DEBUG
     @State private var showCopyJSONAlert: Bool = false
-#endif
 
     public init(
         request: HipsRequest,
@@ -62,30 +60,16 @@ public struct HipsPopupView: View {
         }
         .frame(minWidth: 540, minHeight: 480)
         .onAppear { rememberChecked = false }
-#if DEBUG
+        // SPEC-002 §4.4：复制原始 JSON 二次确认（PRD §5.2.5）
         .alert("原始 JSON 含敏感字段", isPresented: $showCopyJSONAlert) {
             Button("确认复制", role: .destructive) { copyRawJSON() }
             Button("取消", role: .cancel) {}
         } message: {
             Text("原始 JSON 可能含 evidence 等敏感字段，确认复制到剪贴板？\n5 秒后将自动清空剪贴板。")
         }
-        .overlay(alignment: .topTrailing) {
-            if request.rawJSON != nil {
-                Button(action: { showCopyJSONAlert = true }) {
-                    Image(systemName: "doc.on.clipboard")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .padding(8)
-                }
-                .buttonStyle(.plain)
-                .help("复制原始 JSON（DEBUG）")
-                .padding(4)
-            }
-        }
-#endif
     }
 
-#if DEBUG
+    /// SPEC-002 §4.4：复制原始请求 JSON 到剪贴板，5 秒后自动清空（受控暴露，需二次确认）。
     private func copyRawJSON() {
         guard let raw = request.rawJSON,
               let str = String(data: raw, encoding: .utf8) else { return }
@@ -102,7 +86,6 @@ public struct HipsPopupView: View {
             }
         }
     }
-#endif
 
     // MARK: - Header
 
@@ -189,6 +172,14 @@ public struct HipsPopupView: View {
                 }
 
             HStack(spacing: 10) {
+                // SPEC-002 §4.4：复制原始 JSON 正式按钮（底部最左），二次确认
+                if request.rawJSON != nil {
+                    Button(action: { showCopyJSONAlert = true }) {
+                        Label("复制原始 JSON", systemImage: "doc.on.clipboard")
+                    }
+                    .buttonStyle(.bordered)
+                    .help("复制原始请求 JSON（含敏感数据，需确认）")
+                }
                 Spacer()
                 // swappedLayout=true 时位置互换：拒绝在左（borderedProminent）+ 允许在右（bordered）
                 // 即使 swapped，mainActionLocked / phaseRequiresCmdClick 等约束依然生效
