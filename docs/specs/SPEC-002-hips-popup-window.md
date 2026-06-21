@@ -2,7 +2,7 @@
 
 > Version: v1.0 — 2026-05-02
 > Status: Stable
-> Owner: doskey
+> Owner: SieveAI
 > 关联 ADR：ADR-001, ADR-004, ADR-021
 > 关联 PRD 章节：§5.2, §6.3, §6.4
 > 上游依赖：[上游 SPEC-002 hips-popup-behavior](../external/upstream-references.md#spec-002hips-popup-behavior) · [ADR-021 三道防线](../external/upstream-references.md#adr-021tri-state-decision-and-graylist)
@@ -461,4 +461,4 @@ GUI 内存域模型 `HipsRequest`：见 [data-model.md §3.1](../design/data-mod
 
 | 版本 | 日期 | 作者 | 变更 |
 |------|------|-----|-----|
-| v1.0 | 2026-05-02 | doskey | 首次起草，覆盖全部渲染规格 |
+| v1.0 | 2026-05-02 | SieveAI | 首次起草，覆盖全部渲染规格 |

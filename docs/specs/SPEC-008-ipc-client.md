@@ -2,7 +2,7 @@
 
 > Version: v1.0 — 2026-05-02
 > Status: Stable
-> Owner: doskey
+> Owner: SieveAI
 > 关联 ADR：ADR-001, ADR-002
 > 关联 PRD 章节：§6
 > 上游契约：[ADR-013 ipc-protocol](../external/upstream-references.md#adr-013ipc-protocol) · [ipc-protocol.md](../api/ipc-protocol.md)
@@ -405,4 +405,4 @@ func handleHello(_ params: HelloParams) {
 
 | 版本 | 日期 | 作者 | 变更 |
 |------|------|-----|-----|
-| v1.0 | 2026-05-02 | doskey | 首次起草 |
+| v1.0 | 2026-05-02 | SieveAI | 首次起草 |

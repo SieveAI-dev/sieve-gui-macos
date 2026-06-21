@@ -2,7 +2,7 @@
 
 > Version: v1.0 — 2026-05-02
 > Status: Stable
-> Owner: doskey
+> Owner: SieveAI
 > 关联：[architecture.md](architecture.md) · [SPEC-004 历史窗口](../specs/SPEC-004-history-window.md) · [上游 audit.db schema](../external/upstream-references.md#audit-db-schema)
 
 ---
@@ -314,4 +314,4 @@ struct GraylistEntry: Identifiable {
 
 | 版本 | 日期 | 作者 | 变更 |
 |------|------|-----|-----|
-| v1.0 | 2026-05-02 | doskey | 首次起草 |
+| v1.0 | 2026-05-02 | SieveAI | 首次起草 |

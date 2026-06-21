@@ -2,7 +2,7 @@
 
 > Version: v1.0 — 2026-05-02
 > Status: Stable
-> Owner: doskey
+> Owner: SieveAI
 > 关联：[ADR-010](../design/adr/ADR-010-distribution-sparkle-notarization.md)
 
 ---
@@ -60,7 +60,7 @@ generate_keys
 
 闭测期间用 [Cloudflare Pages](https://pages.cloudflare.com)：
 - 仓库：`<待补充>`
-- 域名：`updates.sieveai.dev`（已迁移，跟进上游 ADR-030）
+- 域名：`updates.sieveai.dev`
 - appcast 路径：`https://updates.sieveai.dev/appcast.xml`
 
 ---

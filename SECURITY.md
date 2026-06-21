@@ -11,8 +11,7 @@
 
 | 渠道 | 说明 | 适用阶段 |
 |------|------|---------|
-| **Email** | doskey.lee@gmail.com | Pre-GA 唯一渠道 |
-| Email | security@sieveai.dev | GA 后启用 |
+| **Email** | security@sieveai.dev | 唯一渠道 |
 | PGP | TBD（GA 前公布公钥指纹） | GA 后启用 |
 
 请在邮件标题加前缀 `[SIEVE-GUI-SECURITY]`，内容包含：

@@ -2,7 +2,7 @@
 
 > Version: v1.0 — 2026-05-02
 > Status: Stable
-> Owner: doskey
+> Owner: SieveAI
 > 关联 ADR：ADR-001, ADR-003
 > 关联 PRD 章节：§5.6
 > 上游依赖：[上游 SPEC-003 sieve-setup-tool](../external/upstream-references.md#spec-003sieve-setup-tool) · [上游 ADR-015](../external/upstream-references.md#adr-015sieve-setup-tool)
@@ -297,4 +297,4 @@ Preset 说明（同设置 Detection Tab，PRD §5.3.2）。
 
 | 版本 | 日期 | 作者 | 变更 |
 |------|------|-----|-----|
-| v1.0 | 2026-05-02 | doskey | 首次起草 |
+| v1.0 | 2026-05-02 | SieveAI | 首次起草 |

@@ -2,7 +2,7 @@
 
 > Version: v1.0 — 2026-05-02
 > Status: Stable
-> Owner: doskey
+> Owner: SieveAI
 > 关联 ADR：ADR-001, ADR-003, ADR-005, ADR-007, ADR-008, ADR-010, ADR-011
 > 关联 PRD 章节：§5.3
 
@@ -326,4 +326,4 @@ UserDefaults schema 见 [data-model.md §1](../design/data-model.md#1-userdefaul
 
 | 版本 | 日期 | 作者 | 变更 |
 |------|------|-----|-----|
-| v1.0 | 2026-05-02 | doskey | 首次起草 |
+| v1.0 | 2026-05-02 | SieveAI | 首次起草 |

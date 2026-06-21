@@ -2,14 +2,14 @@
 
 > Version: v1.0 — 2026-05-02
 > Status: Stable
-> Owner: doskey
+> Owner: SieveAI
 
 ---
 
 ## 0. 目标读者
 
 - 新加入本仓库、需要在本机跑起来 GUI 的工程师
-- doskey 自己（避免每次重装 Mac 再翻一次配置）
+- 维护者（避免每次重装 Mac 再翻一次配置）
 
 ---
 

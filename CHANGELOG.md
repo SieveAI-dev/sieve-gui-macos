@@ -13,7 +13,7 @@
 
 ### Added
 
-- **域名迁移 `sieve.local` → `sieveai.dev`（跟进上游 ADR-030）**
+- **域名迁移 `sieve.local` → `sieveai.dev`**
   - Sparkle `SUFeedURL`：`updates.sieve.local` → `updates.sieveai.dev`（`Info.plist` + `project.yml`）
   - `appcast.xml` link / enclosure url 同步
   - `UpdatesSettingsView` About 段三个链接（docs / 反馈 / 开源声明）同步

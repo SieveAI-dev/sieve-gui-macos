@@ -2,7 +2,7 @@
 
 > Version: v2.1 — 2026-05-07
 > Status: Stable
-> Owner: doskey
+> Owner: SieveAI
 > **权威协议规格**：[upstream `SPEC-005-ipc-protocol.md`](../external/upstream-references.md#spec-005ipc-protocol)（daemon 仓库 `docs/specs/SPEC-005-ipc-protocol.md`）
 > 上游 ADR：[ADR-013](../external/upstream-references.md#adr-013ipc-protocol) · [ADR-026](../external/upstream-references.md#adr-026port-based-listener-routingunix-style-改造-1) · [ADR-028](../external/upstream-references.md#adr-028ipc-protocol-neutralizationunix-style-改造-3) · [SPEC-002](../external/upstream-references.md#spec-002hips-popup-behavior)
 > GUI 实现端：[SPEC-008](../specs/SPEC-008-ipc-client.md)
@@ -280,9 +280,9 @@ GUI 自身的 IPC 行为日志写入 `~/.sieve/gui.log`（详见 SPEC-006 / SPEC
 
 | 版本 | 日期 | 作者 | 变更 |
 |---|---|---|---|
-| v1.0 | 2026-05-02（早晨） | doskey | 首次起草，描述协议 v1（已弃用） |
-| v2.0 | 2026-05-02（午后） | doskey | 重写为 GUI 实现注解。所有 schema 定义迁移到上游 SPEC-005，本文件仅保留 GUI 端本地行为。协议升至 v2，落锤 D1–D8 决策（详见会话记录）。 |
-| v2.1 | 2026-05-07 | doskey | unix-style 改造适配。新增 §12 health.listeners[] GUI 实现注解（ADR-026），加 ADR-028 协议术语中性化说明（method 名 / wire 字段保持向后兼容，GUI 代码无改动）。 |
+| v1.0 | 2026-05-02（早晨） | SieveAI | 首次起草，描述协议 v1（已弃用） |
+| v2.0 | 2026-05-02（午后） | SieveAI | 重写为 GUI 实现注解。所有 schema 定义迁移到上游 SPEC-005，本文件仅保留 GUI 端本地行为。协议升至 v2，落锤 D1–D8 决策。 |
+| v2.1 | 2026-05-07 | SieveAI | unix-style 改造适配。新增 §12 health.listeners[] GUI 实现注解（ADR-026），加 ADR-028 协议术语中性化说明（method 名 / wire 字段保持向后兼容，GUI 代码无改动）。 |
 
 ---
 

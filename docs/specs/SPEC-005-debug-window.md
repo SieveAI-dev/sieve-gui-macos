@@ -2,7 +2,7 @@
 
 > Version: v1.0 — 2026-05-02
 > Status: Stable
-> Owner: doskey
+> Owner: SieveAI
 > 关联 ADR：ADR-001, ADR-003
 > 关联 PRD 章节：§5.5
 
@@ -10,7 +10,7 @@
 
 ## 0. 摘要
 
-调试窗口面向 power user 和开发者（主要是 doskey 自己），提供实时事件流、规则沙箱评估、IPC 消息监视、系统状态四个 Tab。通过 `⌥⌘D` 唤起，单实例非模态窗口。
+调试窗口面向 power user 和开发者，提供实时事件流、规则沙箱评估、IPC 消息监视、系统状态四个 Tab。通过 `⌥⌘D` 唤起，单实例非模态窗口。
 
 目标场景：排查"为什么没拦下来"或"为什么误拦了"，不影响 daemon 真实流量。
 
@@ -283,4 +283,4 @@ P99 latency     goroutines(tasks)   1h hits     audit.db
 
 | 版本 | 日期 | 作者 | 变更 |
 |------|------|-----|-----|
-| v1.0 | 2026-05-02 | doskey | 首次起草 |
+| v1.0 | 2026-05-02 | SieveAI | 首次起草 |

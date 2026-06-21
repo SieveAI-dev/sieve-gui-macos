@@ -2,7 +2,7 @@
 
 > Version: v1.0 — 2026-05-02
 > Status: Stable
-> Owner: doskey
+> Owner: SieveAI
 > 关联：PRD §3 §5 · [上游 architecture](../external/upstream-references.md#5-上游-architecture)
 
 ---
@@ -313,4 +313,4 @@ PRD §8.1 量化要求落到架构层面：
 
 | 版本 | 日期 | 作者 | 变更 |
 |------|------|-----|-----|
-| v1.0 | 2026-05-02 | doskey | 首次起草 |
+| v1.0 | 2026-05-02 | SieveAI | 首次起草 |

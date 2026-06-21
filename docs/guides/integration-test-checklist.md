@@ -16,7 +16,7 @@
   ```
 - [ ] Rust 工具链 1.88.0（daemon 用 `rust-toolchain.toml` 固定）
   ```bash
-  cd /Users/doskey/src/sieve-suite/sieve
+  cd ~/src/sieve-suite/sieve
   rustup show active-toolchain   # 应显示 1.88.0
   cargo --version
   ```
@@ -93,7 +93,7 @@ echo "export BADVAR=1" >> ~/.bashrc
 **Step 1：启动 daemon（开发模式）**
 
 ```bash
-cd /Users/doskey/src/sieve-suite/sieve
+cd ~/src/sieve-suite/sieve
 
 # 写最小配置
 cat > /tmp/sieve-test.toml <<'EOF'
@@ -116,7 +116,7 @@ ls -la ~/.sieve/ipc.sock  # 应出现 srwxr-xr-x 或类似 socket 文件
 
 方式 A（Xcode）：
 ```bash
-cd /Users/doskey/src/sieve-suite/sieve-gui-macos
+cd ~/src/sieve-suite/sieve-gui-macos
 open SieveGUI.xcodeproj
 # 在 Xcode 中 Cmd+R 运行
 ```
@@ -1424,7 +1424,7 @@ grep -i "abandon\|sk-ant-api\|PRIVATE KEY" ~/.sieve/gui.log
 
 **操作步骤：**
 ```bash
-cd /Users/doskey/src/sieve-suite/sieve
+cd ~/src/sieve-suite/sieve
 cargo bench -p sieve-rules
 ```
 
@@ -1446,7 +1446,7 @@ ps aux | grep sieve-cli | awk '{print $6}'  # RSS in KB
 
 **操作步骤：**
 ```bash
-cd /Users/doskey/src/sieve-suite/sieve
+cd ~/src/sieve-suite/sieve
 cargo bench -p sieve-hook
 # 或手动计时
 time cargo run -p sieve-hook -- check --request-id $(uuid) --sieve-home /tmp/sieve-test

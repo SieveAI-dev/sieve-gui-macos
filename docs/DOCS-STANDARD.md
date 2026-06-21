@@ -79,7 +79,7 @@ ADR / SPEC 编号规则：
 
 > Status: Accepted | Proposed | Superseded by ADR-MMM | Deprecated
 > Date: YYYY-MM-DD
-> Deciders: doskey (+ 评审人列表)
+> Deciders: SieveAI
 > Tags: ipc, ui, security, build, ...
 
 ## Context
@@ -125,7 +125,7 @@ ADR / SPEC 编号规则：
 
 > Version: vX.Y — YYYY-MM-DD
 > Status: Draft | Stable | Frozen
-> Owner: doskey
+> Owner: SieveAI
 > 关联 ADR：ADR-NNN, ADR-MMM
 > 关联 PRD 章节：§5.X
 

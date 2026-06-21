@@ -2,7 +2,7 @@
 
 > Status: Accepted
 > Date: 2026-05-02
-> Deciders: doskey
+> Deciders: SieveAI
 > Tags: build, security, infra
 
 ## Context
@@ -80,7 +80,7 @@ Sieve GUI 需要一套分发和自动更新机制。核心要求：
 
 **appcast 托管**：Cloudflare Pages 静态站点，appcast URL 格式：
 ```
-https://updates.sieve.doskey.dev/appcast.xml
+https://updates.sieveai.dev/appcast.xml
 ```
 
 **entitlement 处理**（OQ-G-06）：

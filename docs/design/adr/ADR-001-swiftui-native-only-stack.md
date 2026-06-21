@@ -2,7 +2,7 @@
 
 > Status: Accepted
 > Date: 2026-05-02
-> Deciders: doskey
+> Deciders: SieveAI
 > Tags: build, ui, infra
 
 ## Context
@@ -12,7 +12,7 @@ Sieve GUI 需要一个 macOS 原生客户端，负责 HIPS 弹窗、菜单栏、
 约束来源：
 
 - 上游 daemon（ADR-012）已决定 Phase 1 GUI 走独立 git 仓库 `sieve-gui-macos`，并规定 Phase 1 只做 macOS，不为跨平台预留抽象层（PRD §1.3 §9 条 9 和 11）。
-- 项目由 doskey 单人维护，团队规模决定可投入的框架学习成本有限。
+- 框架学习成本有限，应选择与现有技术储备最匹配的方案。
 - HIPS 弹窗 P95 显示延迟须 < 500ms（PRD §8.1），webview 渲染引入额外层的延迟风险高。
 - 第三方依赖白名单限定为 `SQLite.swift` + `Sparkle`，任何额外依赖都需要显式放行。
 
