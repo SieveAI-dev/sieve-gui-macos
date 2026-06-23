@@ -3,7 +3,6 @@
 > Version: v1.0 — 2026-05-02
 > Status: Stable
 > Owner: SieveAI
-> 关联 ADR：ADR-001, ADR-003, ADR-007
 > 关联 PRD 章节：§5.1
 
 ---

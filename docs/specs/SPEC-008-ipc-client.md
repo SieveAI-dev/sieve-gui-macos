@@ -3,9 +3,8 @@
 > Version: v1.0 — 2026-05-02
 > Status: Stable
 > Owner: SieveAI
-> 关联 ADR：ADR-001, ADR-002
 > 关联 PRD 章节：§6
-> 上游契约：[ADR-013 ipc-protocol](../external/upstream-references.md#adr-013ipc-protocol) · [ipc-protocol.md](../api/ipc-protocol.md)
+> 上游契约：[上游 ipc-protocol 决策](../external/upstream-references.md#ipc-protocol) · [ipc-protocol.md](../api/ipc-protocol.md)
 
 ---
 

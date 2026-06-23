@@ -3,7 +3,6 @@
 > Version: v1.0 — 2026-05-02
 > Status: Stable
 > Owner: SieveAI
-> 关联 ADR：ADR-001, ADR-003, ADR-005, ADR-008, ADR-011
 > 关联 PRD 章节：§5.4
 
 ---
@@ -234,7 +233,7 @@ schema 不兼容降级：见 [data-model.md §2.4](../design/data-model.md#24-sc
 
 ### 5.2 导出格式
 
-**CSV 字段**（强制脱敏，[ADR-011](../design/adr/ADR-011-redact-on-export.md)）：
+**CSV 字段**（强制脱敏）：
 ```
 timestamp, direction, severity, rule_id, disposition, user_choice, fingerprint, caller_exe_basename
 ```
@@ -275,10 +274,10 @@ timestamp, direction, severity, rule_id, disposition, user_choice, fingerprint, 
 | 历史窗口加载 1 万条 | < 500ms | PRD §8.1 |
 | 分页 LIMIT | 每次最多 50 条，加上分页，防止全表加载卡顿 | data-model §2.3 |
 | file watch 去抖 | 100ms | data-model §2.1 |
-| 默认脱敏 | 历史窗口所有字段默认 mask，Toggle 开启需 Touch ID | PRD §5.4.4 / ADR-008 |
-| 导出 | 必须强制脱敏，不论当前 Toggle 状态 | PRD §9 #10 / ADR-011 |
+| 默认脱敏 | 历史窗口所有字段默认 mask，Toggle 开启需 Touch ID | PRD §5.4.4 |
+| 导出 | 必须强制脱敏，不论当前 Toggle 状态 | PRD §9 #10 |
 | 原始 prompt 字节 | 不存储，不展示；evidence_meta 只展示 meta（非原文）| PRD §9 #5 |
-| GUI 不写 audit.db | 任何操作不触发 audit.db 写入 | ADR-005 / PRD §5.4.1 |
+| GUI 不写 audit.db | 任何操作不触发 audit.db 写入 | PRD §5.4.1 |
 
 ---
 

@@ -3,7 +3,6 @@
 > Version: v1.0 — 2026-05-02
 > Status: Stable
 > Owner: SieveAI
-> 关联 ADR：ADR-001, ADR-003, ADR-005, ADR-007, ADR-008, ADR-010, ADR-011
 > 关联 PRD 章节：§5.3
 
 ---
@@ -234,8 +233,6 @@ Custom preset 下可编辑非 critical_lock 规则的 `timeout_seconds`（30~600
 - `kAutoCheckUpdates` Toggle（默认开，Sparkle 自动检查）
 - hint："Sparkle EdDSA 签名 + appcast"
 
-Sparkle 集成见 [ADR-010](../design/adr/ADR-010-distribution-sparkle-notarization.md)。
-
 ### 4.8 About Tab
 
 应用图标（64pt）+ 应用信息 + 操作按钮。
@@ -247,7 +244,7 @@ Sparkle 集成见 [ADR-010](../design/adr/ADR-010-distribution-sparkle-notarizat
 | 版本 | `1.0.0 · build YYYY-MM-DD · sha xxxxxxx`（mono）|
 
 操作按钮（一行）：
-- [导出诊断包]：`DiagnosticPackager`（先脱敏再压缩，见 PRD §8.3 和 [ADR-011](../design/adr/ADR-011-redact-on-export.md)）
+- [导出诊断包]：`DiagnosticPackager`（先脱敏再压缩，见 PRD §8.3）
 - [重新运行引导]：弹 Onboarding 窗口
 
 额外链接：帮助 / 反馈邮箱 / 开源声明（SwiftUI 依赖列表）。
@@ -289,11 +286,11 @@ UserDefaults schema 见 [data-model.md §1](../design/data-model.md#1-userdefaul
 |------|------|------|
 | 设置窗口打开延迟 | < 3s（含 IPC 请求数据）| PRD §2.2 |
 | IPC 失联时写入操作 | 全部禁用（防状态分裂）| PRD §5.1.4 |
-| critical_lock 规则 | timeout / default 字段禁止编辑 | ADR-021 / PRD §5.3.2 |
+| critical_lock 规则 | timeout / default 字段禁止编辑 | PRD §5.3.2 |
 | 用户规则编辑器 | Phase 1 不提供，只显示路径和外部编辑入口 | PRD §10 |
-| 导出诊断包 | 强制脱敏，不依赖用户阅读条款 | PRD §9 #10 / ADR-011 |
-| 清空历史 | 必须 Touch ID 二次确认 | PRD §5.3.3 / ADR-008 |
-| 自动检查更新 | 使用 Sparkle EdDSA；GUI 不嵌入 daemon 更新 | ADR-010 / PRD §5.3.5 |
+| 导出诊断包 | 强制脱敏，不依赖用户阅读条款 | PRD §9 #10 |
+| 清空历史 | 必须 Touch ID 二次确认 | PRD §5.3.3 |
+| 自动检查更新 | 使用 Sparkle EdDSA；GUI 不嵌入 daemon 更新 | PRD §5.3.5 |
 
 ---
 

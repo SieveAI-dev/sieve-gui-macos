@@ -16,7 +16,7 @@
 ### 安全红线全绿（已验证 file:line）
 - **HIPS 8 条**：allow_remember=false 不渲染 checkbox / 主按钮缺 recommendation·非 high 锁拒绝 / 含 Critical 隐藏「全部允许」/ rawJSON 关闭即清 / 编码层 remember 强制 false / Phase3 ⌘-Click / 0.4s swallow / 串行排队
 - **IPC 5 条**：v2 白名单硬拒不嗅探 / remember 编码层强制 / Codable 不透传 / 不假装健康 / 决策路径不联网
-- **横切**：导出强制脱敏(ADR-011) / Touch ID 二次确认 / critical_lock 禁编 / IPC params 永不展示 / GUI 只读 audit.db
+- **横切**：导出强制脱敏 / Touch ID 二次确认 / critical_lock 禁编 / IPC params 永不展示 / GUI 只读 audit.db
 
 ### PROGRESS 6-20 低估、实际已落地（纠偏）
 - mock daemon harness 集成测试（IPCClientIntegrationTests + MockDaemonHarness 真 socket）

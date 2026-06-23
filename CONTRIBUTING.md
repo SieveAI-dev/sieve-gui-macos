@@ -69,7 +69,7 @@ A mock daemon harness is not wired up yet; integration testing connects to a rea
 
 These mirror [`CLAUDE.md`](CLAUDE.md) "硬约束" and the PRD §9. Read `CLAUDE.md` for the full list and rationale; the load-bearing ones:
 
-1. **When `allow_remember == false`, the HIPS panel must not render the Remember checkbox** — not even greyed out. (Third line of ADR-021's three defenses.)
+1. **When `allow_remember == false`, the HIPS panel must not render the Remember checkbox** — not even greyed out. (Third line of the three defenses.)
 2. **The GUI decision path does not touch the network.** Sparkle update checks and external links are the only exceptions, and neither may affect the HIPS panel.
 3. **Never store raw prompts or matched evidence snippets.** Evidence the daemon pushes is held in memory only and discarded when the panel closes.
 4. **The HIPS primary button is always "Reject" when `recommendation` is missing or `confidence != high`.** The keyboard Return default maps to Reject.
@@ -86,7 +86,7 @@ If your change interacts with any of the above, link the relevant ADR/SPEC in yo
 
 - **Conventional Commits.** Format: `type(scope): summary`.
 - **Scope tags:** `menu-bar` / `hips` / `settings` / `history` / `debug` / `onboarding` / `toast` / `ipc` / `infra`.
-  - Examples: `feat(menu-bar): show degraded handshake state`, `fix(hips): force Reject default when confidence is low`, `docs(adr): supersede ADR-009`.
+  - Examples: `feat(menu-bar): show degraded handshake state`, `fix(hips): force Reject default when confidence is low`, `docs(adr): supersede a prior decision record`.
 - One commit does one thing — do not mix feature changes with formatting.
 - **No AI signatures, ever.** Do not add `Co-Authored-By: <any AI tool>`, "Generated with …", robot emojis, or any AI-generated footer/byline to commits or PR descriptions. This applies to every commit and PR without exception.
 - Keep PRs scoped; update the relevant SPEC/ADR when you change behavior. Any IPC field or behavior change requires updating the SPEC **and** bumping the protocol version in both this repo and the daemon repo.

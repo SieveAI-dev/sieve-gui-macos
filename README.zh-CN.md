@@ -34,7 +34,7 @@ daemon 是非交互的后台进程——**它无法弹窗，也不该弹窗。**
 | IPC | `~/.sieve/ipc.sock` Unix Domain Socket，JSON-RPC 2.0 |
 | 分发 | hardened runtime + Apple notarization + Sparkle 自动更新 |
 
-栈锁定见 [ADR-001](docs/design/adr/ADR-001-swiftui-native-only-stack.md)，硬约束见 [`CLAUDE.md`](CLAUDE.md)。
+硬约束见 [`CLAUDE.md`](CLAUDE.md)。
 
 ---
 
@@ -50,8 +50,7 @@ docs/
 │   ├── architecture.md         ← GUI 进程架构
 │   ├── data-model.md           ← 本地数据模型
 │   └── adr/
-│       ├── INDEX.md
-│       └── ADR-001 … ADR-011
+│       └── INDEX.md
 ├── specs/
 │   ├── INDEX.md
 │   └── SPEC-001 … SPEC-008
@@ -108,7 +107,7 @@ open SieveGUI.xcodeproj
 
 当前工程基线：
 
-- 50+ 个 Swift 源文件；IPC 与跨仓库 SPEC-005 v2.x 协议完全对齐（ADR-026 `listeners[]` + ADR-028 中性化）。
+- 50+ 个 Swift 源文件；IPC 与跨仓库 SPEC-005 v2.x 协议完全对齐（`listeners[]` + 协议术语中性化）。
 - `swift test` —— 全部测试通过（覆盖 IPC 解码、HIPS 状态机、脱敏、audit-db 访问的大量单元测试）。
 - `xcodebuild` —— **BUILD SUCCEEDED**，产出 `SieveGUI.app`（通用，universal）。
 - Phase 1B 全部 UX / 系统集成已交付（HIPS / Settings / History / Debug / Onboarding / Toast）。

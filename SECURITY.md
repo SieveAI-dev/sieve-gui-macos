@@ -74,7 +74,7 @@ GUI 与 daemon 共享相同的 "[redacted]" 叙事：
 - 所有 release 二进制 **Apple Developer ID 签名 + Notarization + sigstore 双签**
 - **Sparkle EdDSA 签名验证**（appcast.xml 中的 sparkle:edSignature）
 - **pinned dependencies**：`Package.resolved` 入库
-- **entitlements 最小化**：sandbox 关闭仅为 Unix Socket IPC 所必需，[ADR-001](./docs/design/adr/ADR-001-swiftui-native-only-stack.md) 有完整说明
+- **entitlements 最小化**：sandbox 关闭仅为 Unix Socket IPC 所必需
 
 供应链审计建议：
 

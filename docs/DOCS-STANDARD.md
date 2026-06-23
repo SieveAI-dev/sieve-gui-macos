@@ -30,8 +30,8 @@ docs/
 │   ├── architecture.md       ← 系统架构
 │   ├── data-model.md         ← 数据模型
 │   └── adr/
-│       ├── INDEX.md          ← ADR 索引
-│       └── ADR-NNN-*.md      ← 单个决策
+│       ├── INDEX.md          ← 决策索引
+│       └── *.md              ← 单个决策
 ├── specs/
 │   ├── INDEX.md              ← SPEC 索引
 │   └── SPEC-NNN-*.md         ← 单个功能技术规格
@@ -61,13 +61,13 @@ tasks/
 
 | 类型 | 模式 | 示例 |
 |------|-----|------|
-| ADR | `ADR-NNN-描述-用-连字符.md` | `ADR-001-swiftui-native-only-stack.md` |
+| 决策记录 | `<前缀>-NNN-描述-用-连字符.md` | `swiftui-native-only-stack.md` |
 | SPEC | `SPEC-NNN-功能名.md` | `SPEC-002-hips-popup-window.md` |
 | Review | `YYYY-MM-DD-来源-类型.md` | `2026-05-15-ipc-spec-internal-review.md` |
 | Research | `YYYY-MM-DD-主题.md` 或 `主题名.md` | `swiftui-window-scenes-survey.md` |
 
-ADR / SPEC 编号规则：
-- 三位编号，**递增不跳号**（已废弃的也保留占位，文件标记 `Status: superseded by ADR-NNN`）
+SPEC 编号规则：
+- 三位编号，**递增不跳号**（已废弃的也保留占位，文件标记 `Status: superseded`）
 - 编号一旦发布就不改
 
 ---
@@ -75,9 +75,9 @@ ADR / SPEC 编号规则：
 ## 3. ADR 模板
 
 ```markdown
-# ADR-NNN：{决策一句话}
+# {决策记录前缀}-NNN：{决策一句话}
 
-> Status: Accepted | Proposed | Superseded by ADR-MMM | Deprecated
+> Status: Accepted | Proposed | Superseded | Deprecated
 > Date: YYYY-MM-DD
 > Deciders: SieveAI
 > Tags: ipc, ui, security, build, ...
@@ -126,7 +126,6 @@ ADR / SPEC 编号规则：
 > Version: vX.Y — YYYY-MM-DD
 > Status: Draft | Stable | Frozen
 > Owner: SieveAI
-> 关联 ADR：ADR-NNN, ADR-MMM
 > 关联 PRD 章节：§5.X
 
 ## 0. 摘要
@@ -201,7 +200,7 @@ ADR / SPEC 编号规则：
 - **Stable**：通过评审，正式生效；后续修改递增 minor 版本（v1.0 → v1.1）
 - **Frozen**（仅 SPEC）：发布版本对应的快照，禁止任何修改；下一版本另开文件
 - **Deprecated**：不再维护，但内容保留供历史参考
-- **Superseded**：被新文档取代，文件保留，开头标注 `> Superseded by ADR-MMM`
+- **Superseded**：被新文档取代，文件保留，开头标注 `> Superseded by <新文档>`
 
 ---
 

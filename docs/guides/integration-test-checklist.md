@@ -865,7 +865,7 @@ ANTHROPIC_BASE_URL=http://127.0.0.1:11453 claude --bare -p \
 - 进度条：[`Sources/Features/History/HistoryWindowView.swift:68`](../../Sources/Features/History/HistoryWindowView.swift)（`exportProgressBar`）
 - HistoryExporter：[`Sources/Features/History/HistoryExporter.swift`](../../Sources/Features/History/HistoryExporter.swift)
 - HistoryExportFormatter：[`Sources/Models/HistoryExportFormatter.swift`](../../Sources/Models/HistoryExportFormatter.swift)
-- 确认 dialog 强制脱敏提示：[`Sources/Features/History/HistoryWindowView.swift:42`](../../Sources/Features/History/HistoryWindowView.swift)（Text: "历史记录将强制脱敏（ADR-011），不含 evidence 原文"）
+- 确认 dialog 强制脱敏提示：[`Sources/Features/History/HistoryWindowView.swift:42`](../../Sources/Features/History/HistoryWindowView.swift)（Text: "历史记录将强制脱敏，不含 evidence 原文"）
 
 - [ ] 导出进度条正常，取消有效，文件脱敏
 

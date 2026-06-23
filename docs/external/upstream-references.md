@@ -33,14 +33,16 @@
 
 ---
 
-## 2. 上游 ADR
+## 2. 上游架构决策（功能契约）
 
-### ADR-012：native-gui-app-phase1
+> 下列为本仓库依赖的上游 daemon 架构决策，按功能契约自包含描述；权威 wire / schema 以上游公开 SPEC-005 为准。
+
+### native-gui-app（Phase 1）
 - **决策**：Phase 1 GUI 用 SwiftUI native，独立 git 仓库 `sieve-gui-macos`
-- **本仓库依赖**：技术栈锁定的根源；本仓库的 [ADR-001](../design/adr/ADR-001-swiftui-native-only-stack.md) 是这条决策在 GUI 仓库内的延伸表达
+- **本仓库依赖**：技术栈锁定的根源；本仓库 SwiftUI native-only 技术栈是这条决策在 GUI 仓库内的延伸表达
 
-### ADR-013：ipc-protocol
-- **决策**：IPC 走 Unix Domain Socket + JSON-RPC 2.0，协议版本 v1
+### ipc-protocol
+- **决策**：IPC 走 Unix Domain Socket + JSON-RPC 2.0，协议版本 v1（后续升级至 v2，权威定义见上游 SPEC-005）
 - **本仓库依赖**：
   - 协议格式（JSON-RPC 2.0、无 batch、服务端可主动 notify）
   - socket 路径（`~/.sieve/ipc.sock`）
@@ -48,24 +50,24 @@
   - 协议版本号语义
 - **本仓库实现端**：[`docs/api/ipc-protocol.md`](../api/ipc-protocol.md)、[`SPEC-008`](../specs/SPEC-008-ipc-client.md)
 
-### ADR-014：dual-layer-defense
+### dual-layer-defense
 - **决策**：GuiPopup 类规则走 GUI；HookTerminal 类规则走 Claude Code Hook 终端
 - **本仓库依赖**：知道哪些 disposition 是 GUI 渲染范围（`GuiPopup | AutoRedact | StatusBar`），哪些不是（`HookTerminal`）
 
-### ADR-015：sieve-setup-tool
+### sieve-setup-tool
 - **决策**：`sieve setup` CLI 子命令做自动配置
 - **本仓库依赖**：
   - Onboarding step 2 / step 6 调用 `sieve setup`、`sieve doctor`
   - GUI 通过 `Process` spawn 终端运行，不参与配置逻辑
 
-### ADR-016：disposition-matrix-2d
+### disposition-matrix-2d
 - **决策**：disposition 字段从一维扩展为二维（direction × severity）
 - **本仓库依赖**：渲染逻辑根据 (direction, severity) 二元决定：
   - HIPS 主按钮位置
   - Toast 颜色与持续时间
   - 历史列表的图标
 
-### ADR-021：tri-state-decision-and-graylist
+### tri-state-decision-and-graylist
 - **决策**：三态决策（allow / deny / remember）+ critical_lock 三道防线
 - **本仓库依赖（关键！）**：
   - **防线一**：GUI 不参与计算 `allow_remember`，无条件信任 daemon 字段
@@ -74,7 +76,7 @@
 - **违反这条 = 与 v1.5.4 P0 同级别安全漏洞**
 - **本仓库实现端**：[`SPEC-002`](../specs/SPEC-002-hips-popup-window.md) §5.6 / [`CLAUDE.md`](../../CLAUDE.md) 硬约束 §1
 
-### ADR-026：port-based-listener-routing（unix-style 改造 §1）
+### port-based-listener-routing
 - **决策**：daemon `Config.upstream_url` + `Config.port` 升级为 `Config.upstreams: Vec<UpstreamListener>`，每个 listener 显式声明 `provider_id` + `protocol`
 - **本仓库依赖**：
   - `sieve.health` 响应新增顶层 `listeners: ListenerSnapshot[]` 字段（每项 `addr / port / provider_id / protocol`）
@@ -83,12 +85,12 @@
   - GUI doctor / Settings → Daemon Tab 应优先消费 `listeners[]`，空时回落到 `listen` 单值展示
 - **本仓库实现端**：[`Sources/Models/IPCResponses.swift`](../../Sources/Models/IPCResponses.swift) `HealthResultDTO.effectiveListeners` / [`Tests/SieveGUITests/HealthResultDTOTests.swift`](../../Tests/SieveGUITests/HealthResultDTOTests.swift)
 
-### ADR-027：network-jail-enforcement
+### network-jail-enforcement
 - **决策（v3.x 范畴）**：按 LLM endpoint host 切片做 daemon 进程 network jail
 - **本仓库依赖**：当前无（GUI 决策路径不联网，与 jail 规则无交集）
 - **未来需关注**：v3.x 起 doctor 输出可能新增 jail 状态字段，到时同步 health DTO
 
-### ADR-028：ipc-protocol-neutralization（unix-style 改造 §3）
+### ipc-protocol-neutralization
 - **决策**：SPEC-005 协议术语中性化（"GUI 端" → "client 端"，"弹窗" → "decision request / decision event"），sieve-ipc crate 内部模块化为 `protocol/` + `server/` + `client/`，新增 headless decision path（`sieve decisions watch / show / resolve` CLI 子命令）
 - **本仓库依赖**：
   - **wire 字段名 + method 名全部不变**（`sieve.request_decision` / `sieve.request_decision_canceled` / `gui_popup` disposition 枚举值均保留向后兼容）—— GUI 代码无需迁移
@@ -104,7 +106,7 @@
 ### SPEC-005：ipc-protocol（**双仓库唯一权威 IPC 协议规格**）
 - **路径（上游仓库内）**：`docs/specs/SPEC-005-ipc-protocol.md`
 - **覆盖**：所有 IPC 方法名、字段、枚举、错误码、握手、心跳、版本协商、协议升级流程、schema 一致性测试约定
-- **SPEC-005 最后改动 commit**：`7108a45`（ADR-026 listeners[] 数组扩展，向后兼容、未 bump `protocol_version`）。截至 daemon HEAD `8d68912`，SPEC-005 文档最后改动仍为 `7108a45`。
+- **SPEC-005 最后改动 commit**：`7108a45`（listeners[] 数组扩展，向后兼容、未 bump `protocol_version`）。截至 daemon HEAD `8d68912`，SPEC-005 文档最后改动仍为 `7108a45`。
 - **fixture 副本来源（SPEC §14.2）**：`Tests/SieveGUITests/Fixtures/v2/` 现为 daemon 全部 **19 个 method 目录 / 81 个权威 fixture** 的字节一致副本（2026-06-18 从 `sieve.health` 一个目录扩到全量），pin 自 daemon fixtures/v2 目录最近 commit **`ae20fd3`**（daemon HEAD `8d68912`，2026-06-11）。`IPCSchemaV2FixtureTests` 逐个用对应 Swift DTO 解码校验跨仓一致；pin 细节见 `Tests/SieveGUITests/Fixtures/v2/_PIN.md`。
 - **✅ 2026-06-18 D1-D7 跨仓漂移已修复并对齐**（daemon 按 SPEC-005 修正 wire，GUI 同步 DTO + fixture，`IPCSchemaV2FixtureTests` 断言已从 `#expect(throws:)` 翻转为「解码成功 + 字段正确」）：
   1. **D1 hello.preset**：daemon `"default"→"standard"`（SPEC §5.6）；GUI 仅改 fixture（`Preset` enum 已含 `.standard`）。
@@ -182,7 +184,7 @@ GUI 必须 0700 / 0600 权限校验 `~/.sieve/`，不符合时引导修复（[`S
 |------------------|----------------|-------------|------|
 | `v1` | daemon v0.x（v1.5 实现） | GUI v0.x | **Deprecated**（schema drift 严重，已弃用） |
 | `v2` | daemon v0.7+（SPEC-005 v2.0 落地后） | GUI v1.0 | Active（双仓库统一 schema） |
-| `v2.x`（向后兼容扩展） | daemon v0.8+（ADR-026/028 落地后） | GUI v1.0+ | Active（health 新增 `listeners[]`、协议术语中性化；不 bump 主版本号） |
+| `v2.x`（向后兼容扩展） | daemon v0.8+（port-based listener routing + 协议术语中性化落地后） | GUI v1.0+ | Active（health 新增 `listeners[]`、协议术语中性化；不 bump 主版本号） |
 
 未来递增策略：
 - 字段新增（向后兼容） → 不递增 `protocol_version`，但更新 `ipc-protocol.md` 标注引入版本

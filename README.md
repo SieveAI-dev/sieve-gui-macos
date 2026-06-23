@@ -34,7 +34,7 @@ Detection logic stays 100% in the daemon; the GUI never invents protocol fields 
 | IPC | `~/.sieve/ipc.sock` Unix domain socket, JSON-RPC 2.0 |
 | Distribution | Hardened runtime + Apple notarization + Sparkle auto-update |
 
-Stack lock-in is recorded in [ADR-001](docs/design/adr/ADR-001-swiftui-native-only-stack.md); hard constraints live in [`CLAUDE.md`](CLAUDE.md).
+Hard constraints live in [`CLAUDE.md`](CLAUDE.md).
 
 ---
 
@@ -50,8 +50,7 @@ docs/
 │   ├── architecture.md         ← GUI process architecture
 │   ├── data-model.md           ← local data model
 │   └── adr/
-│       ├── INDEX.md
-│       └── ADR-001 … ADR-011
+│       └── INDEX.md
 ├── specs/
 │   ├── INDEX.md
 │   └── SPEC-001 … SPEC-008
@@ -108,7 +107,7 @@ open SieveGUI.xcodeproj
 
 Current engineering baseline:
 
-- 50+ Swift source files; IPC fully aligned with the cross-repo SPEC-005 v2.x protocol (ADR-026 `listeners[]` + ADR-028 neutralization).
+- 50+ Swift source files; IPC fully aligned with the cross-repo SPEC-005 v2.x protocol (`listeners[]` + protocol-term neutralization).
 - `swift test` — all tests green (extensive unit suite covering IPC decoding, HIPS state machine, masking, and audit-DB access).
 - `xcodebuild` — **BUILD SUCCEEDED**, producing `SieveGUI.app` (universal).
 - All Phase 1B UX / system integration shipped (HIPS / Settings / History / Debug / Onboarding / Toast).

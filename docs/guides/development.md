@@ -67,7 +67,7 @@ mock 会在 `~/.sieve/ipc.sock` 启动一个假 daemon，按预设脚本推送 H
 
 ## 3. 项目结构
 
-详见 [ADR-009](../design/adr/ADR-009-project-layout-single-target.md)。简化版：
+简化版：
 
 ```
 SieveGUI.xcodeproj

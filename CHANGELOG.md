@@ -49,7 +49,7 @@
   - 测试基线：127 → 134（+7）
   - **协议契约**：未 bump `protocol_version`（v2 内向后兼容扩展）；wire 字段 `gui_popup` / method 名 `sieve.request_decision*` 全部保留向后兼容（ADR-028 选择最大兼容路径）
 - **Phase 1A 完成**：49 个 Swift 源文件 / 5593 行；`xcodebuild` 干净通过；20/20 单元测试全绿
-- 单 Xcode target 工程骨架（`project.yml` + XcodeGen），目录布局符合 [ADR-009](docs/design/adr/ADR-009-project-layout-single-target.md)
+- 单 Xcode target 工程骨架（`project.yml` + XcodeGen），目录布局符合 ADR-009
 - Models 层全套：HipsRequest 五模板解码 + 编码层强制 `remember=false` 红线
 - IPC 客户端：`Network.framework` UDS + 退避 1/2/5/10/30s + 30s 心跳超时 + 协议版本白名单 + `InflightQueue` actor + `sendRequest async throws -> Data`
 - audit.db 只读 + DispatchSource file watch + v2 schema fail-soft

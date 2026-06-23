@@ -235,8 +235,6 @@ IPCClient detect:
 - Service 之间禁止互相依赖（统一通过 AppState 协调）
 - 任何层都不能反向依赖 View
 
-文件夹布局见 [ADR-009](adr/ADR-009-project-layout-single-target.md)。
-
 ---
 
 ## 5. 状态管理
@@ -305,7 +303,7 @@ PRD §8.1 量化要求落到架构层面：
 - **文件权限**：`~/.sieve/` 必须 0700；GUI 启动时检查，不符合时引导
 - **IPC 鉴权**：依赖 socket 文件 0600，进程内不做密码学认证
 - **敏感字段隔离**：`MaskedField` 组件包住所有可能含原文的字段，禁止直接 `Text(...)`
-- **导出脱敏**：`DiagnosticPackager` 是唯一可以 read evidence 的路径，强制走脱敏管线（[ADR-011](adr/ADR-011-redact-on-export.md)）
+- **导出脱敏**：`DiagnosticPackager` 是唯一可以 read evidence 的路径，强制走脱敏管线
 
 ---
 

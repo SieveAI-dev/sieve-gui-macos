@@ -3,7 +3,6 @@
 > Version: v1.0 — 2026-05-02
 > Status: Stable
 > Owner: SieveAI
-> 关联：[ADR-010](../design/adr/ADR-010-distribution-sparkle-notarization.md)
 
 ---
 

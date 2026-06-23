@@ -3,9 +3,8 @@
 > Version: v1.0 — 2026-05-02
 > Status: Stable
 > Owner: SieveAI
-> 关联 ADR：ADR-001, ADR-004, ADR-021
 > 关联 PRD 章节：§5.2, §6.3, §6.4
-> 上游依赖：[上游 SPEC-002 hips-popup-behavior](../external/upstream-references.md#spec-002hips-popup-behavior) · [ADR-021 三道防线](../external/upstream-references.md#adr-021tri-state-decision-and-graylist)
+> 上游依赖：[上游 SPEC-002 hips-popup-behavior](../external/upstream-references.md#spec-002hips-popup-behavior) · [上游 tri-state-decision-and-graylist 三道防线](../external/upstream-references.md#tri-state-decision-and-graylist)
 
 ---
 
@@ -129,7 +128,7 @@ idle ─────────────────────────
 
 ### 4.1 窗口形态
 
-- 类型：`NSPanel`（见 [ADR-004](../design/adr/ADR-004-hips-floating-panel.md)）
+- 类型：`NSPanel`
 - `window.level = .floating`
 - `collectionBehavior` 包含 `.canJoinAllSpaces` + `.fullScreenAuxiliary`
 - 默认尺寸：宽 540pt，高自适应（最小 400pt）
@@ -284,7 +283,7 @@ length:  71 chars
 
 ### 4.6 Remember Checkbox 渲染规则
 
-**这是 ADR-021 三道防线第三道，违反 = P0 安全漏洞。**
+**这是三道防线第三道，违反 = P0 安全漏洞。**
 
 ```
 allow_remember 字段值  →  GUI 渲染行为
@@ -404,7 +403,7 @@ GUI 内存域模型 `HipsRequest`：见 [data-model.md §3.1](../design/data-mod
 | 指标 | 约束 | 来源 |
 |------|------|------|
 | 弹窗 P95 显示延迟（IPC 接收→第一帧）| < 500ms | PRD §8.1 |
-| `allow_remember == false` 时 | 严禁渲染 Remember checkbox；不允许灰显 | ADR-021 防线三 / CLAUDE.md 硬约束 #1 |
+| `allow_remember == false` 时 | 严禁渲染 Remember checkbox；不允许灰显 | 防线三 / CLAUDE.md 硬约束 #1 |
 | `recommendation` 缺失或 `confidence != "high"` | 主按钮永远是"拒绝"，Return 键默认拒绝 | CLAUDE.md 硬约束 #4 / PRD §9 #3 |
 | 弹窗关闭后 rawJSON | 必须主动清零（`Data` 置空）| PRD §9 #5 |
 | 多 issue 有 Critical | 禁止渲染"全部允许"按钮 | PRD §4.3 |

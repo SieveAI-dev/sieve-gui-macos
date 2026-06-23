@@ -35,6 +35,6 @@
 |------------|---------|-----|
 | SPEC-002 | 上游 SPEC-002 (hips-popup-behavior) | 上游定义 IPC 行为契约；本仓库定义 GUI 渲染规格。两者必须同步演进 |
 | SPEC-006 | 上游 SPEC-003 (sieve-setup-tool) | 上游定义 `sieve setup`/`doctor` CLI 行为；本仓库定义 Onboarding 如何调用与展示结果 |
-| SPEC-008 | 上游 ADR-013 (ipc-protocol) | 上游定义协议；本仓库定义 GUI 侧客户端实现 |
+| SPEC-008 | 上游 ipc-protocol 协议契约 | 上游定义协议；本仓库定义 GUI 侧客户端实现 |
 
 详见 [`../external/upstream-references.md`](../external/upstream-references.md)。

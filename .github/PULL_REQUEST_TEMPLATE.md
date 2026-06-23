@@ -10,7 +10,6 @@
 
 - Closes #
 - 关联 SPEC：<!-- e.g., SPEC-002 §4.6 -->
-- 关联 ADR：<!-- e.g., ADR-008 -->
 - 关联上游 daemon PR：<!-- 仅当涉及 IPC 字段变更时必填 -->
 
 ## Checklist
