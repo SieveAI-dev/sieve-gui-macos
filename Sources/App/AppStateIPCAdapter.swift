@@ -5,10 +5,19 @@ import Foundation
 public final class AppStateIPCAdapter: IPCAppStateAdapter {
     private let appState: AppState
     private let store: UserSettingsStore
+    private let notifier: NotificationCenterAdapter
 
-    public init(appState: AppState, store: UserSettingsStore = UserSettingsStore()) {
+    /// 失联通知去抖位：applyDisconnect 由 IPCClient 在 attempt>=3 才经 ipcDidLoseConnection
+    /// 触发（已是去抖后信号），但重试期间可能重复调用 —— 用此位保证一次失联只发一条系统
+    /// 通知，并作为「是否需要在重连时补发恢复通知」的依据（首次连接不发恢复通知）。
+    private var disconnectNotified = false
+
+    public init(appState: AppState,
+                store: UserSettingsStore = UserSettingsStore(),
+                notifier: NotificationCenterAdapter = .shared) {
         self.appState = appState
         self.store = store
+        self.notifier = notifier
     }
 
     public func applyIPCState(_ state: IPCState) {
@@ -27,10 +36,21 @@ public final class AppStateIPCAdapter: IPCAppStateAdapter {
 
     public func applyHello(_ params: HelloParams) {
         appState.applyHello(params)
+        // 握手成功 = 权威的「已连接」信号（硬约束 #6：菜单栏状态以 sieve.hello 为准）。
+        // 仅当此前真正发过失联通知时才补发恢复通知，避免首次连接误报「已重连」。
+        if disconnectNotified {
+            disconnectNotified = false
+            notifier.notifyReconnected()
+        }
     }
 
     public func applyDisconnect(reason: DaemonStatus.DisconnectReason) {
         appState.applyDisconnect(reason: reason)
+        // 此回调由 IPCClient 在 attempt>=3 经 ipcDidLoseConnection 触发，已是去抖后的失联事实。
+        // 去抖位保证一次失联只发一条系统通知（重试期间重复调用不重复打扰）。
+        guard !disconnectNotified else { return }
+        disconnectNotified = true
+        notifier.notifyDisconnected(reason: reason)
     }
 
     public func applyEventNotify(_ params: EventNotifyParams) {

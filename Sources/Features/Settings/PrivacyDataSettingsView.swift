@@ -46,7 +46,7 @@ public struct PrivacyDataSettingsView: View {
         .formStyle(.grouped)
         .padding()
         .sheet(isPresented: $showGraylist) {
-            GraylistSheetView(ipcClient: ipcClient, isPresented: $showGraylist)
+            GraylistSheetView(appState: appState, ipcClient: ipcClient, isPresented: $showGraylist)
         }
         .alert("清空历史", isPresented: $showClearConfirm) {
             Button("取消", role: .cancel) {}
@@ -136,10 +136,15 @@ public struct PrivacyDataSettingsView: View {
 }
 
 public struct GraylistSheetView: View {
+    @ObservedObject var appState: AppState
     let ipcClient: IPCClient
     @Binding var isPresented: Bool
     @State private var entries: [GraylistEntry] = []
     @State private var loading: Bool = false
+    @State private var pendingRemoval: GraylistEntry?
+    @State private var showRemoveConfirm: Bool = false
+    @State private var removeErrorMessage: String?
+    @State private var showRemoveError: Bool = false
 
     public var body: some View {
         VStack(spacing: 0) {
@@ -168,11 +173,13 @@ public struct GraylistSheetView: View {
                         Spacer()
                         Text("命中 \(entry.matchCountSince) 次").font(.caption).foregroundStyle(.secondary)
                         Button(role: .destructive) {
-                            Task { await remove(entry.fingerprint) }
+                            pendingRemoval = entry
+                            showRemoveConfirm = true
                         } label: {
                             Image(systemName: "trash")
                         }
                         .buttonStyle(.borderless)
+                        .disabled(isDisconnected)
                     }
                 }
                 .frame(minHeight: 240)
@@ -180,6 +187,26 @@ public struct GraylistSheetView: View {
         }
         .frame(width: 480, height: 360)
         .task { await reload() }
+        .alert("删除灰名单条目", isPresented: $showRemoveConfirm) {
+            Button("取消", role: .cancel) { pendingRemoval = nil }
+            Button("确认删除", role: .destructive) {
+                if let entry = pendingRemoval {
+                    Task { await remove(entry.fingerprint) }
+                }
+            }
+        } message: {
+            Text("删除后该条目将不再被灰名单豁免，后续命中会重新触发检测。")
+        }
+        .alert("删除失败", isPresented: $showRemoveError) {
+            Button("好") {}
+        } message: {
+            Text(removeErrorMessage ?? "")
+        }
+    }
+
+    private var isDisconnected: Bool {
+        if case .disconnected = appState.daemonStatus { return true }
+        return false
     }
 
     private func reload() async {
@@ -196,7 +223,19 @@ public struct GraylistSheetView: View {
     }
 
     private func remove(_ fp: String) async {
-        ipcClient.sendRequestAndForget(id: UUID().uuidString, method: "sieve.remove_graylist", params: RemoveGraylistParams(fingerprint: fp))
-        entries.removeAll { $0.fingerprint == fp }
+        pendingRemoval = nil
+        do {
+            _ = try await ipcClient.sendRequest(
+                id: UUID().uuidString,
+                method: "sieve.remove_graylist",
+                params: RemoveGraylistParams(fingerprint: fp)
+            )
+            // 成功 → 重新拉取列表（不做乐观删除，以 daemon 实际状态为准）
+            await reload()
+        } catch {
+            await GUILog.shared.warn("remove_graylist failed: \(error)", category: "settings")
+            removeErrorMessage = "删除失败：\(error.localizedDescription)"
+            showRemoveError = true
+        }
     }
 }

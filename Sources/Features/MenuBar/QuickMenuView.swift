@@ -136,10 +136,12 @@ public struct QuickMenuView: View {
                         .buttonStyle(.bordered)
                         .controlSize(.small)
                 }
-                Text("Critical 拦截仍然生效")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
             }
+            // 暂停期间始终可见（SPEC-001 §4.2 / PRD §5.1.3 硬约束：
+            // 暂停态恰恰最该标注 Critical 仍生效）。两分支共用。
+            Text("暂停期间 Critical 拦截仍然生效")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)

@@ -35,9 +35,8 @@ public final class AuditDBReader: @unchecked Sendable {
 
     public init() {}
 
-    public func open() throws {
+    public func open(path: String = AuditDBReader.dbPath) throws {
         try queue.sync {
-            let path = AuditDBReader.dbPath
             guard FileManager.default.fileExists(atPath: path) else {
                 throw AuditDBError.notFound(path: path)
             }

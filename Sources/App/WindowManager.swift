@@ -55,18 +55,24 @@ public final class WindowManager: NSObject {
     }
 
     private var onboardingSession: NSApplication.ModalSession?
+    private var onboardingCloseDelegate: OnboardingCloseDelegate?
+    /// 关闭按钮回调的桥：OnboardingView 注册自己的 confirmSkip 进来，窗口关闭按钮复用之。
+    private let onboardingSkipBridge = OnboardingSkipBridge()
 
     public func openOnboarding() {
         if onboardingWindow != nil { return }
         let view = OnboardingView(
             appState: AppState.shared,
             ipcClient: ipcClient ?? IPCClient(),
+            skipBridge: onboardingSkipBridge,
             onClose: { [weak self] in self?.closeOnboarding() }
         )
         let host = NSHostingController(rootView: view)
         let w = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 720, height: 520),
-            styleMask: [.titled],   // 禁用最小化/最大化/关闭（关闭走 onClose 走 alert 路径）
+            // SPEC-006 §4.1：关闭按钮存在，但点击不直接关，走确认 alert（windowShouldClose）。
+            // 禁用最小化/最大化，不可调整大小。
+            styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
         )
@@ -74,7 +80,14 @@ public final class WindowManager: NSObject {
         w.contentViewController = host
         w.center()
         w.isReleasedWhenClosed = false
+        w.standardWindowButton(.miniaturizeButton)?.isHidden = true
+        w.standardWindowButton(.zoomButton)?.isHidden = true
         onboardingWindow = w
+
+        // 拦截关闭按钮：弹确认 alert，复用 Onboarding 的「跳过」语义（写完成时间戳 + 记录跳过步骤）。
+        let delegate = OnboardingCloseDelegate { [weak self] in self?.confirmCloseOnboarding() }
+        onboardingCloseDelegate = delegate
+        w.delegate = delegate
 
         // 使用 runModalSession 不阻塞主 RunLoop（ADR-003 / SPEC-006）
         let session = NSApp.beginModalSession(for: w)
@@ -110,8 +123,20 @@ public final class WindowManager: NSObject {
             NSApp.endModalSession(s)
             onboardingSession = nil
         }
+        w.delegate = nil
+        onboardingCloseDelegate = nil
         w.close()
         onboardingWindow = nil
+    }
+
+    /// 标题栏关闭按钮点击 → 复用 OnboardingView.confirmSkip（弹确认 alert、记录跳过步骤、写完成时间戳）。
+    /// 若 bridge 尚未注册（极早期），退化为直接关闭。
+    private func confirmCloseOnboarding() {
+        if let skip = onboardingSkipBridge.confirmSkip {
+            skip()
+        } else {
+            closeOnboarding()
+        }
     }
 
     private func makeWindow(title: String, contentVC: NSViewController, size: NSSize) -> NSWindow {
@@ -131,5 +156,22 @@ public final class WindowManager: NSObject {
     private func focus(_ w: NSWindow) {
         NSApp.activate(ignoringOtherApps: true)
         w.makeKeyAndOrderFront(nil)
+    }
+}
+
+/// OnboardingView 把自身 confirmSkip 注册进来，供窗口关闭按钮复用（避免重复 alert 逻辑）。
+@MainActor
+public final class OnboardingSkipBridge {
+    public var confirmSkip: (() -> Void)?
+    public init() {}
+}
+
+/// Onboarding 窗口的关闭按钮拦截：返回 false 阻止系统直接关窗，转交 onClose 走确认 alert。
+final class OnboardingCloseDelegate: NSObject, NSWindowDelegate {
+    private let onClose: () -> Void
+    init(onClose: @escaping () -> Void) { self.onClose = onClose }
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        onClose()
+        return false
     }
 }

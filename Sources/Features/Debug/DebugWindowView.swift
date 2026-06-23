@@ -18,7 +18,7 @@ public struct DebugWindowView: View {
             RuleEvaluationTab(ipcClient: ipcClient)
                 .environmentObject(replayStore)
                 .tabItem { Label("规则评估", systemImage: "function") }
-            IPCMonitorTab()
+            IPCMonitorTab(ipcClient: ipcClient)
                 .tabItem { Label("IPC 监视", systemImage: "antenna.radiowaves.left.and.right") }
             SystemStatusTab(ipcClient: ipcClient)
                 .tabItem { Label("系统状态", systemImage: "speedometer") }
@@ -125,8 +125,19 @@ public struct RuleEvaluationTab: View {
     @State private var contentKind: String = "tool_use_input"
     @State private var payload: String = ""
     @State private var evaluating: Bool = false
-    @State private var resultText: String = ""
+    /// 结构化评估结果（用 EvaluateResult DTO 解码）。
+    /// 红线：matched_pattern_summary 对非 critical_lock 规则会回填原 payload 片段
+    /// （daemon handle_evaluate：`matched N bytes …: "<snippet>"`），故视同 evidence，
+    /// 命中片段走 MaskedField，且切 Tab / 关窗时整体清空（不常驻内存）。
+    @State private var result: EvaluationOutcome?
     @State private var replayBannerVisible: Bool = false
+
+    /// View 层评估产物。仅持有结构化 meta + 视作 evidence 的 summary；不保留 daemon 响应原 JSON。
+    /// EvaluateResult 仅 Decodable/Sendable（非 Equatable），故本枚举不加 Equatable。
+    enum EvaluationOutcome {
+        case ok(EvaluateResult)
+        case failure(String)
+    }
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -167,17 +178,99 @@ public struct RuleEvaluationTab: View {
                 .disabled(evaluating || payload.utf8.count > 65536 || payload.isEmpty)
             }
             ScrollView {
-                Text(resultText)
-                    .font(.system(.caption, design: .monospaced))
+                resultView
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(8)
             }
-            .frame(height: 160)
+            .frame(height: 200)
             .border(.gray.opacity(0.3))
         }
         .padding()
         .onAppear { applyPrefilledIfNeeded() }
         .onChange(of: replayStore.prefilledPrompt) { _ in applyPrefilledIfNeeded() }
+        // 切 Tab / 关窗时清空：评估结果含可能回填的命中片段，不常驻内存（硬约束 #3）。
+        .onDisappear { result = nil }
+    }
+
+    @ViewBuilder
+    private var resultView: some View {
+        switch result {
+        case .none:
+            Text("尚未评估")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+        case let .some(.failure(message)):
+            Label(message, systemImage: "exclamationmark.triangle.fill")
+                .font(.caption)
+                .foregroundStyle(.orange)
+        case let .some(.ok(eval)):
+            if eval.matches.isEmpty {
+                Label("未命中任何规则", systemImage: "checkmark.circle")
+                    .font(.caption)
+                    .foregroundStyle(.green)
+                noMatchSummary(eval)
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(eval.matches) { match in
+                        matchRow(match)
+                    }
+                    noMatchSummary(eval)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func noMatchSummary(_ eval: EvaluateResult) -> some View {
+        if let noMatch = eval.noMatch, !noMatch.isEmpty {
+            Text("未命中（抽样）：\(noMatch.joined(separator: ", "))")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+                .textSelection(.enabled)
+        }
+    }
+
+    private func matchRow(_ match: EvaluateResult.Match) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Image(systemName: "checkmark.seal.fill").foregroundStyle(.red)
+                if let sev = match.severity {
+                    SeverityChip(sev)
+                } else {
+                    Text("严重度未知").font(.caption2).foregroundStyle(.secondary)
+                }
+                Text(match.ruleId)
+                    .font(.system(.caption, design: .monospaced).weight(.semibold))
+                    .textSelection(.enabled)
+                Text(match.ruleKind)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+            HStack(spacing: 8) {
+                Text("disposition: \(match.disposition)")
+                    .font(.caption2).foregroundStyle(.secondary)
+                Text("would: \(match.wouldDecision)")
+                    .font(.caption2).foregroundStyle(.secondary)
+                if let triggered = match.fieldsTriggered, !triggered.isEmpty {
+                    Text("fields: \(triggered.joined(separator: ", "))")
+                        .font(.caption2).foregroundStyle(.secondary)
+                }
+            }
+            // 红线：matched_pattern_summary 对非 critical_lock 规则可能回填原 payload 片段，
+            // 视同 evidence，走 MaskedField（locked 全脱敏），禁止裸 Text。
+            if let summary = match.matchedPatternSummary, !summary.isEmpty {
+                HStack(spacing: 6) {
+                    Text("命中摘要")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    MaskedField(summary, style: .fullMask, isUnlocked: false, monospaced: true)
+                }
+            }
+        }
+        .padding(8)
+        .background(Color.red.opacity(0.06))
+        .clipShape(RoundedRectangle(cornerRadius: 6))
     }
 
     private func applyPrefilledIfNeeded() {
@@ -200,17 +293,33 @@ public struct RuleEvaluationTab: View {
                         sourceAgent: "claude"
                     )
                 )
-                let pretty = String(data: (try? JSONSerialization.data(withJSONObject: JSONSerialization.jsonObject(with: data), options: [.prettyPrinted, .sortedKeys])) ?? data, encoding: .utf8) ?? ""
+                let outcome = Self.decodeResult(from: data)
                 await MainActor.run {
                     evaluating = false
-                    resultText = pretty
+                    result = outcome
                 }
             } catch {
                 await MainActor.run {
                     evaluating = false
-                    resultText = "评估失败：\(error)"
+                    // 不回显 daemon 原始响应；仅展示本地错误类型描述。
+                    result = .failure("评估失败：\(error)")
                 }
             }
+        }
+    }
+
+    /// 把 IPCClient 已解包出的 `result` 对象解码为 EvaluateResult DTO。
+    /// 注意：sendRequest 返回的是 JSON-RPC `result` 字段本身（见 IPCMessage.parse），
+    /// 不含外层 envelope，故此处直接解 EvaluateResult。
+    /// 不再 pretty-print 整块 daemon JSON（旧实现把原响应常驻 @State，泄露命中片段）。
+    static func decodeResult(from data: Data) -> EvaluationOutcome {
+        do {
+            let result = try JSONDecoder().decode(EvaluateResult.self, from: data)
+            return .ok(result)
+        } catch {
+            // DTO 解码失败（如 severity 出现枚举外取值）时只报结构错误，
+            // 绝不回退到裸 dump 原始 JSON（会泄露命中片段）。
+            return .failure("响应结构无法解析为 EvaluateResult")
         }
     }
 }
@@ -218,9 +327,16 @@ public struct RuleEvaluationTab: View {
 // MARK: - IPC 监视
 
 public struct IPCMonitorTab: View {
+    let ipcClient: IPCClient
     @ObservedObject var monitor: IPCMonitorRingBuffer = .shared
     /// 当前选中行（点击展开详情面板）
     @State private var selectedEntry: IPCMonitorRingBuffer.Entry?
+    /// 每秒刷新 inflight 在途数（inflight 是 actor 上的 async 读取）
+    private let inflightTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+
+    public init(ipcClient: IPCClient) {
+        self.ipcClient = ipcClient
+    }
 
     public var body: some View {
         HSplitView {
@@ -260,6 +376,17 @@ public struct IPCMonitorTab: View {
                     .foregroundStyle(.secondary)
                     .frame(minWidth: 280, idealWidth: 320)
             }
+        }
+        .onAppear { refreshInflight() }
+        .onReceive(inflightTimer) { _ in refreshInflight() }
+    }
+
+    /// 从 IPCClient 拉取当前在途数写入 ring buffer。inflight 是 actor 上的 async 读取，
+    /// 读完跳回 MainActor 更新 @Published。
+    private func refreshInflight() {
+        Task { @MainActor in
+            let n = await ipcClient.inflightCount
+            monitor.setInflight(n)
         }
     }
 

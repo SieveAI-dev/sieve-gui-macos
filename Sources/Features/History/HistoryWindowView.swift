@@ -38,7 +38,13 @@ public struct HistoryWindowView: View {
             }
         }
         .frame(width: 1080, height: 660)
-        .onAppear { viewModel.start() }
+        .onAppear {
+            viewModel.start()
+            appState.setAuditSchemaWarning(viewModel.schemaWarning)
+        }
+        .onChange(of: viewModel.schemaWarning) { warn in
+            appState.setAuditSchemaWarning(warn)
+        }
         .confirmationDialog("选择导出格式", isPresented: $showExportFormatPicker) {
             Button("CSV") { startExport(format: .csv) }
             Button("NDJSON") { startExport(format: .ndjson) }
@@ -131,9 +137,19 @@ public struct HistoryWindowView: View {
             TableColumn("Action") { row in Text(row.disposition).font(.caption) }
                 .width(min: 60, ideal: 80)
             TableColumn("Detail") { row in
-                MaskedField(row.evidenceMetaJSON ?? "", style: .clearWhenUnlocked, isUnlocked: appState.isUnlocked && !appState.settings.historyMaskByDefault)
+                MaskedField(row.evidenceMetaJSON ?? "", style: .clearWhenUnlocked, isUnlocked: historyContentUnlocked)
+                    .onAppear {
+                        // 触底翻页：末行 cell 出现即拉下一页（SwiftUI Table 无原生触底回调）。
+                        if row.id == viewModel.rows.last?.id { viewModel.loadMore() }
+                    }
             }
         }
+    }
+
+    /// 列表与 Inspector 统一的"解锁后是否显示明文"判定：
+    /// 已 Touch ID 解锁且未开启「历史默认脱敏」。两处必须同源，避免明文判定矛盾。
+    private var historyContentUnlocked: Bool {
+        HistoryMaskPolicy.contentUnlocked(appState)
     }
 
     private func timeLabel(_ d: Date) -> String {

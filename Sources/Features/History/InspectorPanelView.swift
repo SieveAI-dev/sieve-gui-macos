@@ -23,20 +23,20 @@ public struct InspectorPanelView: View {
                 if let fp = row.fingerprint {
                     HStack {
                         Text("fingerprint").font(.caption).foregroundStyle(.secondary)
-                        MaskedField(fp, style: .prefix4Suffix4, isUnlocked: appState.isUnlocked)
+                        MaskedField(fp, style: .prefix4Suffix4, isUnlocked: contentUnlocked)
                     }
                 }
                 if let sid = row.sessionId {
                     HStack {
                         Text("session_id").font(.caption).foregroundStyle(.secondary)
-                        MaskedField(sid, style: .sessionTrunc, isUnlocked: appState.isUnlocked)
+                        MaskedField(sid, style: .sessionTrunc, isUnlocked: contentUnlocked)
                     }
                 }
                 if let pid = row.callerPid {
                     HStack {
                         Text("caller_pid").font(.caption).foregroundStyle(.secondary)
-                        if appState.isUnlocked { Text("\(pid)").font(.system(.caption, design: .monospaced)) }
-                        else { MaskedField("\(pid)", style: .clearWhenUnlocked, isUnlocked: false) }
+                        // 红线：敏感字段统一走 MaskedField，禁裸 Text；解锁判定与列表同源。
+                        MaskedField("\(pid)", style: .clearWhenUnlocked, isUnlocked: contentUnlocked)
                     }
                 }
 
@@ -86,13 +86,18 @@ public struct InspectorPanelView: View {
         _ = await TouchIDService.shared.authenticate(reason: "查看完整 evidence_meta")
     }
 
+    /// 列表与 Inspector 统一的"解锁后是否显示明文"判定（同源，避免明文判定矛盾）。
+    private var contentUnlocked: Bool {
+        HistoryMaskPolicy.contentUnlocked(appState)
+    }
+
     private var evidenceMetaSection: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("evidence_meta").font(.caption).foregroundStyle(.secondary)
-            if appState.isUnlocked, let json = row.evidenceMetaJSON {
+            if contentUnlocked, let json = row.evidenceMetaJSON {
+                // 红线：明文 evidence_meta 仍走 MaskedField（解锁态显示原文），禁裸 Text。
                 ScrollView {
-                    Text(json)
-                        .font(.system(.caption2, design: .monospaced))
+                    MaskedField(json, style: .clearWhenUnlocked, isUnlocked: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .frame(maxHeight: 180)

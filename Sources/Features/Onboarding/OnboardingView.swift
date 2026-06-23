@@ -5,6 +5,7 @@ import ServiceManagement
 public struct OnboardingView: View {
     @ObservedObject var appState: AppState
     let ipcClient: IPCClient
+    let skipBridge: OnboardingSkipBridge?
     let onClose: () -> Void
 
     @State private var step: Int = 1
@@ -12,10 +13,13 @@ public struct OnboardingView: View {
     @State private var notifGranted: Bool = false
     @State private var loginItemEnabled: Bool = false
     @State private var selectedPreset: Preset = .standard
+    /// daemon 二进制找不到时为 true（场景 C），驱动「未安装」专用提示 + 禁用继续。
+    @State private var daemonNotInstalled: Bool = false
 
-    public init(appState: AppState, ipcClient: IPCClient, onClose: @escaping () -> Void) {
+    public init(appState: AppState, ipcClient: IPCClient, skipBridge: OnboardingSkipBridge? = nil, onClose: @escaping () -> Void) {
         self.appState = appState
         self.ipcClient = ipcClient
+        self.skipBridge = skipBridge
         self.onClose = onClose
     }
 
@@ -26,6 +30,10 @@ public struct OnboardingView: View {
             ScrollView { content.padding(24) }
         }
         .frame(width: 720, height: 520)
+        .onAppear {
+            // 把 confirmSkip 暴露给窗口关闭按钮（WindowManager），共用同一条跳过路径。
+            skipBridge?.confirmSkip = { confirmSkip() }
+        }
     }
 
     private var sidebar: some View {
@@ -86,13 +94,17 @@ public struct OnboardingView: View {
     private var doctorStep: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("环境检查").font(.title2.weight(.semibold))
-            ForEach(doctorResults, id: \.name) { check in
-                HStack {
-                    Image(systemName: check.ok ? "checkmark.circle.fill" : "xmark.circle.fill")
-                        .foregroundStyle(check.ok ? .green : .red)
-                    Text(check.name)
-                    Spacer()
-                    if !check.ok { Button("修复") { runSetup() } }
+            if daemonNotInstalled {
+                daemonNotInstalledNotice
+            } else {
+                ForEach(doctorResults, id: \.name) { check in
+                    HStack {
+                        Image(systemName: check.ok ? "checkmark.circle.fill" : "xmark.circle.fill")
+                            .foregroundStyle(check.ok ? .green : .red)
+                        Text(check.name)
+                        Spacer()
+                        if !check.ok { Button("修复") { runSetup() } }
+                    }
                 }
             }
             Spacer()
@@ -101,10 +113,33 @@ public struct OnboardingView: View {
                 Spacer()
                 Button("继续") { step = 3 }
                     .buttonStyle(.borderedProminent)
-                    .disabled(doctorResults.isEmpty || doctorResults.contains { !$0.ok })
+                    .disabled(daemonNotInstalled || doctorResults.isEmpty || doctorResults.contains { check in !check.ok })
             }
         }
         .onAppear { runDoctor() }
+    }
+
+    /// 场景 C：daemon 二进制未安装时的专用降级提示（SPEC-006 §4.4）。
+    /// 不提供「运行 sieve setup」（无可执行文件），改提示重新安装完整 .dmg。
+    private var daemonNotInstalledNotice: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.red)
+                Text("Sieve daemon 未安装").font(.headline)
+            }
+            Text("未在 PATH 或常见路径找到 sieve 命令，且 ~/.sieve/ipc.sock 不存在。请确保你已安装完整的 Sieve（.dmg），再重试。")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+            Button("打开下载页") {
+                if let url = URL(string: "https://sieveai.dev/download") {
+                    NSWorkspace.shared.open(url)
+                }
+            }
+            Text("daemon 未安装时无法继续引导。")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+        }
+        .padding(.vertical, 4)
     }
 
     private var notificationStep: some View {
@@ -247,13 +282,65 @@ public struct OnboardingView: View {
     private func confirmSkip() {
         let alert = NSAlert()
         alert.messageText = "确定跳过引导？"
-        alert.informativeText = "未完成的检查项可能导致 Sieve 无法正常工作。"
+        alert.informativeText = "未完成引导，下次启动会再次出现。未完成的检查项可能导致 Sieve 无法正常工作。"
         alert.addButton(withTitle: "继续引导")
         alert.addButton(withTitle: "确定跳过")
         if alert.runModal() == .alertSecondButtonReturn {
+            // SPEC-006 §3 / §6：记录跳过时所处步骤 + 写完成时间戳。
+            Self.recordSkippedStep(step, into: .standard)
             appState.settings.onboardingCompletedAt = Date()
             onClose()
         }
+    }
+
+    /// 把「跳过引导」时所处的步骤并入 `kOnboardingSkippedSteps`（去重、升序、纯函数，可单测）。
+    /// 直接走 UserDefaults：SPEC-006 §6 把该 key 列为独立数据契约，且不进 UserSettings 白名单结构体。
+    static func recordSkippedStep(_ step: Int, into defaults: UserDefaults) {
+        let existing = defaults.array(forKey: SettingsKey.onboardingSkippedSteps) as? [Int] ?? []
+        let merged = Array(Set(existing).union([step])).sorted()
+        defaults.set(merged, forKey: SettingsKey.onboardingSkippedSteps)
+    }
+
+    /// 判断 daemon 是否已安装：PATH 命中 `sieve`、任一已知路径存在、或 ipc.sock 存在皆视为已安装（SPEC-006 §4.4 / 场景 C）。
+    /// 纯函数：注入候选路径 + socket 路径 + PATH 命中结果，便于单测。
+    static func isDaemonInstalled(
+        candidatePaths: [String],
+        socketPath: String,
+        pathLookupHit: Bool,
+        fileExists: (String) -> Bool
+    ) -> Bool {
+        if pathLookupHit { return true }
+        if candidatePaths.contains(where: fileExists) { return true }
+        if fileExists(socketPath) { return true }
+        return false
+    }
+
+    /// 生产环境探测：`which sieve` + 常见安装路径 + ipc.sock 存在性。
+    private static func detectDaemonInstalled() -> Bool {
+        let fm = FileManager.default
+        let candidates = ["/usr/local/bin/sieve", "/opt/homebrew/bin/sieve"]
+        let socket = (NSHomeDirectory() as NSString).appendingPathComponent(".sieve/ipc.sock")
+        let whichHit: Bool = {
+            let p = Process()
+            p.launchPath = "/usr/bin/which"
+            p.arguments = ["sieve"]
+            let pipe = Pipe()
+            p.standardOutput = pipe
+            p.standardError = Pipe()
+            do {
+                try p.run()
+                p.waitUntilExit()
+                return p.terminationStatus == 0
+            } catch {
+                return false
+            }
+        }()
+        return isDaemonInstalled(
+            candidatePaths: candidates,
+            socketPath: socket,
+            pathLookupHit: whichHit,
+            fileExists: { path in fm.fileExists(atPath: path) }
+        )
     }
 
     private func runDoctor() {
@@ -262,18 +349,28 @@ public struct OnboardingView: View {
                 let data = try await ipcClient.sendRequest(id: UUID().uuidString, method: "sieve.health")
                 let dto = try JSONDecoder().decode(HealthResultDTO.self, from: data)
                 await MainActor.run {
+                    self.daemonNotInstalled = false
                     self.doctorResults = Self.checks(from: dto)
                 }
             } catch {
-                // 失联：daemon 不通也展示一组占位条目，引导用户跑 sieve setup
+                // 失联：先区分「未安装」（场景 C）与「装了但没起来」（场景 B）。
+                let installed = Self.detectDaemonInstalled()
                 await MainActor.run {
-                    self.doctorResults = [
-                        DoctorCheck(name: "ipc.sock 可连接", ok: false),
-                        DoctorCheck(name: "daemon listener 已绑定", ok: false),
-                        DoctorCheck(name: "audit.db 可访问", ok: false),
-                        DoctorCheck(name: "规则引擎已加载", ok: false),
-                        DoctorCheck(name: "client 握手成功", ok: false)
-                    ]
+                    if installed {
+                        self.daemonNotInstalled = false
+                        // 装了但失联：展示占位条目，引导用户跑 sieve setup（场景 B）。
+                        self.doctorResults = [
+                            DoctorCheck(name: "ipc.sock 可连接", ok: false),
+                            DoctorCheck(name: "daemon listener 已绑定", ok: false),
+                            DoctorCheck(name: "audit.db 可访问", ok: false),
+                            DoctorCheck(name: "规则引擎已加载", ok: false),
+                            DoctorCheck(name: "client 握手成功", ok: false)
+                        ]
+                    } else {
+                        // 未安装：展示专用提示 + 禁用继续（场景 C）。
+                        self.daemonNotInstalled = true
+                        self.doctorResults = []
+                    }
                 }
             }
         }

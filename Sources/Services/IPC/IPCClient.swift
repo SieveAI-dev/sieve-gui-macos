@@ -32,6 +32,8 @@ public final class IPCClient: @unchecked Sendable {
     private static let backoff: [TimeInterval] = [1, 2, 5, 10, 30]
     private static let heartbeatTimeout: TimeInterval = 30
     private static let maxMessageBytes: Int = 1024 * 1024
+    /// inflight 超时清扫周期（秒）。SPEC-008 §6：daemon 静默时按 deadline reject，防 await 永久挂起。
+    private static let inflightSweepInterval: TimeInterval = 5
 
     public weak var delegate: IPCDelegate?
 
@@ -47,8 +49,10 @@ public final class IPCClient: @unchecked Sendable {
     private var state: IPCState = .idle {
         didSet { notifyState(state) }
     }
+    private let inflightTimeoutPolicy = InflightQueue.TimeoutPolicy.default
     private var attempt: Int = 0
     private var heartbeatTask: DispatchWorkItem?
+    private var inflightSweepTask: DispatchWorkItem?
     private var lastReceivedAt: Date = .distantPast
     private var receiveBuffer = Data()
     private var shouldReconnect = true
@@ -157,6 +161,12 @@ public final class IPCClient: @unchecked Sendable {
         ipcQueue.sync { state }
     }
 
+    /// 当前在途（已 enqueue 未收响应）请求数，供 Debug IPC 监视展示。
+    /// 只读快照，不影响握手/重连/版本白名单逻辑。
+    public var inflightCount: Int {
+        get async { await inflight.count() }
+    }
+
     /// 发出 mutating request（sieve.set_preset / sieve.set_paused 等）时，把 id 加入集合，
     /// 收到响应后移除，供 IPCRouter 判断 preset_changed / paused_changed 是否为本 GUI 回声。
     public func registerMutatingRequest(_ id: String) {
@@ -194,6 +204,7 @@ public final class IPCClient: @unchecked Sendable {
         state = .connecting
         conn.start(queue: ipcQueue)
         startHeartbeatTimer()
+        startInflightSweepTimer()
         receiveLoop()
     }
 
@@ -219,6 +230,8 @@ public final class IPCClient: @unchecked Sendable {
         connection = nil
         heartbeatTask?.cancel()
         heartbeatTask = nil
+        inflightSweepTask?.cancel()
+        inflightSweepTask = nil
         receiveBuffer.removeAll()
     }
 
@@ -376,6 +389,31 @@ public final class IPCClient: @unchecked Sendable {
             return
         }
         startHeartbeatTimer()
+    }
+
+    // MARK: - Inflight timeout sweep
+
+    /// 周期清扫 inflight：daemon 收到请求但静默不响应且不断连时，sendRequest 的 await 会永久挂起。
+    /// 每 `inflightSweepInterval` 秒扫一次，把超过 deadline 的 waiter 以 `.timeout` reject（SPEC-008 §6）。
+    private func startInflightSweepTimer() {
+        inflightSweepTask?.cancel()
+        let task = DispatchWorkItem { [weak self] in self?.sweepInflightTimeouts() }
+        inflightSweepTask = task
+        ipcQueue.asyncAfter(deadline: .now() + IPCClient.inflightSweepInterval, execute: task)
+    }
+
+    private func sweepInflightTimeouts() {
+        let policy = inflightTimeoutPolicy
+        Task { [weak self] in
+            guard let self = self else { return }
+            let expired = await self.inflight.sweepTimeouts(policy: policy)
+            // 超时的 mutating request id 也要清掉，避免回声判定残留
+            for id in expired {
+                await self.inflightMutatingIds.remove(id)
+            }
+        }
+        // 重新排程下一轮（连接存活期间持续）
+        startInflightSweepTimer()
     }
 
     // MARK: - Notifications

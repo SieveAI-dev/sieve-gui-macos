@@ -18,6 +18,8 @@ public actor InflightQueue {
         case versionMismatch
         /// 重连后旧 inflight 被丢弃（SPEC-005 §3.4）
         case reconnectedDiscarded
+        /// daemon 静默：超过 deadline 仍无响应（SPEC-008 §6，evaluate 90s / 其他 60s，OQ-008-02）
+        case timeout
 
         public static func == (lhs: AwaitError, rhs: AwaitError) -> Bool {
             switch (lhs, rhs) {
@@ -25,9 +27,30 @@ public actor InflightQueue {
             case (.canceled, .canceled): return true
             case (.versionMismatch, .versionMismatch): return true
             case (.reconnectedDiscarded, .reconnectedDiscarded): return true
+            case (.timeout, .timeout): return true
             default: return false
             }
         }
+    }
+
+    /// inflight 超时阈值（SPEC-008 §6 / OQ-008-02）。
+    /// - `evaluate` 类慢方法（大 payload）：90s
+    /// - 其他方法：60s
+    public struct TimeoutPolicy: Sendable {
+        public let defaultSeconds: TimeInterval
+        public let evaluateSeconds: TimeInterval
+
+        public init(defaultSeconds: TimeInterval = 60, evaluateSeconds: TimeInterval = 90) {
+            self.defaultSeconds = defaultSeconds
+            self.evaluateSeconds = evaluateSeconds
+        }
+
+        /// 按 method 名返回 deadline 时长。包含 "evaluate" 的方法走 evaluate 阈值。
+        public func deadline(forMethod method: String) -> TimeInterval {
+            method.contains("evaluate") ? evaluateSeconds : defaultSeconds
+        }
+
+        public static let `default` = TimeoutPolicy()
     }
 
     private var entries: [String: Entry] = [:]
@@ -90,4 +113,29 @@ public actor InflightQueue {
 
     /// 仅清 entries，不通知 waiters（内部用途）。
     public func clear() { entries.removeAll() }
+
+    /// 超时清扫：对所有超过 deadline（按 method 区分，SPEC-008 §6 / OQ-008-02）的 entry，
+    /// 以 `.timeout` 错误 reject 对应 waiter 并移除 entry，防止 daemon 静默时 await 永久挂起。
+    /// 无 waiter 的 entry（fire-and-forget）也一并清掉，避免 entries 泄漏。
+    /// - Parameters:
+    ///   - now: 当前时间（测试可注入）。
+    ///   - policy: 超时策略（按 method 给 deadline）。
+    /// - Returns: 被清扫掉的 entry id 列表（供调用方做关联清理，如 mutating id 集合）。
+    @discardableResult
+    public func sweepTimeouts(now: Date = Date(), policy: TimeoutPolicy = .default) -> [String] {
+        var expired: [String] = []
+        for (id, entry) in entries {
+            let deadline = policy.deadline(forMethod: entry.method)
+            if now.timeIntervalSince(entry.createdAt) >= deadline {
+                expired.append(id)
+            }
+        }
+        for id in expired {
+            entries.removeValue(forKey: id)
+            if let cont = waiters.removeValue(forKey: id) {
+                cont.resume(throwing: AwaitError.timeout)
+            }
+        }
+        return expired
+    }
 }

@@ -83,7 +83,10 @@ public struct EvaluateResult: Decodable, Sendable {
     public struct Match: Decodable, Sendable, Identifiable {
         public var id: String { ruleId }
         public let ruleId: String
-        public let severity: Severity
+        /// 可选：daemon evaluate 对非 critical_lock 命中可能回 `severity:"unknown"`（SPEC-005
+        /// 枚举外取值，见 handle_evaluate），GUI `Severity` 无该 case → 容错为 nil（展示「未知」），
+        /// 避免整个 EvaluateResult 解码失败丢结果。
+        public let severity: Severity?
         public let disposition: String
         public let matchedPatternSummary: String?
         public let fieldsTriggered: [String]?
@@ -108,7 +111,8 @@ public struct EvaluateResult: Decodable, Sendable {
         public init(from decoder: Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
             ruleId = try c.decode(String.self, forKey: .ruleId)
-            severity = try c.decode(Severity.self, forKey: .severity)
+            // 容错：未知 severity 字符串（如 daemon 的 "unknown"）→ nil，不丢整个结果。
+            severity = (try c.decodeIfPresent(String.self, forKey: .severity)).flatMap(Severity.init(rawValue:))
             disposition = try c.decode(String.self, forKey: .disposition)
             matchedPatternSummary = try c.decodeIfPresent(String.self, forKey: .matchedPatternSummary)
             fieldsTriggered = try c.decodeIfPresent([String].self, forKey: .fieldsTriggered)

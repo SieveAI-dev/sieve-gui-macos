@@ -113,7 +113,10 @@ public final class ToastController: NSObject, IPCToastAdapter {
     private func dismiss(id: String) {
         guard let panel = panels[id] else { return }
         // reduce-motion：跳过淡出，直接隐藏（保留关闭行为，移除动画）
-        let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        // 系统 flag 作为入参，由用户 reduceMotionOverride（system/always/never）决定最终值
+        let reduceMotion = appState.settings.reduceMotionEnabled(
+            systemReduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        )
         if reduceMotion {
             panel.orderOut(nil)
             panels.removeValue(forKey: id)

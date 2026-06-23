@@ -276,13 +276,11 @@ public struct HipsPopupView: View {
     }
 
     private var currentPhase: HipsPhase {
-        let total = request.timeoutSeconds
-        let remaining = appState.holdRemainingSeconds
-        guard total > 0 else { return .red }
-        let r = Double(remaining) / Double(total)
-        if r > 0.5 { return .blue }
-        if r > 0.2 { return .orange }
-        return .red
+        // 阈值公式唯一来源在 HipsPhase.resolve（核心库纯函数），View 不重复实现。
+        HipsPhase.resolve(
+            remaining: Double(appState.holdRemainingSeconds),
+            total: Double(request.timeoutSeconds)
+        )
     }
 
     private var allowLabel: String {

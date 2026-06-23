@@ -46,6 +46,19 @@ public struct UserSettings: Sendable, Equatable {
         loginItemEnabled: true,
         onboardingCompletedAt: nil
     )
+
+    /// 解析最终的 reduce-motion 生效值（纯函数，无 AppKit 依赖，可单测）。
+    /// - `reduceMotionOverride == "always"` → 恒 true（用户强制减少动画）
+    /// - `reduceMotionOverride == "never"`  → 恒 false（用户强制保留动画）
+    /// - 其他（含 "system"）→ 透传系统 flag
+    /// - Parameter systemReduceMotion: 系统 `accessibilityDisplayShouldReduceMotion` 的当前值
+    public func reduceMotionEnabled(systemReduceMotion: Bool) -> Bool {
+        switch reduceMotionOverride {
+        case "always": return true
+        case "never": return false
+        default: return systemReduceMotion
+        }
+    }
 }
 
 public final class UserSettingsStore: @unchecked Sendable {

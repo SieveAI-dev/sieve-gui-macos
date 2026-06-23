@@ -21,7 +21,13 @@ let package = Package(
             ],
             path: "Sources",
             exclude: [
-                "App",
+                // App 入口/AppKit 相关留给 xcodebuild；AppState 是纯逻辑（无 AppKit
+                // 依赖），单独纳入核心库以便 swift test 守护菜单栏状态机（见 sources）。
+                "App/AppDelegate.swift",
+                "App/AppStateIPCAdapter.swift",
+                "App/DebugReplayStore.swift",
+                "App/SieveGUIApp.swift",
+                "App/WindowManager.swift",
                 "Features",
                 "Resources",
                 "Services/Sparkle",
@@ -35,7 +41,8 @@ let package = Package(
                 "Services/IPC",
                 "Services/AuditDB",
                 "Services/Logger",
-                "Services/Telemetry"
+                "Services/Telemetry",
+                "App/AppState.swift"
             ]
         ),
         .testTarget(

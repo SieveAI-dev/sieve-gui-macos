@@ -63,6 +63,17 @@ public enum HipsPhase: Sendable {
     case blue   // remaining/total > 0.5
     case orange // 0.2 < remaining/total <= 0.5
     case red    // remaining/total <= 0.2
+
+    /// HIPS 倒计时阶段阈值的唯一权威实现（核心库纯函数，可测）。
+    /// `total <= 0` 兜底为 `.red`（防除零，等价"已无剩余时间"最严格）。
+    /// 阈值半开区间：blue 当 ratio > 0.5；orange 当 0.2 < ratio <= 0.5；red 当 ratio <= 0.2。
+    public static func resolve(remaining: Double, total: Double) -> HipsPhase {
+        guard total > 0 else { return .red }
+        let ratio = remaining / total
+        if ratio > 0.5 { return .blue }
+        if ratio > 0.2 { return .orange }
+        return .red
+    }
 }
 
 public enum DaemonStatus: Equatable, Sendable {

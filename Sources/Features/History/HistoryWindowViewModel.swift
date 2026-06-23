@@ -15,6 +15,11 @@ public final class HistoryWindowViewModel: ObservableObject {
     @Published public var keywordInput: String = ""
     @Published public private(set) var loading: Bool = false
     @Published public var selected: AuditEventRow?
+    /// reader 打开后回写的 schema 警告位（基于实际 PRAGMA user_version，非 hello 推送值）。
+    /// View 观察此位写入 AppState.setAuditSchemaWarning 驱动 banner。
+    @Published public private(set) var schemaWarning: Bool = false
+    /// 列表已无更多数据（loadMore 返回空），触底回调据此停止继续翻页。
+    @Published public private(set) var reachedEnd: Bool = false
 
     private let reader: AuditDBReader
     private var lastSeenId: Int64 = 0
@@ -43,6 +48,9 @@ public final class HistoryWindowViewModel: ObservableObject {
 
     public func start() {
         do { try reader.open() } catch { /* fail-soft */ }
+        // reader 打开后用实际 PRAGMA user_version 判定 schema 警告（fail-soft，SPEC-004 §异常）。
+        // 即便 open() 抛错（未知/损坏 schema）也回写，schemaVersion 保持默认 0 → 未知 → 告警。
+        schemaWarning = reader.schemaWarning
         reload()
         reader.startWatching { [weak self] in
             Task { @MainActor in self?.appendIncremental() }
@@ -51,6 +59,7 @@ public final class HistoryWindowViewModel: ObservableObject {
 
     public func reload() {
         loading = true
+        reachedEnd = false
         let f = filter
         let reader = self.reader
         Task.detached {
@@ -64,10 +73,14 @@ public final class HistoryWindowViewModel: ObservableObject {
         guard let vm = viewModel else { return }
         vm.rows = rows
         vm.lastSeenId = rows.first?.id ?? 0
+        vm.reachedEnd = rows.count < 50
         vm.loading = false
     }
 
+    /// 触底翻页：Table 末行 .onAppear 触发。重入/已到底/正加载时直接跳过。
     public func loadMore() {
+        guard !loading, !reachedEnd else { return }
+        loading = true
         let offset = rows.count
         let f = filter
         let reader = self.reader
@@ -82,6 +95,8 @@ public final class HistoryWindowViewModel: ObservableObject {
         guard let vm = viewModel else { return }
         vm.rows.append(contentsOf: more)
         if vm.rows.count > vm.maxKept { vm.rows.removeFirst(vm.rows.count - vm.maxKept) }
+        vm.reachedEnd = more.count < 50
+        vm.loading = false
     }
 
     private func appendIncremental() {
