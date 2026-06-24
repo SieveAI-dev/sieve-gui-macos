@@ -10,7 +10,7 @@ public enum ExportState: Sendable {
     case failed(String)
 }
 
-/// 强制脱敏导出器 actor（ADR-011）。
+/// 强制脱敏导出器 actor。
 /// 实际格式化逻辑委托给 HistoryExportFormatter（Models 层，可单元测试）。
 public actor HistoryExporter {
     public static let shared = HistoryExporter()

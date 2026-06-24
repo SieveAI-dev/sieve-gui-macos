@@ -2,7 +2,7 @@ import Testing
 import Foundation
 @testable import SieveGUICore
 
-/// HIPS 三条红线行为测试（ADR-021 / SPEC-002）
+/// HIPS 三条红线行为测试（SPEC-002）
 /// 由于 HipsPopupView 在 Features 层（Package.swift exclude），
 /// 这里测试驱动视图逻辑的 Model 层属性，覆盖等价行为断言。
 @Suite("HIPS 红线：Phase3 swallow / 锁拒绝 / Remember 不渲染")
@@ -99,7 +99,7 @@ struct HipsRedLineTests {
         #expect(Recommendation.mainActionLocksToDeny(rec) == false)
     }
 
-    // MARK: - 3. allow_remember=false → Remember checkbox 不渲染（ADR-021 第三道防线）
+    // MARK: - 3. allow_remember=false → Remember checkbox 不渲染（第三道防线）
 
     @Test("allow_remember=false → request.allowRemember = false（不得渲染 checkbox）")
     func allow_remember_false_field_preserved() {
@@ -123,7 +123,7 @@ struct HipsRedLineTests {
         // 编码层强制：使用 allowRemember=false 时 resultJSON 中 remember 必须为 false
         let result = response.resultJSON(allowRemember: req.allowRemember)
         #expect(result["remember"] as? Bool == false,
-                "allow_remember=false 时，resultJSON 必须强制 remember=false（ADR-021 第三道防线）")
+                "allow_remember=false 时，resultJSON 必须强制 remember=false（第三道防线）")
     }
 
     @Test("allow_remember=true → checkbox 应渲染（allowRemember=true）")

@@ -2,7 +2,7 @@ import Testing
 import Foundation
 @testable import SieveGUICore
 
-@Suite("sieve.health 解码（SPEC-005 §9.5 + ADR-026 listeners[]）")
+@Suite("sieve.health 解码（SPEC-005 §9.5，listeners[]）")
 struct HealthResultDTOTests {
 
     // MARK: - 完整 SPEC-005 §9.5 响应

@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// 唯一窗口打开入口（[ADR-003](docs/design/adr/ADR-003-window-scene-model.md)）。
+/// 唯一窗口打开入口（窗口场景模型）。
 /// 不允许使用 `@Environment(\.openWindow)`。
 @MainActor
 public final class WindowManager: NSObject {
@@ -89,7 +89,7 @@ public final class WindowManager: NSObject {
         onboardingCloseDelegate = delegate
         w.delegate = delegate
 
-        // 使用 runModalSession 不阻塞主 RunLoop（ADR-003 / SPEC-006）
+        // 使用 runModalSession 不阻塞主 RunLoop（SPEC-006）
         let session = NSApp.beginModalSession(for: w)
         onboardingSession = session
         // 模态轮询：每 100ms 用 runModalSession 喂一次事件，让其他主线程任务（IPC/audit）不饿死

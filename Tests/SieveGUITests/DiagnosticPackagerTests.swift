@@ -46,7 +46,7 @@ struct DiagnosticPackagerTests {
         return tmp
     }
 
-    @Test("audit.db 拷贝后 evidence 列全空（ADR-011）")
+    @Test("audit.db 拷贝后 evidence 列全空")
     func redacted_copy_clears_evidence_columns() throws {
         let src = try makeTempAuditDB()
         let dst = FileManager.default.temporaryDirectory
@@ -76,7 +76,7 @@ struct DiagnosticPackagerTests {
             let fingerprint = sqlite3_column_text(stmt, 1).map(String.init(cString:)) ?? ""
             let sessionId = sqlite3_column_text(stmt, 2).map(String.init(cString:)) ?? ""
             let callerExe = sqlite3_column_text(stmt, 3).map(String.init(cString:)) ?? ""
-            #expect(evidenceMeta.isEmpty, "evidence_meta 应为空（ADR-011）")
+            #expect(evidenceMeta.isEmpty, "evidence_meta 应为空")
             #expect(!evidenceMeta.contains("BIP39"), "evidence 原文不得出现在导出文件")
             #expect(fingerprint.isEmpty, "fingerprint 应为空")
             #expect(sessionId.isEmpty, "session_id 应为空")

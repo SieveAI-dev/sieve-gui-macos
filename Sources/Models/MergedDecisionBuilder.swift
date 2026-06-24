@@ -10,7 +10,7 @@ public enum MergedAction: Sendable, Equatable {
 /// 把多 issue + 整体动作翻译为 per-issue 决策（SPEC-002 §4.8 / ipc-protocol §4.1）。
 public enum MergedDecisionBuilder {
 
-    /// 是否可渲染「全部允许」按钮：无 Critical 才可（红线 PRD §4.3，禁止含 Critical 时允许全部）。
+    /// 是否可渲染「全部允许」按钮：无 Critical 才可（红线，禁止含 Critical 时允许全部）。
     public static func canAllowAll(_ issues: [HipsIssue]) -> Bool {
         !issues.contains { $0.severity == .critical }
     }

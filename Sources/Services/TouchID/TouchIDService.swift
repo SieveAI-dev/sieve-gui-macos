@@ -3,7 +3,7 @@ import AppKit
 import LocalAuthentication
 import os.log
 
-/// Touch ID 解锁会话。一次解锁后 5 分钟内有效（参考 ADR-008）。
+/// Touch ID 解锁会话。一次解锁后 5 分钟内有效。
 /// 红线：失败/取消只回退脱敏视图，不再次弹窗；锁屏唤醒后强制清除会话。
 @MainActor
 public final class TouchIDService: NSObject {

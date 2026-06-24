@@ -50,7 +50,7 @@ public struct HistoryWindowView: View {
             Button("NDJSON") { startExport(format: .ndjson) }
             Button("取消", role: .cancel) {}
         } message: {
-            Text("历史记录将强制脱敏（ADR-011），不含 evidence 原文。")
+            Text("历史记录将强制脱敏，不含 evidence 原文。")
         }
     }
 

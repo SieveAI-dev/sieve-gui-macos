@@ -13,7 +13,7 @@ public enum ExportFormat: String, CaseIterable, Sendable {
     }
 }
 
-/// 历史导出脱敏格式化（ADR-011 红线：不含 evidence_meta / fingerprint / session_id / caller_pid / caller_exe）
+/// 历史导出脱敏格式化（红线：不含 evidence_meta / fingerprint / session_id / caller_pid / caller_exe）
 /// 纯函数，无副作用，可单元测试。
 public struct HistoryExportFormatter: Sendable {
     public let format: ExportFormat
@@ -69,7 +69,7 @@ public struct HistoryExportFormatter: Sendable {
             ]
             if let uc = row.userChoice { dict["user_choice"] = uc }
             if let rid = row.requestId { dict["request_id"] = rid }
-            // evidence_meta / fingerprint / session_id / caller_pid / caller_exe → 强制不写入（ADR-011）
+            // evidence_meta / fingerprint / session_id / caller_pid / caller_exe → 强制不写入
             let pairs = dict.sorted(by: { $0.key < $1.key })
                 .map { "\"\($0.key)\":\"\($0.value)\"" }
                 .joined(separator: ",")
