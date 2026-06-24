@@ -8,7 +8,7 @@
 
 Sieve GUI 是 [Sieve daemon](#上游-daemon) 的 native macOS 守门人壳：常驻菜单栏、HIPS 弹窗、读 audit.db 给历史。**daemon 做检测，GUI 只做交互。**
 
-完整定位见 `docs/requirements/sieve-gui-macos-prd-v1.0.md`。
+受支持的上游 agent：Claude Code / OpenClaw / Hermes / Codex CLI。
 
 ---
 
@@ -52,7 +52,7 @@ open SieveGUI.xcodeproj
 注意：
 
 - App target 的 UI / Features / Sparkle 等代码**只能**经 xcodebuild 编译，`swift build` 会按 `Package.swift` 的 `exclude` 跳过。改完 UI 跑 `swift test` 不会触发 UI 层编译错误，必须 `xcodebuild` 才算验证。
-- mock daemon 还没接好，联调直接连真 sieve daemon（`~/.sieve/ipc.sock`），daemon 不在时 GUI 进入 disconnected。
+- IPC 行为由 `MockDaemonHarness` 测试 fixture 覆盖做单元测试；端到端联调直接连真 sieve daemon（`~/.sieve/ipc.sock`），daemon 不在时 GUI 进入 disconnected。
 
 ## 代码结构概览
 
@@ -81,7 +81,7 @@ Sources/
 
 ## 文档体系
 
-本仓库严格遵循全局 DOCS-STANDARD v2.0（见 [`docs/DOCS-STANDARD.md`](docs/DOCS-STANDARD.md)）。
+本仓库严格遵循全局 DOCS-STANDARD v2.1（见 [`docs/DOCS-STANDARD.md`](docs/DOCS-STANDARD.md)）。所有 ADR 一律私有，公开仓不含 ADR 文件、不引用 ADR 编号。
 
 - 修改任何**功能代码**前，先读对应模块的 SPEC（`docs/specs/SPEC-NNN-*.md`）
 - 修改任何**架构相关**代码前，先读 [`docs/design/architecture.md`](docs/design/architecture.md)
@@ -99,7 +99,7 @@ Sources/
 
 ## 硬约束（违反 = reject PR）
 
-与 PRD §9 完全对齐，关键几条：
+关键几条：
 
 1. **`allow_remember == false` 时，HIPS 弹窗禁止渲染 Remember checkbox**（不允许灰显代替）。这是三态决策（allow / deny / remember）+ critical_lock 三道防线中的第三道：GUI 无条件信任 daemon 计算出的 `allow_remember`，字段为 false 即不渲染。
 2. **GUI 决策路径不联网**。Sparkle 检查更新和 external link 例外，且二者不影响 HIPS 弹窗。
@@ -132,7 +132,7 @@ Sources/
 ### 测试
 
 - 单元测试：`swift testing` 框架（`@Test` macro）
-- IPC 客户端必须有 mock daemon harness（见 [`docs/guides/development.md`](docs/guides/development.md)）
+- IPC 客户端走 `MockDaemonHarness` 测试 fixture（见 [`docs/guides/development.md`](docs/guides/development.md)）
 - HIPS 弹窗的关键约束（Remember 渲染 / 主按钮位置 / 倒计时阶段切换）必须有快照/行为测试
 
 ### 文件组织
@@ -145,7 +145,7 @@ Sources/
 
 ## 工作流增量
 
-- **进度真实源**：所有任务从 `tasks/PROGRESS.md` 拉取，完成后立即勾选 + 移到「已完成」段并写一句话总结。`tasks/` 顶层只保留 `PROGRESS.md` / `lessons.md` / `_archive/`，遵循全局 CLAUDE.md "`tasks/` 目录规范"
+- **进度真实源**：项目进度与经验沉淀不在公开仓维护，本公开仓不保留内部进度细节
 - **PR 标题**：`feat(menu-bar): ...` / `fix(hips): ...` / `docs(spec): ...`
 - **commit 范围**：`menu-bar` / `hips` / `settings` / `history` / `debug` / `onboarding` / `toast` / `ipc` / `infra`
 
@@ -153,12 +153,9 @@ Sources/
 
 ## 关键文档导航
 
-- 产品需求：`docs/requirements/sieve-gui-macos-prd-v1.0.md`
 - 系统架构：[`docs/design/architecture.md`](docs/design/architecture.md)
 - IPC 协议：[`docs/api/ipc-protocol.md`](docs/api/ipc-protocol.md)
 - SPEC 索引：[`docs/specs/INDEX.md`](docs/specs/INDEX.md)
 - 上游引用：[`docs/external/upstream-references.md`](docs/external/upstream-references.md)
 - 开发指南：[`docs/guides/development.md`](docs/guides/development.md)
 - 发布指南：[`docs/guides/deployment.md`](docs/guides/deployment.md)
-- 当前进度真实源：`tasks/PROGRESS.md`
-- 经验沉淀：`tasks/lessons.md`

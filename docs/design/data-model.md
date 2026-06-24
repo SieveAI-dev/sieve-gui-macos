@@ -203,7 +203,7 @@ struct HitSummary: Identifiable {
 ```
 
 来源：
-- IPC `event_notify`（实时）→ 直接构造
+- IPC `notify_status_bar`（实时）→ 直接构造
 - audit.db file watch 触发 → 增量查询构造
 
 `AppState.recentHits` 维护**最近 3 条**（FIFO 截断）。

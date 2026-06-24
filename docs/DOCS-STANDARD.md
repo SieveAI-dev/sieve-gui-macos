@@ -1,8 +1,8 @@
-# 文档体系规范 v2.0
+# 文档体系规范 v2.1
 
 > 适用范围：本仓库（`sieve-gui-macos`）所有 Markdown 文档
-> 上次更新：2026-05-02
-> 上游来源：全局 `~/.claude/CLAUDE.md` DOCS-STANDARD v2.0
+> 上次更新：2026-06-24
+> 上游来源：全局 `~/.claude/CLAUDE.md` DOCS-STANDARD v2.1
 
 ---
 
@@ -10,8 +10,8 @@
 
 > 安全性 > 一致性 > 完整性 > 简洁性
 
-- **一文件一职责**。一个 ADR 一个决策，一个 SPEC 一个模块。散落的小文件必须归目录；单文件不建目录。
-- **ADR 只增不改**。决策变了写新 ADR，旧的标记为「被取代」。**禁止**在 ADR 文件里改写已发布的决策。
+- **一文件一职责**。一个 SPEC 一个模块。散落的小文件必须归目录；单文件不建目录。
+- **架构决策记录（ADR）不在公开仓维护**；本公开仓**不含 ADR 文件、不引用 ADR 编号**。需说明架构时用自包含功能描述或指向公开 SPEC。
 - **research/（外部事物调研） vs review/（本项目产出物评审）严格区分**。
 - **CLAUDE.md 引用而非复制**，控制在 300 行以内。
 - **文档正文中文，文件名全英文**。
@@ -28,10 +28,7 @@ docs/
 ├── requirements/             ← PRD、用户故事
 ├── design/
 │   ├── architecture.md       ← 系统架构
-│   ├── data-model.md         ← 数据模型
-│   └── adr/
-│       ├── INDEX.md          ← 决策索引
-│       └── *.md              ← 单个决策
+│   └── data-model.md         ← 数据模型
 ├── specs/
 │   ├── INDEX.md              ← SPEC 索引
 │   └── SPEC-NNN-*.md         ← 单个功能技术规格
@@ -40,7 +37,7 @@ docs/
 ├── guides/
 │   ├── development.md
 │   └── deployment.md
-├── research/                 ← 对外部事物的调研（竞品、技术）
+├── research/                 ← 对外部事物的调研（技术、生态）
 ├── review/                   ← 对本项目产出物的评审
 ├── external/                 ← 第三方参考资料 / 上游仓库引用
 └── review/_archive/          ← 历史 review 归档（超过 1 个月或被取代）
@@ -61,9 +58,8 @@ tasks/
 
 | 类型 | 模式 | 示例 |
 |------|-----|------|
-| 决策记录 | `<前缀>-NNN-描述-用-连字符.md` | `swiftui-native-only-stack.md` |
 | SPEC | `SPEC-NNN-功能名.md` | `SPEC-002-hips-popup-window.md` |
-| Review | `YYYY-MM-DD-来源-类型.md` | `2026-05-15-ipc-spec-internal-review.md` |
+| Review | `YYYY-MM-DD-来源-类型.md` | `2026-05-15-ipc-spec-review.md` |
 | Research | `YYYY-MM-DD-主题.md` 或 `主题名.md` | `swiftui-window-scenes-survey.md` |
 
 SPEC 编号规则：
@@ -72,49 +68,9 @@ SPEC 编号规则：
 
 ---
 
-## 3. ADR 模板
+## 3. 架构决策记录（ADR）
 
-```markdown
-# {决策记录前缀}-NNN：{决策一句话}
-
-> Status: Accepted | Proposed | Superseded | Deprecated
-> Date: YYYY-MM-DD
-> Deciders: SieveAI
-> Tags: ipc, ui, security, build, ...
-
-## Context
-
-为什么要做这个决策？背景、约束、问题。
-
-## Options Considered
-
-### Option 1：{方案 A}
-- 优点
-- 缺点
-- 估计成本
-
-### Option 2：{方案 B}
-- ...
-
-### Option 3：{方案 C}
-- ...
-
-## Decision
-
-选了 Option N。**一句话写清楚选了什么**。
-
-## Consequences
-
-- 正面影响
-- 负面影响 / 引入的新约束
-- 后续需要做的事
-
-## References
-
-- 相关 PRD 章节链接
-- 相关 SPEC 链接
-- 上游 ADR / 外部资料链接
-```
+ADR 不在公开仓维护，本公开仓不放 ADR 文件、不引用 ADR 编号。需要在公开文档里说明某个架构决策时，用自包含的功能描述，或指向公开 SPEC，不链向 ADR。
 
 ---
 
@@ -126,7 +82,7 @@ SPEC 编号规则：
 > Version: vX.Y — YYYY-MM-DD
 > Status: Draft | Stable | Frozen
 > Owner: SieveAI
-> 关联 PRD 章节：§5.X
+> 关联：上游 SPEC / 功能契约（见 external/upstream-references.md）
 
 ## 0. 摘要
 
@@ -168,12 +124,7 @@ SPEC 编号规则：
 
 必须覆盖的关键测试用例。
 
-## 9. 未决事项（OQ）
-
-| 编号 | 问题 | 当前选项 | 截止决策 |
-|------|------|---------|---------|
-
-## 10. 变更记录
+## 9. 变更记录
 
 | 版本 | 日期 | 作者 | 变更 |
 ```
@@ -210,8 +161,8 @@ SPEC 编号规则：
 
 | 场景 | 需更新的文档 | 优先级 |
 |------|-------------|-------|
-| 新增功能 | PRD + 设计文档 + README + CHANGELOG | P0 |
-| 修改 IPC / 架构变更 | 对应 SPEC + ADR + ipc-protocol.md + CHANGELOG | P0 |
+| 新增功能 | 对应 SPEC + 设计文档 + README + CHANGELOG | P0 |
+| 修改 IPC / 架构变更 | 对应 SPEC + ipc-protocol.md + CHANGELOG | P0 |
 | Bug 修复（涉及逻辑） / 配置变更 | CHANGELOG + 相关文档 | P1 |
 | 依赖升级 | CHANGELOG | P2 |
 
@@ -245,8 +196,9 @@ SPEC 编号规则：
 
 - [ ] 命名符合 §2
 - [ ] 版本化文档带 `> Version:` 标注
-- [ ] ADR / SPEC 用了对应模板（§3 / §4）
+- [ ] SPEC 用了对应模板（§4）
+- [ ] 没有 ADR 文件 / ADR 编号引用（ADR 不在公开仓维护）
 - [ ] 没有把上游 daemon 文档复制进本仓库（应通过 external/ 引用）
 - [ ] 修改了 IPC 相关文档时，`ipc-protocol.md` 与 `SPEC-008-ipc-client.md` 同步更新
 - [ ] 链接路径都是相对路径，没有 hardcode GitHub URL
-- [ ] CHANGELOG（首次发布前用 `tasks/PROGRESS.md` 代替）有同步条目
+- [ ] CHANGELOG（首次发布前用私有进度文档代替）有同步条目

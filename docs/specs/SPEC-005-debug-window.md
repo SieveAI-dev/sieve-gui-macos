@@ -3,7 +3,6 @@
 > Version: v1.0 — 2026-05-02
 > Status: Stable
 > Owner: SieveAI
-> 关联 PRD 章节：§5.5
 
 ---
 
@@ -26,7 +25,7 @@
 **非目标**：
 - 修改 daemon 配置（见设置窗口 SPEC-003）
 - audit.db 写入（GUI 只读）
-- 展示 IPC 消息 params 详情（避免泄露，PRD §5.5.4）
+- 展示 IPC 消息 params 详情（避免泄露）
 
 ---
 
@@ -89,7 +88,7 @@ closed ──⌥⌘D──► open (tab = events)
 
 事件源合并显示（三类来源）：
 - `audit`：audit.db file watch 增量查询
-- `ipc`：IPC `sieve.event_notify` stream
+- `ipc`：IPC `sieve.notify_status_bar` stream
 - `gui`：GUI 自身关键日志（重连 / Touch ID 失败 / 渲染异常）
 
 **顶部控制栏**：
@@ -104,7 +103,7 @@ closed ──⌥⌘D──► open (tab = events)
 时间            来源    级别    消息
 ─────────────────────────────────────────────────────────────────
 16:42:03.124   audit   info    OUT-01 redacted · sk-ant-api03-•••• · len=51
-16:42:03.118   ipc     info    → event_notify {kind:"redacted", rule_id:"OUT-01"}
+16:42:03.118   ipc     info    → notify_status_bar {kind:"outbound_redacted", rule_id:"OUT-01"}
 16:41:58.901   gui     info    Toast displayed for 5.0s
 16:39:11.221   audit   warn    IN-CR-05 GuiPopup hold 7.2s · denied
 16:38:21.504   gui     warn    IPC timeout · retry in 1.0s
@@ -163,7 +162,7 @@ IPC 调用：`sieve.evaluate`，见 [ipc-protocol §4.5](../api/ipc-protocol.md#
 
 ```
 handshake       reconnects      inflight
-v1 ✓（绿）     0               0
+v2 ✓（绿）     0               0
 ```
 
 **消息流表格**：
@@ -173,13 +172,13 @@ dir  method                id        size   params
 ─── ─────────────────────  ────────  ─────  ─────────────────────────
 →   sieve.request_decision  8f3a      1.2KB  （不展示，避免泄露）
 ←   sieve.decision_response  8f3a     180B   （不展示，避免泄露）
-→   sieve.event_notify       —        320B   （不展示，避免泄露）
+→   sieve.notify_status_bar  —        320B   （不展示，避免泄露）
 →   sieve.hello              init     240B   （不展示，避免泄露）
 ```
 
 列宽：dir 40pt / method 220pt / id 100pt / size 80pt / params 1fr。
 
-params 列始终显示"（不展示，避免泄露）"（PRD §5.5.4 硬约束）。
+params 列始终显示"（不展示，避免泄露）"（硬约束）。
 
 `→` = daemon → GUI（蓝色），`←` = GUI → daemon（橙色）。
 
@@ -222,7 +221,7 @@ P99 latency     goroutines(tasks)   1h hits     audit.db
 | 操作 | 来源/接口 |
 |------|---------|
 | 实时事件（audit 类）| audit.db file watch 增量查询（`SELECT WHERE id > lastSeen`）|
-| 实时事件（ipc 类）| `sieve.event_notify` 通知，见 [ipc-protocol §3.3](../api/ipc-protocol.md#33-sieveevent_notify通知) |
+| 实时事件（ipc 类）| `sieve.notify_status_bar` 通知，见 [ipc-protocol §3.3](../api/ipc-protocol.md#33-sievenotify_status_bar通知) |
 | 实时事件（gui 类）| GUI 内部日志流（`~/.sieve/gui.log` + 内存 ring buffer）|
 | 沙箱评估 | `sieve.evaluate`，见 [ipc-protocol §4.5](../api/ipc-protocol.md#45-sieveevaluate沙箱评估) |
 | 系统健康 | `sieve.health`，见 [ipc-protocol §4.7](../api/ipc-protocol.md#47-sievehealth) |
@@ -244,19 +243,19 @@ P99 latency     goroutines(tasks)   1h hits     audit.db
 
 ## 7. 性能与硬约束
 
-| 指标 | 约束 | 来源 |
-|------|------|------|
-| 实时事件 ring buffer | 最多 1000 条，防内存膨胀 | PRD §8.1 |
-| IPC 消息 ring buffer | 最多 100 条 | PRD §5.5.4 |
-| sieve.evaluate payload | ≤ 64KB | ipc-protocol §4.5 |
-| IPC 监视 params | 始终不展示（泄露防护）| PRD §5.5.4 |
-| Replay 按钮 | 仅 DEBUG build | PRD §5.5.4（不影响真实流量约束）|
+| 指标 | 约束 |
+|------|------|
+| 实时事件 ring buffer | 最多 1000 条，防内存膨胀 |
+| IPC 消息 ring buffer | 最多 100 条 |
+| sieve.evaluate payload | ≤ 64KB |
+| IPC 监视 params | 始终不展示（泄露防护）|
+| Replay 按钮 | 仅 DEBUG build |
 
 ---
 
 ## 8. 测试要求
 
-- 实时事件：IPC `event_notify` 到达 → 断言新行追加到列表（来源=ipc）
+- 实时事件：IPC `notify_status_bar` 到达 → 断言新行追加到列表（来源=ipc）
 - 实时事件：audit.db file watch 触发 → 断言新行追加（来源=audit）
 - 实时事件：级别过滤 warn → 断言 info 行不显示
 - 沙箱评估：正常评估 → `sieve.evaluate` IPC 调用验证 + 结果渲染
@@ -269,16 +268,7 @@ P99 latency     goroutines(tasks)   1h hits     audit.db
 
 ---
 
-## 9. 未决事项（OQ）
-
-| 编号 | 问题 | 当前选项 | 截止决策 |
-|------|------|---------|---------|
-| OQ-005-01 | 沙箱评估是否在生产版本中默认可见？（PRD OQ-G-05）| 默认显示，但 daemon 端决定是否限制（`cfg!(production_locked)`）| Week 8 与 daemon 对齐 |
-| OQ-005-02 | "实时事件"Tab 的 ring buffer 是否应该支持导出？ | Phase 1 不支持，仅支持单行复制 | Phase 1 排除 |
-
----
-
-## 10. 变更记录
+## 9. 变更记录
 
 | 版本 | 日期 | 作者 | 变更 |
 |------|------|-----|-----|

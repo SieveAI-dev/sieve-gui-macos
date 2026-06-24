@@ -17,7 +17,7 @@
 ### 通用
 
 - [ ] 修改了哪些代码就跑了哪些测试，并附粘贴/截图
-- [ ] `swift-format lint` 通过
+- [ ] `swiftformat --lint` 通过
 - [ ] `xcodebuild test` 通过
 - [ ] commit message 是 Conventional Commits 格式（`feat(scope): ...` / `fix(scope): ...`）
 - [ ] **没有** 在 commit 里加任何 AI 署名 / `Co-Authored-By: Claude` 之类
@@ -27,8 +27,7 @@
 - [ ] 改了 IPC → `docs/api/ipc-protocol.md` + `docs/specs/SPEC-008-ipc-client.md` 已同步
 - [ ] 改了 HIPS 行为 → `docs/specs/SPEC-002-hips-popup-window.md` 已同步
 - [ ] 改了模块行为 → 对应 SPEC 已同步
-- [ ] 改了架构 → 写新 ADR 或把旧 ADR 标记 Superseded
-- [ ] 没复制上游 daemon 仓库的 ADR/SPEC 到本仓库（应通过 `external/` 引用）
+- [ ] 没复制上游 daemon 仓库的 SPEC 到本仓库（应通过 `external/` 引用）
 
 ### 安全 / 隐私（涉及时必查）
 
@@ -42,8 +41,8 @@
 ### 协议变更（涉及时必查）
 
 - [ ] 字段变更已与上游 daemon 仓库 PR 绑定
-- [ ] 不兼容变更已递增 `protocol_version`（v1 → v2）
-- [ ] mock daemon 的对应场景已更新
+- [ ] 不兼容变更已在两个仓库同步递增 `protocol_version`
+- [ ] `MockDaemonHarness` 的对应场景已更新
 
 ## 如何测试
 

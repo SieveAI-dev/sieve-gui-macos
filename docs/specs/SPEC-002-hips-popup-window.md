@@ -3,7 +3,6 @@
 > Version: v1.0 — 2026-05-02
 > Status: Stable
 > Owner: SieveAI
-> 关联 PRD 章节：§5.2, §6.3, §6.4
 > 上游依赖：[上游 SPEC-002 hips-popup-behavior](../external/upstream-references.md#spec-002hips-popup-behavior) · [上游 tri-state-decision-and-graylist 三道防线](../external/upstream-references.md#tri-state-decision-and-graylist)
 
 ---
@@ -136,7 +135,7 @@ idle ─────────────────────────
 - 弹出时调用 `NSApp.activate(ignoringOtherApps: true)`
 - 可选播放系统提示音（默认 `Funk`，用户可在设置关闭）
 
-NSPanel 采用**复用模式**（HipsPanelManager 持有一个常驻隐藏 NSPanel，显示时更新内容），避免每次弹窗重建 View 导致延迟（PRD §8.1 P95 < 500ms 硬约束）。
+NSPanel 采用**复用模式**（HipsPanelManager 持有一个常驻隐藏 NSPanel，显示时更新内容），避免每次弹窗重建 View 导致延迟（P95 < 500ms 硬约束）。
 
 ### 4.2 整体布局
 
@@ -195,7 +194,7 @@ GUI 根据 `params.context.template` 字段选择模板，不识别时降级到 
 ┌─────────────────────────────────────────────────┐ ← 绿底
 │  0x742d35  ••••••••(23)  ••••(6)  f0bEb1        │
 └─────────────────────────────────────────────────┘
-模型回复中替换为                     Levenshtein 9
+模型回复中替换为                     近似地址告警
 ┌─────────────────────────────────────────────────┐ ← 红底
 │  0x742d35  [Aa183][2F95][dC8d]  ••••(6)  bEb1   │ ← 红色高亮差异字符
 └─────────────────────────────────────────────────┘
@@ -266,7 +265,7 @@ length:  71 chars
 - 不做特殊语义解析
 - 底部提示："此规则没有专用模板，显示原始数据"
 
-**[📋 复制原始 JSON] 按钮**：复制 `HipsRequest.rawJSON`，需要二次确认 alert："原始请求 JSON 可能包含敏感数据，确认复制到剪贴板？"（PRD §5.2.5）。
+**[📋 复制原始 JSON] 按钮**：复制 `HipsRequest.rawJSON`，需要二次确认 alert："原始请求 JSON 可能包含敏感数据，确认复制到剪贴板？"。
 
 ### 4.5 推荐栏渲染规则
 
@@ -279,7 +278,7 @@ length:  71 chars
 | `confidence="medium"` 或 `"low"` | 灰色中性底 | ℹ | "Sieve 建议谨慎，置信度不足" + reason | 拒绝在右（主按钮，fail-closed）|
 | `recommendation` 字段缺失 | 灰色中性底 | ℹ | "Sieve 无明确建议，请结合上下文判断" | 拒绝在右（主按钮，fail-closed）|
 
-**硬约束**（CLAUDE.md §4 + PRD §9 #3）：`recommendation` 缺失或 `confidence != "high"` 时，主按钮永远是"拒绝"，键盘 `Return` 默认也走拒绝。
+**硬约束**（CLAUDE.md §4）：`recommendation` 缺失或 `confidence != "high"` 时，主按钮永远是"拒绝"，键盘 `Return` 默认也走拒绝。
 
 ### 4.6 Remember Checkbox 渲染规则
 
@@ -300,23 +299,23 @@ false                 →  【严禁渲染 checkbox】
 ─────────────────────────────────────────────────────────────────
 ```
 
-**禁止**：灰显 checkbox（灰显暗示"将来可能解锁"，违反 Critical 锁产品承诺，PRD §5.2.8）。
+**禁止**：灰显 checkbox（灰显暗示"将来可能解锁"，违反 Critical 锁产品承诺）。
 
 IPC 编码层二重保险：无论 UI 状态如何，发送 `decision_response` 时，若 `allow_remember == false`，则 `remember` 字段强制为 `false`（见 [ipc-protocol §7](../api/ipc-protocol.md#7-协议层硬约束gui-实现端)）。
 
 ### 4.7 防误点三道机制
 
-**机制一：0.4s swallow**（PRD §5.2.7）
+**机制一：0.4s swallow**
 - 弹窗弹出后 400ms 内，所有按钮点击被 swallow（不响应）
 - 视觉：按钮显示 0.4s 进度条或透明度降低（防止用户不知道）
 - 目的：防止用户在连点其他 App 时误触
 
-**机制二：阶段 3 ⌘+Click**（PRD §5.2.7）
+**机制二：阶段 3 ⌘+Click**
 - 当倒计时处于 Phase 3（≤20% 剩余时间），"允许此次"按钮需要 `Command+Click` 才响应普通点击
 - 按钮标注改为："按住 ⌘ 点击允许"
 - 目的：防止紧迫感下误放行
 
-**机制三：上次 deny 后 5s 按钮位移**（PRD §5.2.7）
+**机制三：上次 deny 后 5s 按钮位移**
 - 条件：用户对同一 `rule_id` 的上一次决策是 deny，且距离本次弹窗不超过 5 秒
 - 行为：主按钮和副按钮交换位置（拒绝移到右侧，允许移到左侧）
 - 目的：降低肌肉记忆击穿风险（不能靠记住"右边是拒绝"盲点）
@@ -343,14 +342,14 @@ IPC 编码层二重保险：无论 UI 状态如何，发送 `decision_response` 
 └─────────────────────────────────────────────────────┘
 ```
 
-**按钮组合规则**（PRD §5.2.9 + 场景 C）：
+**按钮组合规则**（场景 C）：
 
 | 条件 | 渲染的按钮 |
 |------|----------|
 | 存在至少 1 个 Critical issue | [拒绝全部]（主）+ [仅允许非 Critical 项（N 项）]（副，N=非 Critical 数量）|
 | 0 个 Critical issue | [拒绝全部]（副）+ [全部允许]（主，仅此情况渲染）|
 
-**禁止**：当存在 Critical issue 时渲染"全部允许"按钮（不允许灰显代替，PRD §4.3）。
+**禁止**：当存在 Critical issue 时渲染"全部允许"按钮（不允许灰显代替）。
 
 多 issue 模式下每条 issue 的 Remember 渲染：
 - 遵循各自的 `allow_remember` 字段
@@ -400,17 +399,17 @@ GUI 内存域模型 `HipsRequest`：见 [data-model.md §3.1](../design/data-mod
 
 ## 7. 性能与硬约束
 
-| 指标 | 约束 | 来源 |
-|------|------|------|
-| 弹窗 P95 显示延迟（IPC 接收→第一帧）| < 500ms | PRD §8.1 |
-| `allow_remember == false` 时 | 严禁渲染 Remember checkbox；不允许灰显 | 防线三 / CLAUDE.md 硬约束 #1 |
-| `recommendation` 缺失或 `confidence != "high"` | 主按钮永远是"拒绝"，Return 键默认拒绝 | CLAUDE.md 硬约束 #4 / PRD §9 #3 |
-| 弹窗关闭后 rawJSON | 必须主动清零（`Data` 置空）| PRD §9 #5 |
-| 多 issue 有 Critical | 禁止渲染"全部允许"按钮 | PRD §4.3 |
-| Phase 3 allow | 必须 ⌘+Click | PRD §5.2.7 |
-| 0.4s swallow | 所有按钮弹出后 400ms 内禁用 | PRD §5.2.7 |
-| 弹窗串行排队 | 同一时刻只显示一个 HIPS 弹窗 | PRD §5.2.1 |
-| `decision_response.remember` | `allow_remember == false` 时编码层强制为 `false` | ipc-protocol §7 |
+| 指标 | 约束 |
+|------|------|
+| 弹窗 P95 显示延迟（IPC 接收→第一帧）| < 500ms |
+| `allow_remember == false` 时 | 严禁渲染 Remember checkbox；不允许灰显 |
+| `recommendation` 缺失或 `confidence != "high"` | 主按钮永远是"拒绝"，Return 键默认拒绝 |
+| 弹窗关闭后 rawJSON | 必须主动清零（`Data` 置空）|
+| 多 issue 有 Critical | 禁止渲染"全部允许"按钮 |
+| Phase 3 allow | 必须 ⌘+Click |
+| 0.4s swallow | 所有按钮弹出后 400ms 内禁用 |
+| 弹窗串行排队 | 同一时刻只显示一个 HIPS 弹窗 |
+| `decision_response.remember` | `allow_remember == false` 时编码层强制为 `false` |
 
 ---
 
@@ -446,17 +445,7 @@ GUI 内存域模型 `HipsRequest`：见 [data-model.md §3.1](../design/data-mod
 
 ---
 
-## 9. 未决事项（OQ）
-
-| 编号 | 问题 | 当前选项 | 截止决策 |
-|------|------|---------|---------|
-| OQ-002-01 | `address_compare` 模板中"显示完整地址"是否需要 Touch ID？ | 当前方案：不需要（弹窗内已需要决策，信息对用户有益），仅复制原始 JSON 需要确认 | Week 6 |
-| OQ-002-02 | 多 issue 排序规则中，同 severity 的多条如何排序（by rule_id 字母序 or by daemon 发送顺序）？ | 当前：daemon 发送顺序；Critical 始终置顶 | Week 7 |
-| OQ-002-03 | `secret_outbound` 模板的"显示助记词"是否复用历史窗口的 5 分钟 Touch ID 会话？ | 是，复用 `AppState.unlockSession`，弹窗关闭后 session 不清除 | Week 8 确认 |
-
----
-
-## 10. 变更记录
+## 9. 变更记录
 
 | 版本 | 日期 | 作者 | 变更 |
 |------|------|-----|-----|

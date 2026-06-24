@@ -3,7 +3,6 @@
 > Version: v1.0 — 2026-05-02
 > Status: Stable
 > Owner: SieveAI
-> 关联 PRD 章节：§5.1
 
 ---
 
@@ -11,7 +10,7 @@
 
 菜单栏模块是 Sieve GUI 的主入口。通过 `NSStatusItem` 常驻于 macOS 菜单栏，以五种图标状态实时反映 daemon 运行状况。点击图标弹出 Quick Menu popover，提供状态摘要、最近命中、暂停/恢复、以及各功能窗口的入口。
 
-状态以 `sieve.hello` 实际握手为准，禁止"假装健康"（PRD §9 #6）。
+状态以 `sieve.hello` 实际握手为准，禁止"假装健康"。
 
 ---
 
@@ -102,7 +101,7 @@
 
 图标实现：SF Symbols `circle.lefthalf.filled` + 自绘筛子层；适配 macOS 深色/浅色菜单栏模板图像。
 
-**约束**（PRD §5.1.1）：
+**约束**：
 - 角标计数最大显示 99，超过显示 `99+`
 - hold 状态倒计时数字每秒刷新，与 HIPS 弹窗同步
 - 所有状态切换 200ms ease-in-out 动效
@@ -137,17 +136,17 @@
 **命中行约束**：
 - 每条不超过 1 行，溢出 ellipsis
 - 内容：时间（monospace 5字符）+ rule_id（monospace 10字符）+ 脱敏摘要
-- 绝不显示原始 prompt；所有 hint 字段来自 `HitSummary.ruleId + action`（PRD §5.1.2）
+- 绝不显示原始 prompt；所有 hint 字段来自 `HitSummary.ruleId + action`
 - deny 类 action 的 rule_id 显示为红色
 
 **暂停行为**：
 - 点"暂停 30 分钟" → IPC `sieve.set_paused{minutes:30}`，等待 response
 - response 成功 → 状态切 paused，菜单行变"恢复（剩 27:42）"
-- 暂停期间，说明行始终可见："暂停期间 Critical 拦截仍然生效"（PRD §5.1.3 硬约束）
-- 不提供 > 30 分钟 / 无限期暂停（PRD §5.1.3）
+- 暂停期间，说明行始终可见："暂停期间 Critical 拦截仍然生效"（硬约束）
+- 不提供 > 30 分钟 / 无限期暂停
 
 **退出行为**：
-- "退出 Sieve GUI" 弹 alert："daemon 仍在运行，重新打开 Sieve GUI 即可恢复 HIPS 弹窗。"（PRD §5.1.2）
+- "退出 Sieve GUI" 弹 alert："daemon 仍在运行，重新打开 Sieve GUI 即可恢复 HIPS 弹窗。"
 - 确认后退出 GUI 进程；daemon 继续运行
 
 ### 4.3 失联 Popover（替换 Quick Menu）
@@ -193,7 +192,7 @@
 |------|------|---------|
 | daemon 状态（connected/paused/preset）| IPC `sieve.hello` | 每次重连 |
 | paused_until | IPC `sieve.set_paused` response | 操作后 |
-| recentHits（最近 3 条）| `AppState.recentHits` | IPC `event_notify` + audit.db file watch |
+| recentHits（最近 3 条）| `AppState.recentHits` | IPC `notify_status_bar` + audit.db file watch |
 | 今日命中统计 | audit.db 增量查询 | file watch 触发 |
 | hold 倒计时数字 | `HipsPanelManager.activeRequest.remainingSeconds` | 每秒 |
 
@@ -221,14 +220,14 @@ IPC 消息格式详见 [ipc-protocol §1](../api/ipc-protocol.md#1-握手) 和 [
 
 ## 7. 性能与硬约束
 
-| 指标 | 约束 | 来源 |
-|------|------|------|
-| Quick Menu 弹出延迟 | < 100ms（popover 复用，不每次重建） | PRD §2.2 |
-| 图标状态切换 | 必须以 `sieve.hello` 握手为准，不假装健康 | PRD §9 #6 |
-| hold 倒计时数字 | 与 HIPS 弹窗同步，精度 ±1s | PRD §5.1.1 |
-| 暂停期间 Critical 拦截 | 菜单栏必须标注"Critical 拦截仍然生效" | PRD §5.1.3 |
-| 最近命中摘要 | 绝不显示原始 prompt 内容 | PRD §5.1.2 / PRD §9 #5 |
-| 退出不影响 daemon | GUI 进程退出只影响 GUI，daemon 继续 | PRD §8.2 |
+| 指标 | 约束 |
+|------|------|
+| Quick Menu 弹出延迟 | < 100ms（popover 复用，不每次重建） |
+| 图标状态切换 | 必须以 `sieve.hello` 握手为准，不假装健康 |
+| hold 倒计时数字 | 与 HIPS 弹窗同步，精度 ±1s |
+| 暂停期间 Critical 拦截 | 菜单栏必须标注"Critical 拦截仍然生效" |
+| 最近命中摘要 | 绝不显示原始 prompt 内容 |
+| 退出不影响 daemon | GUI 进程退出只影响 GUI，daemon 继续 |
 
 ---
 
@@ -252,16 +251,7 @@ IPC 消息格式详见 [ipc-protocol §1](../api/ipc-protocol.md#1-握手) 和 [
 
 ---
 
-## 9. 未决事项（OQ）
-
-| 编号 | 问题 | 当前选项 | 截止决策 |
-|------|------|---------|---------|
-| OQ-001-01 | warning 状态的 5min 计时是基于 event 时间戳还是 GUI 收到 event_notify 的时间？ | event.occurred_at（daemon 端），避免 GUI 进程暂停导致误算 | Week 6 |
-| OQ-001-02 | 多个 GuiPopup 排队时，hold 状态的倒计时数字显示哪个（第一个 or 最小剩余）？ | 显示 activeRequest（当前弹窗）的剩余秒，不显示队列中其他 | Week 6 |
-
----
-
-## 10. 变更记录
+## 9. 变更记录
 
 | 版本 | 日期 | 作者 | 变更 |
 |------|------|-----|-----|

@@ -3,7 +3,6 @@
 > Version: v1.0 — 2026-05-02
 > Status: Stable
 > Owner: SieveAI
-> 关联 PRD 章节：§6
 > 上游契约：[上游 ipc-protocol 决策](../external/upstream-references.md#ipc-protocol) · [ipc-protocol.md](../api/ipc-protocol.md)
 
 ---
@@ -194,7 +193,7 @@ func route(_ incoming: JSONRPCIncoming) {
         case "sieve.heartbeat":         handleHeartbeat()
         case "sieve.request_decision":  // 含 id，见下
         case "sieve.request_decision_canceled": handleCanceled(...)
-        case "sieve.event_notify":      handleEventNotify(...)
+        case "sieve.notify_status_bar": handleStatusBarNotify(...)
         case "sieve.preset_changed":    handlePresetChanged(...)
         default:                        // 未知 method，写 log，不报错
         }
@@ -338,16 +337,16 @@ func handleHello(_ params: HelloParams) {
 
 ## 7. 性能与硬约束
 
-| 指标 | 约束 | 来源 |
-|------|------|------|
-| IPC 重连耗时（socket 已就绪）| < 100ms | PRD §8.1 |
-| 退避封顶 | 30s | PRD §6.5 |
-| 心跳超时 | 30s | ipc-protocol §2 |
-| 协议版本不识别 | 立即进入 disconnected，不兼容旧字段 | PRD §9 #7 / CLAUDE.md 硬约束 #5 |
-| 消息体最大 | 1MB（单条）| 实现保护 |
-| decision_response.remember | `allow_remember == false` 时编码层强制 `false` | ipc-protocol §7 |
-| 主线程保护 | NWConnection 在专用 DispatchQueue；结果用 `Task { @MainActor }` 投递 | architecture §6 |
-| 禁止 `[String: Any]` 透传 | 所有 IPC 消息走 `Codable` 结构体 | CLAUDE.md 编码规范 |
+| 指标 | 约束 |
+|------|------|
+| IPC 重连耗时（socket 已就绪）| < 100ms |
+| 退避封顶 | 30s |
+| 心跳超时 | 30s |
+| 协议版本不识别 | 立即进入 disconnected，不兼容旧字段 |
+| 消息体最大 | 1MB（单条）|
+| decision_response.remember | `allow_remember == false` 时编码层强制 `false` |
+| 主线程保护 | NWConnection 在专用 DispatchQueue；结果用 `Task { @MainActor }` 投递 |
+| 禁止 `[String: Any]` 透传 | 所有 IPC 消息走 `Codable` 结构体 |
 
 ---
 
@@ -390,17 +389,7 @@ func handleHello(_ params: HelloParams) {
 
 ---
 
-## 9. 未决事项（OQ）
-
-| 编号 | 问题 | 当前选项 | 截止决策 |
-|------|------|---------|---------|
-| OQ-008-01 | `NWParameters` 对 UDS 是否需要显式设置 `localEndpointReuse`？实测 macOS 13 上 UDS 的 `NWConnection` 行为是否有 quirk？ | Week 5 实测验证 | Week 5 |
-| OQ-008-02 | inflight 超时时长：当前设 60s，是否足够覆盖慢速 `sieve.evaluate`（大 payload）？ | `sieve.evaluate` 单独设 90s timeout；其他方法 60s | Week 8 |
-| OQ-008-03 | socket 权限校验失败时是否阻断连接？（目前只写 log 不阻断）| 目前宽松处理，OS 文件权限本身会拒绝非 owner 访问 | Phase 1 |
-
----
-
-## 10. 变更记录
+## 9. 变更记录
 
 | 版本 | 日期 | 作者 | 变更 |
 |------|------|-----|-----|
