@@ -165,9 +165,10 @@ public struct HistoryWindowView: View {
         panel.title = "导出历史记录（强制脱敏）"
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
-        let rows = viewModel.rows
         exportState = .running(progress: 0)
         Task {
+            // 全量分页拉取（含当前 filter），而非 viewModel.rows 的 ≤200 内存窗口。
+            let rows = await viewModel.fetchAllForExport()
             await HistoryExporter.shared.export(rows: rows, format: format, to: url) { state in
                 Task { @MainActor in
                     exportState = state

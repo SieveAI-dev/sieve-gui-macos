@@ -97,14 +97,20 @@ public final class IPCClient: @unchecked Sendable {
     }
 
     private func _enqueueAndAwait(id: String, method: String, payload: Data) async throws -> Data {
-        await inflight.enqueue(.init(
-            id: id, method: method, payload: payload,
-            createdAt: Date(),
-            isDecisionResponse: false
-        ))
-        sendRaw(payload)
         return try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Data, Error>) in
-            Task { await self.inflight.registerWaiter(id: id, continuation: cont) }
+            Task {
+                // 顺序关键：先 enqueue + 注册 waiter，最后才 sendRaw 发出请求。
+                // 否则本地 Unix socket 的极快响应可能在 registerWaiter 之前就 fulfill，
+                // 而 fulfill 此时找不到 waiter 只丢弃 entry → continuation 永久挂起，
+                // 且 sweepTimeouts 已无对应 entry 可兜底（孤儿 waiter）。
+                await self.inflight.enqueue(.init(
+                    id: id, method: method, payload: payload,
+                    createdAt: Date(),
+                    isDecisionResponse: false
+                ))
+                await self.inflight.registerWaiter(id: id, continuation: cont)
+                self.sendRaw(payload)
+            }
         }
     }
 

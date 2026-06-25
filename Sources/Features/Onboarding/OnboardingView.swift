@@ -236,7 +236,7 @@ public struct OnboardingView: View {
                     .disabled(demoRunning)
                 Spacer()
                 Button("完成") {
-                    appState.settings.onboardingCompletedAt = Date()
+                    appState.markOnboardingCompleted()
                     onClose()
                 }
                 .buttonStyle(.borderedProminent)
@@ -288,7 +288,7 @@ public struct OnboardingView: View {
         if alert.runModal() == .alertSecondButtonReturn {
             // SPEC-006 §3 / §6：记录跳过时所处步骤 + 写完成时间戳。
             Self.recordSkippedStep(step, into: .standard)
-            appState.settings.onboardingCompletedAt = Date()
+            appState.markOnboardingCompleted()
             onClose()
         }
     }
@@ -395,8 +395,12 @@ public struct OnboardingView: View {
     }
 
     private func runSetup() {
+        guard let bin = SieveBinaryLocator.resolve() else {
+            Task { await GUILog.shared.warn("找不到 sieve 可执行文件，无法运行 setup", category: "onboarding") }
+            return
+        }
         let p = Process()
-        p.launchPath = "/usr/local/bin/sieve"
+        p.launchPath = bin
         p.arguments = ["setup"]
         try? p.run()
     }

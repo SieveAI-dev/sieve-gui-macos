@@ -174,7 +174,7 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
                 self.countdownRemaining -= 1
                 if self.countdownRemaining <= 0 {
                     self.countdownTimer?.invalidate()
-                    self.closePanel(notifyDaemon: false)
+                    self.handleCountdownTimeout()
                 }
             }
         }
@@ -263,6 +263,34 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
                 await self?.ipcClient?.sendDecisionResponse(id: p.requestId, result: p.resultJSON())
             }
         }
+    }
+
+    /// 倒计时归零：用户未在 daemon 指定时限内决策。fail-closed —— 主动向 daemon 回传「拒绝」
+    /// （`by_user=false` 表示超时/回退，正是 SPEC-005 §6.2 对该字段的协议预期），而非静默关窗
+    /// 让 daemon 干等自己的 default_on_timeout。merged 请求按 denyAll 回传。
+    private func handleCountdownTimeout() {
+        guard let req = activeRequest else { return }
+        let payload: PendingDecisionPayload
+        if req.merged {
+            let perIssue = MergedDecisionBuilder.perIssues(for: req.issues, action: .denyAll)
+            payload = .merged(MergedDecisionResponse(id: req.id, perIssue: perIssue, byUser: false))
+        } else {
+            let response = DecisionResponse(
+                id: req.id, decision: .deny, remember: false,
+                contextHint: nil, byUser: false, uiPhaseWhenClicked: .red
+            )
+            payload = .single(response, allowRemember: req.allowRemember)
+        }
+        if isDisconnected {
+            // 失联期间缓存，重连握手后由 resendDisconnectedDecisions() 重发（daemon 按 request_id 去重）。
+            disconnectedCache.store(payload)
+        } else {
+            Task { [weak self] in
+                await self?.ipcClient?.sendDecisionResponse(id: req.id, result: payload.resultJSON())
+            }
+        }
+        recordHit(for: req, decision: .deny)
+        closePanel(notifyDaemon: false)
     }
 
     private func handleClose() {

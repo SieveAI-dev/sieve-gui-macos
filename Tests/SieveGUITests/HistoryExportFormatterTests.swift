@@ -126,4 +126,15 @@ struct HistoryExportFormatterTests {
         #expect(line.contains("\"rule,with,commas\""))
         #expect(line.contains("\"has\"\"quote\""))
     }
+
+    @Test("NDJSON 特殊字符（引号、反斜杠、换行）转义后仍是合法 JSON 且值无损")
+    func ndjson_escapes_special_chars() throws {
+        let formatter = HistoryExportFormatter(format: .ndjson)
+        let row = makeRow(ruleId: "rule\"with\\quote\nnewline", disposition: "x", requestId: "r\"id")
+        let line = formatter.formatLine(row: row)
+        let data = line.data(using: .utf8)!
+        let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        #expect(obj?["rule_id"] as? String == "rule\"with\\quote\nnewline")
+        #expect(obj?["request_id"] as? String == "r\"id")
+    }
 }

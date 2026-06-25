@@ -5,6 +5,7 @@ public struct QuickMenuView: View {
     let onOpenSettings: () -> Void
     let onOpenHistory: () -> Void
     let onOpenDebug: () -> Void
+    let onOpenOnboarding: () -> Void
     let onPause: (Int) -> Void
     let onResume: () -> Void
     let onQuit: () -> Void
@@ -16,6 +17,7 @@ public struct QuickMenuView: View {
         onOpenSettings: @escaping () -> Void,
         onOpenHistory: @escaping () -> Void,
         onOpenDebug: @escaping () -> Void,
+        onOpenOnboarding: @escaping () -> Void,
         onPause: @escaping (Int) -> Void,
         onResume: @escaping () -> Void,
         onQuit: @escaping () -> Void
@@ -24,6 +26,7 @@ public struct QuickMenuView: View {
         self.onOpenSettings = onOpenSettings
         self.onOpenHistory = onOpenHistory
         self.onOpenDebug = onOpenDebug
+        self.onOpenOnboarding = onOpenOnboarding
         self.onPause = onPause
         self.onResume = onResume
         self.onQuit = onQuit
@@ -156,7 +159,7 @@ public struct QuickMenuView: View {
             Text(disconnectReasonText(reason))
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            Button("打开 Onboarding 修复") { /* will be wired */ }
+            Button("打开 Onboarding 修复") { onOpenOnboarding() }
                 .controlSize(.small)
         }
         .padding(.horizontal, 14)

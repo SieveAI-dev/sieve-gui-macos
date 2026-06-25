@@ -166,6 +166,7 @@
 		E6E2C9AB3534024FE07B30C9 /* DiagnosticPackagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ED59D2BC2BF04135B382BA6 /* DiagnosticPackagerTests.swift */; };
 		E7590413B6CAADA59BC12B6A /* DecisionResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 729A1DFBEDBA81F489BF8D71 /* DecisionResponse.swift */; };
 		E9C53345864938E0D4A0739D /* DaemonSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6506B2A5D681868D95007D82 /* DaemonSettingsView.swift */; };
+		E9DCA04A41D206494AF5B10C /* SieveBinaryLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17D048170DD7D5AE56183411 /* SieveBinaryLocator.swift */; };
 		EB0C843C430596FFB198B5B8 /* AppStateStatusMachineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C970A6041CB4D1D57E5DE185 /* AppStateStatusMachineTests.swift */; };
 		EC372570CA8DFFD00B1CE88B /* request.single.minimal.json in Resources */ = {isa = PBXBuildFile; fileRef = 398CB28D14BD1DA47F55AD4A /* request.single.minimal.json */; };
 		EC5DEA7C26B98974C5A41097 /* notification.full.json in Resources */ = {isa = PBXBuildFile; fileRef = 89A6CE2194498776E0FDFC41 /* notification.full.json */; };
@@ -205,6 +206,7 @@
 		11FB1CCB8B973D9F5013CFFA /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		120782C66D23B9A1E8B454CB /* WindowManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowManager.swift; sourceTree = "<group>"; };
 		159E7FD37EEFBFAC94397553 /* DetectionPresetOverrideTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetectionPresetOverrideTests.swift; sourceTree = "<group>"; };
+		17D048170DD7D5AE56183411 /* SieveBinaryLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SieveBinaryLocator.swift; sourceTree = "<group>"; };
 		1804C9CC3940134CADFBEE24 /* response.minimal.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = response.minimal.json; sourceTree = "<group>"; };
 		184CCF309BCA49B0EFB87224 /* response.null_optional.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = response.null_optional.json; sourceTree = "<group>"; };
 		1CB243B57B7D19B2F9EDE790 /* LiveEventsRingBufferTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveEventsRingBufferTests.swift; sourceTree = "<group>"; };
@@ -880,6 +882,7 @@
 				E15C4A65D3E739239000CC2F /* Sparkle */,
 				6FFADA51C351A29C708303CB /* Telemetry */,
 				CB9A086866D0FCF94AD63D01 /* TouchID */,
+				17D048170DD7D5AE56183411 /* SieveBinaryLocator.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -1211,6 +1214,7 @@
 				6489552F607376FE5F3119D2 /* RuleOverride.swift in Sources */,
 				7501DC535C9ECF838EA63BD9 /* SettingsWindowView.swift in Sources */,
 				50B1261A8C34993CEAB0AA6D /* SeverityChip.swift in Sources */,
+				E9DCA04A41D206494AF5B10C /* SieveBinaryLocator.swift in Sources */,
 				83503BD2FAE7C8DA9561818E /* SieveGUIApp.swift in Sources */,
 				25B19292FED176FA8EBCEB1C /* SparkleUpdaterBridge.swift in Sources */,
 				7396D5E0E95A0E49E187BF2F /* StatusBarIcon.swift in Sources */,

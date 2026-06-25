@@ -95,6 +95,7 @@ public final class MenuBarController: NSObject, NSPopoverDelegate {
             onOpenSettings: { [weak self] in self?.openWindow(.settings) },
             onOpenHistory: { [weak self] in self?.openWindow(.history) },
             onOpenDebug: { [weak self] in self?.openWindow(.debug) },
+            onOpenOnboarding: { [weak self] in self?.openWindow(.onboarding) },
             onPause: { [weak self] minutes in self?.requestPause(minutes: minutes) },
             onResume: { [weak self] in self?.requestResume() },
             onQuit: { [weak self] in self?.confirmQuit() }

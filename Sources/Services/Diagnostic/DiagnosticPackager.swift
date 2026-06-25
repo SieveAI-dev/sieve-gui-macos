@@ -109,15 +109,28 @@ public actor DiagnosticPackager {
         }
         defer { sqlite3_close(db) }
 
-        // 获取 events 表实际存在的列
+        // 获取 events 表实际存在的列。
         let existingCols = getTableColumns(db: db, table: "events")
+        // events 表不存在（返回空集）= schema 不符预期。绝不能当作"无敏感列"放行——
+        // 那会把一个结构未知、可能含未脱敏 evidence 的库原样塞进诊断包。拒绝导出。
+        guard !existingCols.isEmpty else {
+            logger.error("audit.db redact: events 表不存在，拒绝导出未知 schema 的库")
+            return false
+        }
         let colsToRedact = DiagnosticPackager.auditRedactedColumns.filter { existingCols.contains($0) }
-        guard !colsToRedact.isEmpty else { return true }  // 没有敏感列则直接返回成功
-
-        let setClauses = colsToRedact.map { "\($0) = ''" }.joined(separator: ", ")
-        let sql = "UPDATE events SET \(setClauses)"
-        if sqlite3_exec(db, sql, nil, nil, nil) != SQLITE_OK {
-            logger.error("audit.db redact UPDATE failed")
+        // events 表存在但无任一敏感列 = 该 schema 本就不含 evidence，跳过 UPDATE。
+        if !colsToRedact.isEmpty {
+            let setClauses = colsToRedact.map { "\($0) = ''" }.joined(separator: ", ")
+            let sql = "UPDATE events SET \(setClauses)"
+            if sqlite3_exec(db, sql, nil, nil, nil) != SQLITE_OK {
+                logger.error("audit.db redact UPDATE failed")
+                return false
+            }
+        }
+        // VACUUM 回收被清空列占用的页，否则旧 evidence 明文残留在 SQLite freelist，
+        // strings(1) 仍可从拷贝文件恢复——脱敏形同虚设。
+        if sqlite3_exec(db, "VACUUM", nil, nil, nil) != SQLITE_OK {
+            logger.error("audit.db redact VACUUM failed")
             return false
         }
         return true

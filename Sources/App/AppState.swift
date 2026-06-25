@@ -65,6 +65,13 @@ public final class AppState: ObservableObject {
     // MARK: - daemon 状态变更（由 IPCRouter 调用）
 
     public func updatePreset(_ p: Preset) { preset = p }
+
+    /// 标记引导完成：同步落盘（绕过 `settings` 的 200ms debounce），避免完成/跳过后
+    /// 立即退出导致时间戳未持久化、下次启动重复弹引导。
+    public func markOnboardingCompleted(at date: Date = Date()) {
+        settings.onboardingCompletedAt = date  // 更新内存 + 触发 @Published（UI 联动）
+        store.setOnboardingCompleted(date)      // 立即同步写 UserDefaults
+    }
     public func updatePaused(_ paused: Bool, until: Date?) {
         self.paused = paused
         self.pausedUntil = until
