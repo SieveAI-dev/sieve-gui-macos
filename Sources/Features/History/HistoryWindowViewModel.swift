@@ -111,6 +111,7 @@ public final class HistoryWindowViewModel: ObservableObject {
             var offset = 0
             while true {
                 let batch = reader.recentEvents(limit: page, offset: offset, filter: f)
+                if batch.isEmpty { break }
                 all.append(contentsOf: batch)
                 if batch.count < page { break }
                 offset += page

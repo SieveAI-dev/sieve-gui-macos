@@ -387,8 +387,8 @@ public struct DetectionPresetView: View {
         guard let override = ruleOverrides[ruleId] else { return }
         let prevOverride = override
         let requestId = UUID().uuidString
-        ipcClient.registerMutatingRequest(requestId)
         Task {
+            await ipcClient.registerMutatingRequest(requestId)   // 注册先于发送，避免 echo 漏判
             do {
                 _ = try await ipcClient.sendRequest(
                     id: requestId,
@@ -487,8 +487,8 @@ public struct DetectionPresetView: View {
         let previousPreset = appState.preset
         appState.updatePreset(p)         // 乐观更新
         pendingPreset = nil
-        ipcClient.registerMutatingRequest(id)
         Task {
+            await ipcClient.registerMutatingRequest(id)   // 注册先于发送，避免 echo 漏判
             do {
                 _ = try await ipcClient.sendRequest(id: id, method: "sieve.set_preset", params: SetPresetParams(mode: p.rawValue))
                 ipcClient.unregisterMutatingRequest(id)

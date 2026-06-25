@@ -126,6 +126,17 @@ public struct QuickMenuView: View {
                         .buttonStyle(.borderless)
                         .font(.caption)
                 }
+            } else if appState.paused {
+                // paused 但 until 未知（启动握手时 daemon 已暂停，hello 不带 paused_until）。
+                HStack {
+                    Text("已暂停")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                    Spacer()
+                    Button("恢复", action: onResume)
+                        .buttonStyle(.borderless)
+                        .font(.caption)
+                }
             } else {
                 HStack {
                     Picker("暂停", selection: $pauseMinutes) {

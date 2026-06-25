@@ -175,8 +175,10 @@ public final class IPCClient: @unchecked Sendable {
 
     /// 发出 mutating request（sieve.set_preset / sieve.set_paused 等）时，把 id 加入集合，
     /// 收到响应后移除，供 IPCRouter 判断 preset_changed / paused_changed 是否为本 GUI 回声。
-    public func registerMutatingRequest(_ id: String) {
-        Task { await inflightMutatingIds.insert(id) }
+    /// 注册本 GUI 发出的 mutating request id（供回声判定）。async——调用方必须在 sendRequest
+    /// **之前** await 完成注册，否则本地 socket 极快响应/回声可能早于注册到达致 echo 漏判。
+    public func registerMutatingRequest(_ id: String) async {
+        await inflightMutatingIds.insert(id)
     }
 
     public func unregisterMutatingRequest(_ id: String) {
@@ -208,6 +210,7 @@ public final class IPCClient: @unchecked Sendable {
             self?.handleNWState(newState)
         }
         state = .connecting
+        lastReceivedAt = Date()   // 心跳基准：.waiting 不立即 teardown，靠 heartbeat 给自愈窗口后兜底
         conn.start(queue: ipcQueue)
         startHeartbeatTimer()
         startInflightSweepTimer()
@@ -220,10 +223,16 @@ public final class IPCClient: @unchecked Sendable {
             attempt = 0
             state = .connected
             lastReceivedAt = Date()
-        case .failed(let err), .waiting(let err):
-            logger.warning("nw state failed/waiting: \(String(describing: err), privacy: .public)")
+        case .failed(let err):
+            logger.warning("nw state failed: \(String(describing: err), privacy: .public)")
             tearDown()
             scheduleRetry(reason: .socketMissing)
+        case .waiting(let err):
+            // .waiting 是 Network.framework 的临时态（对端尚未就绪等），框架会自行重试恢复到
+            // .ready。不主动 tearDown，以免扼杀框架自愈 + 触发不必要的自建 backoff。
+            // 兜底：openConnection 已把 lastReceivedAt 设为连接时刻，超 heartbeatTimeout 仍未
+            // ready 则 checkHeartbeat 会 teardown 重连。
+            logger.notice("nw state waiting（等待框架自愈）: \(String(describing: err), privacy: .public)")
         case .cancelled:
             tearDown()
         default:

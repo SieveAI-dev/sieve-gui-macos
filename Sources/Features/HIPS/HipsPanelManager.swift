@@ -77,10 +77,12 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
     // MARK: - Present
 
     private func present(_ req: HipsRequest) {
-        // 渲染前置校验：单 issue 模式必须有 context
-        guard req.merged || req.context != nil else {
-            // 非 merged 但 context 缺失 → 视为渲染失败
-            handleRenderFailure(req: req, reason: "context missing for single-issue request")
+        // 渲染前置校验：单 issue 模式必须有 context 且有 rule_id。
+        // 缺 rule_id 时详情卡（HipsPopupView 的 `if let context, let ruleId`）整块不渲染，
+        // 用户会面对一个无任何命中详情的危险确认弹窗却仍可点「允许」——知情同意失效。
+        // 任一缺失 → fail-closed 走渲染失败（发 -32101 + 系统通知 + 关窗）。
+        guard req.merged || (req.context != nil && req.ruleId != nil) else {
+            handleRenderFailure(req: req, reason: "context/rule_id missing for single-issue request")
             return
         }
 

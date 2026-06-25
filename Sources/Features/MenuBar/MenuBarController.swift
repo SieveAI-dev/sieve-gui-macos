@@ -56,7 +56,9 @@ public final class MenuBarController: NSObject, NSPopoverDelegate {
             button.title = " " + String(format: "%ds", secs)
             button.font = NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium)
         } else {
-            button.title = ""
+            // hold 结束后不能无条件清空 title——否则会抹掉 warning 角标且不会恢复
+            // （warning sink 仅在 warningHitCount 变化时触发）。回退重算 warning 角标。
+            updateWarningBadge(appState.warningHitCount)
         }
     }
 
@@ -126,9 +128,9 @@ public final class MenuBarController: NSObject, NSPopoverDelegate {
         // 乐观更新：先按本地估算 until 切到 paused
         let optimisticUntil = Date().addingTimeInterval(TimeInterval(bounded * 60))
         appState.updatePaused(true, until: optimisticUntil)
-        ipcClient?.registerMutatingRequest(pauseId)
         Task { [weak self] in
             guard let self = self, let client = self.ipcClient else { return }
+            await client.registerMutatingRequest(pauseId)   // 注册先于发送，避免 echo 漏判
             do {
                 let data = try await client.sendRequest(
                     id: pauseId,
@@ -152,16 +154,17 @@ public final class MenuBarController: NSObject, NSPopoverDelegate {
     private func requestResume() {
         let resumeId = UUID().uuidString
         appState.updatePaused(false, until: nil)
-        ipcClient?.registerMutatingRequest(resumeId)
-        ipcClient?.sendRequestAndForget(
-            id: resumeId,
-            method: "sieve.set_paused",
-            params: SetPausedParams(minutes: 0)
-        )
-        // fire-and-forget 无法 await 结果，延迟 10s 后自动反注册（避免集合永久增长）
         Task { [weak self] in
+            guard let self = self, let client = self.ipcClient else { return }
+            await client.registerMutatingRequest(resumeId)   // 注册先于发送，避免 echo 漏判
+            client.sendRequestAndForget(
+                id: resumeId,
+                method: "sieve.set_paused",
+                params: SetPausedParams(minutes: 0)
+            )
+            // fire-and-forget 无法 await 结果，延迟 10s 后自动反注册（避免集合永久增长）
             try? await Task.sleep(nanoseconds: 10_000_000_000)
-            self?.ipcClient?.unregisterMutatingRequest(resumeId)
+            client.unregisterMutatingRequest(resumeId)
         }
     }
 

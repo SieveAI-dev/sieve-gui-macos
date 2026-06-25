@@ -181,7 +181,9 @@ public final class AppState: ObservableObject {
             return
         }
         if activeRequest != nil { daemonStatus = .hold; return }
-        if paused, let until = pausedUntil { daemonStatus = .paused(until: until); return }
+        // paused 为真即进 .paused 态（until 可空）——不能因 pausedUntil 缺失就降级为 normal/warning
+        // 假装健康（违反硬约束 #6）。启动握手时 daemon 已暂停但 hello 不带 paused_until 即此情形。
+        if paused { daemonStatus = .paused(until: pausedUntil); return }
         if warningHitCount > 0 { daemonStatus = .warning; return }
         daemonStatus = .normal
     }

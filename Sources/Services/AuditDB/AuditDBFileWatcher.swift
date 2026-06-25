@@ -9,6 +9,8 @@ public final class AuditDBFileWatcher: @unchecked Sendable {
     private var fd: Int32 = -1
     private var source: DispatchSourceFileSystemObject?
     private var debounceTask: DispatchWorkItem?
+    private var openRetries = 0
+    private let maxOpenRetries = 10
     private let logger = Logger(subsystem: "com.sieve.gui", category: "audit-fs")
 
     public init(path: String, onChange: @escaping @Sendable () -> Void) {
@@ -20,9 +22,18 @@ public final class AuditDBFileWatcher: @unchecked Sendable {
         stop()
         fd = open(path, O_EVTONLY)
         guard fd >= 0 else {
-            logger.warning("audit-fs: open failed for \(self.path, privacy: .public)")
+            // open 失败常见于 daemon 重建 audit.db 的瞬间（旧文件已 rename、新文件尚未就位）。
+            // 有限次延迟重试，避免 watcher 在重建 gap 中静默永久失效（历史窗口停止刷新）。
+            if openRetries < maxOpenRetries {
+                openRetries += 1
+                logger.warning("audit-fs: open failed for \(self.path, privacy: .public)，第 \(self.openRetries) 次重试")
+                queue.asyncAfter(deadline: .now() + 0.5) { [weak self] in self?.start() }
+            } else {
+                logger.error("audit-fs: open 连续失败 \(self.maxOpenRetries) 次，停止监视")
+            }
             return
         }
+        openRetries = 0
         let src = DispatchSource.makeFileSystemObjectSource(
             fileDescriptor: fd,
             eventMask: [.write, .extend, .rename, .delete],
