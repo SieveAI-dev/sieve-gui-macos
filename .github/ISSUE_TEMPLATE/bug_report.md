@@ -3,7 +3,6 @@ name: Bug 报告
 about: 报告一个 GUI 行为异常
 title: "[bug] "
 labels: bug
-assignees: doskey
 ---
 
 > ⚠️ **不要在 issue 里粘贴**：原始钱包地址、私钥、助记词、API key、完整 prompt 内容、`audit.db` 文件。
@@ -14,7 +13,7 @@ assignees: doskey
 - macOS 版本：
 - GUI 版本：（设置 → 关于 看到）
 - daemon 版本：（设置 → daemon 看到）
-- 协议版本：v1 / 不识别 / 不确定
+- 协议版本：v2 / 不识别 / 不确定
 
 ## 现象（What）
 

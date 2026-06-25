@@ -94,7 +94,10 @@ public enum IPCIncoming: Sendable {
             throw IPCError.invalidRequest
         }
         let method = dict["method"]?.asString
-        let id = dict["id"]?.asString
+        // JSON-RPC 2.0 允许 id 为 string 或 number。daemon 当前恒发 string，但这里同时兼容
+        // number（转成 string）——否则 daemon 若改用数字 id，response 会被判成无 id/无 method
+        // 而丢弃，对应请求全部走超时（跨仓 schema 漂移高危点的 GUI 侧防御）。
+        let id = dict["id"]?.asString ?? dict["id"]?.asInt.map(String.init)
         let paramsData: Data = {
             if let p = dict["params"] { return (try? JSONEncoder().encode(p)) ?? Data("{}".utf8) }
             return Data("{}".utf8)

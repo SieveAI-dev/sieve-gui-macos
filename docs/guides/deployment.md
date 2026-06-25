@@ -11,8 +11,6 @@
 Sieve GUI 的发布走 **hardened runtime + Apple notarization + Sparkle EdDSA 签名** 三层。
 分发载体是 `.dmg`（用户拖拽到 Applications）+ Sparkle appcast（自动检查更新）。
 
-reproducible build 与 sigstore 推迟到 v1.1（OQ-G-09）。
-
 ---
 
 ## 1. 一次性准备
@@ -57,8 +55,7 @@ generate_keys
 
 ### 1.4 appcast 主机
 
-闭测期间用 [Cloudflare Pages](https://pages.cloudflare.com)：
-- 仓库：`<待补充>`
+appcast 由静态托管提供（任意静态站均可）：
 - 域名：`updates.sieveai.dev`
 - appcast 路径：`https://updates.sieveai.dev/appcast.xml`
 
@@ -184,7 +181,7 @@ create-dmg \
   --icon "SieveGUI.app" 175 200 \
   --hide-extension "SieveGUI.app" \
   --app-drop-link 425 200 \
-  build/SieveGUI-1.0.0.dmg \
+  build/SieveGUI-0.1.0-alpha.dmg \
   build/export/
 ```
 
@@ -192,14 +189,14 @@ create-dmg \
 
 ```bash
 codesign --force --sign "Developer ID Application: <Your Name> (<TEAMID>)" \
-  build/SieveGUI-1.0.0.dmg
+  build/SieveGUI-0.1.0-alpha.dmg
 
 # notarize .dmg（再走一次）
-xcrun notarytool submit build/SieveGUI-1.0.0.dmg \
+xcrun notarytool submit build/SieveGUI-0.1.0-alpha.dmg \
   --keychain-profile sieve-notary \
   --wait
 
-xcrun stapler staple build/SieveGUI-1.0.0.dmg
+xcrun stapler staple build/SieveGUI-0.1.0-alpha.dmg
 ```
 
 ---
@@ -209,7 +206,7 @@ xcrun stapler staple build/SieveGUI-1.0.0.dmg
 ### 5.1 签 .dmg
 
 ```bash
-sign_update build/SieveGUI-1.0.0.dmg
+sign_update build/SieveGUI-0.1.0-alpha.dmg
 # 输出 sparkle:edSignature 和 length 两个值
 ```
 
@@ -222,19 +219,19 @@ sign_update build/SieveGUI-1.0.0.dmg
     <title>Sieve GUI Updates</title>
     <link>https://&lt;host&gt;/appcast.xml</link>
     <item>
-      <title>Version 1.0.0</title>
+      <title>Version 0.1.0-alpha</title>
       <pubDate>Thu, 02 May 2026 12:00:00 +0000</pubDate>
       <sparkle:version>20260502.1</sparkle:version>
-      <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
+      <sparkle:shortVersionString>0.1.0-alpha</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
       <enclosure
-        url="https://&lt;host&gt;/SieveGUI-1.0.0.dmg"
+        url="https://&lt;host&gt;/SieveGUI-0.1.0-alpha.dmg"
         sparkle:edSignature="&lt;EdDSA-signature&gt;"
         length="&lt;byte-length&gt;"
         type="application/octet-stream" />
       <description><![CDATA[
-        <h2>Sieve GUI 1.0.0</h2>
-        <p>首个 GA 版本。</p>
+        <h2>Sieve GUI 0.1.0-alpha</h2>
+        <p>早期预览版本。</p>
       ]]></description>
     </item>
   </channel>
@@ -243,22 +240,22 @@ sign_update build/SieveGUI-1.0.0.dmg
 
 `sparkle:version` 用单调递增整数（不一定等于 marketing version）。
 
-### 5.3 上传 .dmg + appcast.xml 到 Cloudflare Pages
+### 5.3 上传 .dmg + appcast.xml 到静态托管
 
-仓库结构：
+托管目录结构：
 
 ```
 sieve-gui-appcast/
 ├── appcast.xml
-├── SieveGUI-1.0.0.dmg
-└── SieveGUI-0.9.0.dmg  ← 保留历史版本，便于回退
+├── SieveGUI-0.1.0-alpha.dmg
+└── ...                  ← 保留历史版本，便于回退
 ```
 
-`git push` 触发 Cloudflare 部署。
+部署后即可被客户端拉取。
 
 ### 5.4 验证
 
-在另一台 Mac 装老版本，跑设置 → Updates → 检查更新，应该弹出 1.0.0 升级提示，签名校验通过，下载安装。
+在另一台 Mac 装老版本，跑设置 → Updates → 检查更新，应该弹出升级提示，签名校验通过，下载安装。
 
 ---
 
@@ -266,7 +263,7 @@ sieve-gui-appcast/
 
 | 字段 | 来源 | 示例 |
 |------|-----|------|
-| `CFBundleShortVersionString` | `Info.plist` | `1.0.0`（marketing） |
+| `CFBundleShortVersionString` | `Info.plist` | `0.1.0-alpha`（marketing） |
 | `CFBundleVersion` | `Info.plist` | `20260502.1`（build，单调递增） |
 | `sparkle:version` | appcast.xml | 同 build |
 | `sparkle:shortVersionString` | appcast.xml | 同 marketing |
@@ -332,9 +329,9 @@ xattr -d com.apple.quarantine /Applications/SieveGUI.app
 ## 9. 发布前自检清单
 
 - [ ] 所有测试通过（`xcodebuild test`）
-- [ ] `swift-format lint` 通过
+- [ ] `swiftformat --lint` 通过
 - [ ] `Info.plist` 版本号已递增
-- [ ] CHANGELOG（首次发布前用 `tasks/todo.md` 代替）已更新
+- [ ] CHANGELOG.md 已更新
 - [ ] notarization 通过
 - [ ] stapler 验证通过
 - [ ] .dmg 在另一台 Mac 上能一键安装（不弹"无法验证开发者"）

@@ -3,7 +3,6 @@
 > Version: v1.0 — 2026-05-02
 > Status: Stable
 > Owner: SieveAI
-> 关联 PRD 章节：§5.3
 
 ---
 
@@ -24,7 +23,7 @@
 - Sparkle 更新检查
 
 **非目标**：
-- 用户规则 TOML 文件的 GUI 编辑器（Phase 1 排除，PRD §10）
+- 用户规则 TOML 文件的 GUI 编辑器（Phase 1 排除）
 - daemon 更新（GUI 不替 daemon 推更新）
 
 ---
@@ -123,7 +122,7 @@ closed ──⌘, / 菜单入口──► open (active tab = general)
           （4宫格，选中项白卡样式）
 ```
 
-选中项下方展示说明卡（PRD §5.3.2）：
+选中项下方展示说明卡：
 
 | Preset | 图标 | 颜色 | 说明要点 |
 |--------|-----|------|---------|
@@ -163,13 +162,13 @@ Custom preset 下可编辑非 critical_lock 规则的 `timeout_seconds`（30~600
 | 控件 | 类型 | 默认 | 行为 |
 |------|------|-----|-----|
 | 历史记录默认脱敏 | Toggle | 开 | `kHistoryMaskByDefault`；关闭后仍需 Touch ID 解锁查看 |
-| 审计日志保留 | Picker（30/90/180/无限 天）| 90 | 写 daemon 配置（IPC `sieve.set_preset_overrides` 的 retention 字段，待确认） |
-| 记录调用进程 | Toggle | 开 | 写 daemon 配置；关闭后 `caller_pid/exe` 为 NULL（PRD §5.3.3）|
+| 审计日志保留 | Picker（30/90/180/无限 天）| 90 | 写 daemon 配置（IPC `sieve.set_preset_overrides` 的 retention 字段） |
+| 记录调用进程 | Toggle | 开 | 写 daemon 配置；关闭后 `caller_pid/exe` 为 NULL|
 | 灰名单管理 | 按钮 [打开灰名单管理（N 条）] | — | 弹独立 sheet（见 §4.5.1）|
 | 清空历史 | 按钮（danger 样式）| — | 不可逆，需 Touch ID 二次确认 |
 
 **hint 文字**：
-- 记录调用进程 hint："caller_pid + caller_exe；关闭后字段为 NULL（PRD v2.0 §5.6）"
+- 记录调用进程 hint："caller_pid + caller_exe；关闭后字段为 NULL"
 - 历史默认脱敏 hint："关闭后仍需 Touch ID 解锁查看敏感字段"
 
 #### 4.5.1 灰名单管理 Sheet
@@ -200,7 +199,7 @@ Custom preset 下可编辑非 critical_lock 规则的 `timeout_seconds`（30~600
 | 字段 | 值 |
 |------|----|
 | daemon 版本 | `sieve.hello.daemon_version` |
-| 协议版本 | `v1 ✓`（绿色）/ 版本不匹配显示红色 + [运行 sieve setup 升级] 按钮 |
+| 协议版本 | `v2 ✓`（绿色）/ 版本不匹配显示红色 + [运行 sieve setup 升级] 按钮 |
 | 监听地址 | `127.0.0.1:11453` |
 | 启动时间 | 相对时间（"2 小时 13 分前"）|
 
@@ -224,7 +223,7 @@ Custom preset 下可编辑非 critical_lock 规则的 `timeout_seconds`（30~600
 
 顶部：
 - 应用图标（48pt squircle）
-- "Sieve GUI 1.0.0"（14pt bold）
+- "Sieve GUI 0.1.0-alpha"（14pt bold）
 - "build YYYY-MM-DD · sha xxxxxxx"（11pt mono 次要色）
 - 当前更新状态（"已是最新版本" 绿色 / "有新版本可用" 蓝色 + 下载按钮）
 - [检查更新] 主按钮
@@ -241,10 +240,10 @@ Custom preset 下可编辑非 critical_lock 规则的 `timeout_seconds`（30~600
 |------|-----|
 | 名称 | Sieve |
 | 简介 | "本地的、不联网的代理守门人"（一行）|
-| 版本 | `1.0.0 · build YYYY-MM-DD · sha xxxxxxx`（mono）|
+| 版本 | `0.1.0-alpha · build YYYY-MM-DD · sha xxxxxxx`（mono）|
 
 操作按钮（一行）：
-- [导出诊断包]：`DiagnosticPackager`（先脱敏再压缩，见 PRD §8.3）
+- [导出诊断包]：`DiagnosticPackager`（先脱敏再压缩）
 - [重新运行引导]：弹 Onboarding 窗口
 
 额外链接：帮助 / 反馈邮箱 / 开源声明（SwiftUI 依赖列表）。
@@ -282,15 +281,15 @@ UserDefaults schema 见 [data-model.md §1](../design/data-model.md#1-userdefaul
 
 ## 7. 性能与硬约束
 
-| 指标 | 约束 | 来源 |
-|------|------|------|
-| 设置窗口打开延迟 | < 3s（含 IPC 请求数据）| PRD §2.2 |
-| IPC 失联时写入操作 | 全部禁用（防状态分裂）| PRD §5.1.4 |
-| critical_lock 规则 | timeout / default 字段禁止编辑 | PRD §5.3.2 |
-| 用户规则编辑器 | Phase 1 不提供，只显示路径和外部编辑入口 | PRD §10 |
-| 导出诊断包 | 强制脱敏，不依赖用户阅读条款 | PRD §9 #10 |
-| 清空历史 | 必须 Touch ID 二次确认 | PRD §5.3.3 |
-| 自动检查更新 | 使用 Sparkle EdDSA；GUI 不嵌入 daemon 更新 | PRD §5.3.5 |
+| 指标 | 约束 |
+|------|------|
+| 设置窗口打开延迟 | < 3s（含 IPC 请求数据）|
+| IPC 失联时写入操作 | 全部禁用（防状态分裂）|
+| critical_lock 规则 | timeout / default 字段禁止编辑 |
+| 用户规则编辑器 | Phase 1 不提供，只显示路径和外部编辑入口 |
+| 导出诊断包 | 强制脱敏，不依赖用户阅读条款 |
+| 清空历史 | 必须 Touch ID 二次确认 |
+| 自动检查更新 | 使用 Sparkle EdDSA；GUI 不嵌入 daemon 更新 |
 
 ---
 
@@ -310,16 +309,7 @@ UserDefaults schema 见 [data-model.md §1](../design/data-model.md#1-userdefaul
 
 ---
 
-## 9. 未决事项（OQ）
-
-| 编号 | 问题 | 当前选项 | 截止决策 |
-|------|------|---------|---------|
-| OQ-003-01 | "审计日志保留"写 daemon 配置的 IPC 方法？当前 ipc-protocol 未定义此接口 | 可能走 `sieve.set_preset_overrides` 的扩展字段，或单独 `sieve.set_audit_retention` | Week 7 与 daemon 对齐 |
-| OQ-003-02 | "记录调用进程"切换的 IPC 接口同上 | 同上 | Week 7 |
-
----
-
-## 10. 变更记录
+## 9. 变更记录
 
 | 版本 | 日期 | 作者 | 变更 |
 |------|------|-----|-----|

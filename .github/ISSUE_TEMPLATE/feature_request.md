@@ -3,12 +3,11 @@ name: 功能请求
 about: 提议一个新功能或改进
 title: "[feat] "
 labels: enhancement
-assignees: doskey
 ---
 
 > 提议前先确认：
-> 1. PRD `docs/requirements/sieve-gui-macos-prd-v1.0.md` §10 不做清单里没有
-> 2. 不违反 §9 硬约束（特别是不联网决策、Critical 锁、fail-closed）
+> 1. 不在范围之外（GUI 只做交互，检测逻辑属上游 daemon）
+> 2. 不违反 [`CLAUDE.md`](../../CLAUDE.md) 硬约束（特别是不联网决策、Critical 锁、fail-closed）
 
 ## 想解决什么问题
 
@@ -29,13 +28,6 @@ assignees: doskey
 - [ ] Toast / 通知 (SPEC-007)
 - [ ] IPC (SPEC-008)
 - [ ] 其他：
-
-## 是否需要新 ADR
-
-<!-- 改变架构 / 引入新依赖 / 调整安全约束 → 需要 ADR -->
-
-- [ ] 是
-- [ ] 否
 
 ## 是否影响 IPC 协议
 

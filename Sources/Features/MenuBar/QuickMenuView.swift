@@ -5,6 +5,7 @@ public struct QuickMenuView: View {
     let onOpenSettings: () -> Void
     let onOpenHistory: () -> Void
     let onOpenDebug: () -> Void
+    let onOpenOnboarding: () -> Void
     let onPause: (Int) -> Void
     let onResume: () -> Void
     let onQuit: () -> Void
@@ -16,6 +17,7 @@ public struct QuickMenuView: View {
         onOpenSettings: @escaping () -> Void,
         onOpenHistory: @escaping () -> Void,
         onOpenDebug: @escaping () -> Void,
+        onOpenOnboarding: @escaping () -> Void,
         onPause: @escaping (Int) -> Void,
         onResume: @escaping () -> Void,
         onQuit: @escaping () -> Void
@@ -24,6 +26,7 @@ public struct QuickMenuView: View {
         self.onOpenSettings = onOpenSettings
         self.onOpenHistory = onOpenHistory
         self.onOpenDebug = onOpenDebug
+        self.onOpenOnboarding = onOpenOnboarding
         self.onPause = onPause
         self.onResume = onResume
         self.onQuit = onQuit
@@ -123,6 +126,17 @@ public struct QuickMenuView: View {
                         .buttonStyle(.borderless)
                         .font(.caption)
                 }
+            } else if appState.paused {
+                // paused 但 until 未知（启动握手时 daemon 已暂停，hello 不带 paused_until）。
+                HStack {
+                    Text("已暂停")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                    Spacer()
+                    Button("恢复", action: onResume)
+                        .buttonStyle(.borderless)
+                        .font(.caption)
+                }
             } else {
                 HStack {
                     Picker("暂停", selection: $pauseMinutes) {
@@ -137,7 +151,7 @@ public struct QuickMenuView: View {
                         .controlSize(.small)
                 }
             }
-            // 暂停期间始终可见（SPEC-001 §4.2 / PRD §5.1.3 硬约束：
+            // 暂停期间始终可见（SPEC-001 §4.2 硬约束：
             // 暂停态恰恰最该标注 Critical 仍生效）。两分支共用。
             Text("暂停期间 Critical 拦截仍然生效")
                 .font(.caption2)
@@ -156,7 +170,7 @@ public struct QuickMenuView: View {
             Text(disconnectReasonText(reason))
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            Button("打开 Onboarding 修复") { /* will be wired */ }
+            Button("打开 Onboarding 修复") { onOpenOnboarding() }
                 .controlSize(.small)
         }
         .padding(.horizontal, 14)

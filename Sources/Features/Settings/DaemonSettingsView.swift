@@ -110,8 +110,12 @@ public struct DaemonSettingsView: View {
     }
 
     private func runSieveDoctor() {
+        guard let bin = SieveBinaryLocator.resolve() else {
+            Task { await GUILog.shared.warn("找不到 sieve 可执行文件，无法运行 doctor", category: "settings") }
+            return
+        }
         let task = Process()
-        task.launchPath = "/usr/local/bin/sieve"
+        task.launchPath = bin
         task.arguments = ["doctor"]
         try? task.run()
     }

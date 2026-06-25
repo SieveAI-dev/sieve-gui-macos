@@ -14,25 +14,22 @@
   - `UpdatesSettingsView` About 段三个链接（docs / 反馈 / 开源声明）同步
 - 补 `LICENSE` 与 `SECURITY.md`
 
-### Phase 1D：unix-style 协议适配（ADR-026 + ADR-028）
-- `HealthResultDTO` 全量重写，对齐 SPEC-005 §9.5 真实 schema
-  （旧版是 `ok/checks/metrics{p99/throughput/goroutines}` 早期 mock 占位，从未真联调）
+### unix-style 协议适配（多 listener + 协议术语中性化）
+- `HealthResultDTO` 全量重写，对齐 SPEC-005 §9.5 schema
 - 新增 `ListenerSnapshot { addr, port, provider_id, protocol }` + `effectiveListeners` 兼容访问器
   （优先 `listeners[]`，旧 daemon 退化到 `listen` 单值）
 - `DaemonSettingsView` 加 "Listeners" 段；首次进入自动拉一次 `sieve.health`
-- `OnboardingView.runDoctor` 基于真实 health 字段构造 5 项 checks（替换占位）
-- 新增 `HealthResultDTOTests`（7 case：完整字段 / 旧 daemon 兼容 / 暂停态 / custom preset / id 派生 / 必填缺失 / 非法时间戳）
-- 测试基线：127 → 134（+7）
+- `OnboardingView.runDoctor` 基于真实 health 字段构造 5 项 checks
+- 新增 `HealthResultDTOTests`（完整字段 / 旧 daemon 兼容 / 暂停态 / custom preset / id 派生 / 必填缺失 / 非法时间戳）
 - 协议契约：未 bump `protocol_version`（v2 内向后兼容扩展）；wire 字段 / method 名全部保留
-- 文档同步：`docs/external/upstream-references.md` 加 ADR-026/027/028 + SPEC-005 commit pin；
-  `docs/api/ipc-protocol.md` v2.0 → v2.1，加 §12 listeners[] 实现注解 + §13 ADR-028 影响说明
+- 文档同步：`docs/external/upstream-references.md` 补多 listener 与协议术语中性化契约；
+  `docs/api/ipc-protocol.md` v2.0 → v2.1，加 §12 listeners[] 实现注解 + §13 协议术语中性化影响说明
 
 ## [Unreleased] — 2026-05-04
 
 ### 文档（联调阶段）
-- 新增 `docs/guides/integration-test-checklist.md`（1571 行，20 章节，125 项 checklist）
-- 覆盖手动联调全部场景：协议握手 / HIPS 11 项 / 三态决策 / 菜单栏 / Settings 六 Tab / History / Debug 四 Tab / Onboarding 6 步 / Toast / 重连 / v2.0+ 兼容扩展 / OUT/IN 规则 / 安全红线 / 性能预算 / 问题登记
-- 每项含操作步骤 / 代码 file:line 跳转链接 / 触发条件 / 预期效果 / 失败排查路径 / 复选框（`[ ]` `[x]` `[!]` `[s]`）
+- 新增联调测试 checklist，覆盖手动联调全部场景：协议握手 / HIPS / 三态决策 / 菜单栏 / Settings 六 Tab / History / Debug 四 Tab / Onboarding 6 步 / Toast / 重连 / v2 兼容扩展 / OUT/IN 规则 / 安全红线 / 性能预算
+- 每项含操作步骤 / 触发条件 / 预期效果 / 失败排查路径
 
 ## [Unreleased] — 2026-05-03
 
@@ -64,7 +61,7 @@
 
 ### Phase 1B 系统集成
 - Settings critical_lock 规则行 disabled + tooltip
-- History CSV/NDJSON 导出（流式 + 取消 + ADR-011 强制脱敏）
+- History CSV/NDJSON 导出（流式 + 取消 + 导出强制脱敏）
 - Debug 实时事件 grep 200ms 去抖 + 暂停快照
 - Debug IPC 监视详情面板（method/id/bytes/timestamp，永不展示 params）
 - Onboarding step 6 demo 触发真实 sieve.evaluate
@@ -80,15 +77,10 @@
 - History → Debug Tab "在调试窗口重放" 联动
 
 ### 测试基础设施
-- A2 mock daemon harness（NWListener + sendNotification/Request + acceptedCount + waitForNewConnection）
-- IPCClientIntegrationTests 5 场景（握手 / 版本不识别 / 重连丢 inflight / boot_id 三路 / request_decision 双格式）
-- HIPS 行为测试覆盖 Phase3 swallow / 锁拒绝 / Remember 不渲染（ADR-021 第三道防线）
-- swift test 基线 20 → 127（+107 新测试）
+- `MockDaemonHarness`（测试内 IPC 端点：sendNotification/Request + 连接计数 + waitForNewConnection）
+- IPCClient 集成测试 5 场景（握手 / 版本不识别 / 重连丢 inflight / boot_id 三路 / request_decision 双格式）
 
 ### 修复
-- HipsPanelManager:123 误用 await NotificationCenterAdapter.notifyAutoDeny → swift build 排除 Features/ 未发现，xcodebuild warnings-as-errors 暴露
-- IPCClient 集成测试 hang：sleep 替换为 waitForNewConnection（IPCClient 退避 1/2/5/10/30s）
-- versionMismatch 状态序列断言修正：检查 versionMismatch 之后无 connecting/retrying（之前断言整个序列无 connecting，初始连接的过渡 connecting 会误判）
-
-### 经验沉淀（lessons.md）
-- L-017 swift build 不编译 Features/，xcodebuild 才是 UI 层真验证
+- HipsPanelManager auto-deny 通知调用修正（UI 层错误经 xcodebuild warnings-as-errors 暴露）
+- IPCClient 集成测试稳定性：sleep 替换为 waitForNewConnection
+- versionMismatch 状态序列断言修正：检查 versionMismatch 之后无 connecting/retrying

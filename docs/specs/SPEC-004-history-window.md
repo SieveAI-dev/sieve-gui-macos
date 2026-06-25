@@ -3,7 +3,6 @@
 > Version: v1.0 — 2026-05-02
 > Status: Stable
 > Owner: SieveAI
-> 关联 PRD 章节：§5.4
 
 ---
 
@@ -25,8 +24,8 @@
 
 **非目标**：
 - 历史记录写入（audit.db 是 append-only，GUI 不写入）
-- 原始 prompt 字节查看（audit.db 不存原文，PRD §5.4.4）
-- 图表 / 趋势分析 / 周报（PRD §10 排除）
+- 原始 prompt 字节查看（audit.db 不存原文）
+- 图表 / 趋势分析 / 周报（排除）
 - 行为序列分析（Phase 2 评估）
 
 ---
@@ -129,7 +128,7 @@ closed ──────────────────► loading
 | User | 80pt | `allow` / `deny` / `—`（AutoRedact 无用户决策）|
 | Detail | 1fr | `•••••••• 已脱敏 · {hint}`（默认）|
 
-Detail 列始终显示 hint（来自 `events.rule_id` + action 的语义摘要，非原文）。`hint` 字段本身已在 audit.db 中脱敏（不存原文，PRD §11.2）。
+Detail 列始终显示 hint（来自 `events.rule_id` + action 的语义摘要，非原文）。`hint` 字段本身已在 audit.db 中脱敏（不存原文）。
 
 选中行：背景色 `macOS accent`，文字白色，SeverityChip 改为白色 uppercase 文字。
 
@@ -193,7 +192,7 @@ evidence_meta:
 - 默认关闭（`kHistoryMaskByDefault`）
 - 开启需要 Touch ID（5 分钟解锁会话，复用 `AppState.unlockSession`）
 - 开启后 `prefix_hash` 等字段显示完整内容
-- 注：audit.db 本来就不存原始 prompt 字节（PRD §5.4.4 / PRD §11.2）
+- 注：audit.db 本来就不存原始 prompt 字节
 
 **关联灰名单**：
 - critical_lock 规则显示"此规则受 critical_lock 保护，无法加入灰名单"
@@ -258,7 +257,7 @@ timestamp, direction, severity, rule_id, disposition, user_choice, fingerprint, 
 | 条件 | 行为 |
 |------|-----|
 | `audit.db` 不存在 / 无权限 | 空状态视图："历史文件不可读，请运行 sieve doctor" + 修复引导 |
-| `audit.db` schema 未知 version | 顶部 banner 警告；仍展示 v1 字段，未知字段显示 `—`（fail-soft，PRD §8.6）|
+| `audit.db` schema 未知 version | 顶部 banner 警告；仍展示 v1 字段，未知字段显示 `—`（fail-soft）|
 | Touch ID 不可用 | evidence_meta 展开按钮改为"密码认证"（macOS LAContext fallback）|
 | Touch ID 失败 / 取消 | 回退脱敏视图；写 GUI log（不写 audit.db）|
 | IPC 失联 | 历史窗口顶部 banner；列表数据可继续浏览（来自本地 SQLite）|
@@ -269,15 +268,15 @@ timestamp, direction, severity, rule_id, disposition, user_choice, fingerprint, 
 
 ## 7. 性能与硬约束
 
-| 指标 | 约束 | 来源 |
-|------|------|------|
-| 历史窗口加载 1 万条 | < 500ms | PRD §8.1 |
-| 分页 LIMIT | 每次最多 50 条，加上分页，防止全表加载卡顿 | data-model §2.3 |
-| file watch 去抖 | 100ms | data-model §2.1 |
-| 默认脱敏 | 历史窗口所有字段默认 mask，Toggle 开启需 Touch ID | PRD §5.4.4 |
-| 导出 | 必须强制脱敏，不论当前 Toggle 状态 | PRD §9 #10 |
-| 原始 prompt 字节 | 不存储，不展示；evidence_meta 只展示 meta（非原文）| PRD §9 #5 |
-| GUI 不写 audit.db | 任何操作不触发 audit.db 写入 | PRD §5.4.1 |
+| 指标 | 约束 |
+|------|------|
+| 历史窗口加载 1 万条 | < 500ms |
+| 分页 LIMIT | 每次最多 50 条，加上分页，防止全表加载卡顿 |
+| file watch 去抖 | 100ms |
+| 默认脱敏 | 历史窗口所有字段默认 mask，Toggle 开启需 Touch ID |
+| 导出 | 必须强制脱敏，不论当前 Toggle 状态 |
+| 原始 prompt 字节 | 不存储，不展示；evidence_meta 只展示 meta（非原文）|
+| GUI 不写 audit.db | 任何操作不触发 audit.db 写入 |
 
 ---
 
@@ -298,16 +297,7 @@ timestamp, direction, severity, rule_id, disposition, user_choice, fingerprint, 
 
 ---
 
-## 9. 未决事项（OQ）
-
-| 编号 | 问题 | 当前选项 | 截止决策 |
-|------|------|---------|---------|
-| OQ-004-01 | "自定义时间范围"的最大回溯天数？（防止加载大量数据）| 180 天上限，用户可改筛选 | Week 8 |
-| OQ-004-02 | 历史窗口默认时间范围从"今天"改为"最近 7 天"是否更合理？ | PRD §5.4.2 说"今天"（PRD OQ-G-04），先按今天实现 | Week 8 确认 |
-
----
-
-## 10. 变更记录
+## 9. 变更记录
 
 | 版本 | 日期 | 作者 | 变更 |
 |------|------|-----|-----|

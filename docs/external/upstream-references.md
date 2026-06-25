@@ -12,24 +12,23 @@
 
 由提交者手动协调。建议步骤：
 
-1. 在 daemon 仓库改 `SPEC-005`（IPC 协议权威源）/ `data-model.md`（audit.db schema）/ `PRD v2.0`
+1. 在 daemon 仓库改 `SPEC-005`（IPC 协议权威源）/ `data-model.md`（audit.db schema）
 2. 在本仓库同步改 `docs/api/ipc-protocol.md` + `docs/specs/SPEC-008-ipc-client.md` + 相关 SPEC
 3. 协议版本号 `protocol_version` 递增（不向后兼容）
 4. 两个仓库的 PR 互相关联，同 review 同 merge
 
 ---
 
-## 1. 上游 PRD
+## 1. 上游产品契约
 
-### PRD v2.0
-- **路径（上游仓库内）**：`docs/prd/sieve-prd-v2.0.md`
-- **本仓库依赖章节**：
-  - §1 产品定位（"daemon 不弹窗"约束的根源）
-  - §5.4 处置矩阵（disposition 字段的语义）
-  - §5.6 隐私字段（caller_pid / caller_exe 的可选性）
-  - §9 硬约束（10 条全集，本仓库摘录到 PRD §9）
-  - §10 不做清单
-  - §11.2 不存原文承诺
+本仓库依赖的上游 daemon 产品契约（按功能描述自包含，权威 wire / schema 以上游公开 SPEC 为准）：
+
+- **产品定位**："daemon 不弹窗"约束的根源——出站脱敏自动改写、不打断工作流
+- **处置矩阵**：disposition 字段的语义（按 direction × severity 二维决定渲染）
+- **隐私字段**：caller_pid / caller_exe 的可选性
+- **硬约束**：本仓库摘录到 CLAUDE.md 硬约束段
+- **不做清单**：明确的非目标边界
+- **不存原文承诺**：审计与日志均不落原始字节
 
 ---
 
@@ -42,7 +41,7 @@
 - **本仓库依赖**：技术栈锁定的根源；本仓库 SwiftUI native-only 技术栈是这条决策在 GUI 仓库内的延伸表达
 
 ### ipc-protocol
-- **决策**：IPC 走 Unix Domain Socket + JSON-RPC 2.0，协议版本 v1（后续升级至 v2，权威定义见上游 SPEC-005）
+- **决策**：IPC 走 Unix Domain Socket + JSON-RPC 2.0，协议版本白名单仅 `v2`（权威定义见上游 SPEC-005）
 - **本仓库依赖**：
   - 协议格式（JSON-RPC 2.0、无 batch、服务端可主动 notify）
   - socket 路径（`~/.sieve/ipc.sock`）
@@ -51,8 +50,13 @@
 - **本仓库实现端**：[`docs/api/ipc-protocol.md`](../api/ipc-protocol.md)、[`SPEC-008`](../specs/SPEC-008-ipc-client.md)
 
 ### dual-layer-defense
-- **决策**：GuiPopup 类规则走 GUI；HookTerminal 类规则走 Claude Code Hook 终端
+- **决策**：GuiPopup 类规则走 GUI；HookTerminal 类规则走 agent 侧 PreToolUse hook 终端
 - **本仓库依赖**：知道哪些 disposition 是 GUI 渲染范围（`GuiPopup | AutoRedact | StatusBar`），哪些不是（`HookTerminal`）
+
+### multi-agent-接入
+- **决策**：daemon 支持四家 agent 接入——Claude Code、OpenClaw、Hermes、Codex CLI；各 agent 通过把上游 base_url 指向本地 daemon 接入，并可注册 PreToolUse hook
+- **hook 与网关分工**：各 agent 的 pre-tool hook 作为 UX 层（终端内即时提示/确认）；由于这些 hook 均 fail-open、无法强制 fail-closed，安全不变量统一由网关侧的 inbound_hold 兜底 fail-closed。Codex CLI 经原生 PreToolUse hook + IPC `judge_tool_call` 取裁决
+- **本仓库依赖**：GUI 只渲染 daemon 路由给它的 GuiPopup 类决策，不感知具体是哪家 agent 触发；Onboarding 可引导 `sieve setup --agent claude|openclaw|hermes|codex`
 
 ### sieve-setup-tool
 - **决策**：`sieve setup` CLI 子命令做自动配置
@@ -73,14 +77,14 @@
   - **防线一**：GUI 不参与计算 `allow_remember`，无条件信任 daemon 字段
   - **防线三**：`allow_remember == false` 时**严禁**渲染 Remember checkbox（不允许灰显）
   - 灰名单字段 schema（fingerprint、context_hint、created_at）
-- **违反这条 = 与 v1.5.4 P0 同级别安全漏洞**
+- **违反这条 = 安全护栏被绕过的高危漏洞**
 - **本仓库实现端**：[`SPEC-002`](../specs/SPEC-002-hips-popup-window.md) §5.6 / [`CLAUDE.md`](../../CLAUDE.md) 硬约束 §1
 
 ### port-based-listener-routing
 - **决策**：daemon `Config.upstream_url` + `Config.port` 升级为 `Config.upstreams: Vec<UpstreamListener>`，每个 listener 显式声明 `provider_id` + `protocol`
 - **本仓库依赖**：
   - `sieve.health` 响应新增顶层 `listeners: ListenerSnapshot[]` 字段（每项 `addr / port / provider_id / protocol`）
-  - 旧 `listen: ListenSnapshot` 字段保留为 `listeners[0]` 别名（deprecated since v2.x），仅向后兼容
+  - 旧 `listen: ListenSnapshot` 字段保留为 `listeners[0]` 别名，仅向后兼容
   - 协议版本号**不 bump**（v2 内向后兼容扩展，client 用 `decodeIfPresent ?? []` 兜底旧 daemon）
   - GUI doctor / Settings → Daemon Tab 应优先消费 `listeners[]`，空时回落到 `listen` 单值展示
 - **本仓库实现端**：[`Sources/Models/IPCResponses.swift`](../../Sources/Models/IPCResponses.swift) `HealthResultDTO.effectiveListeners` / [`Tests/SieveGUITests/HealthResultDTOTests.swift`](../../Tests/SieveGUITests/HealthResultDTOTests.swift)
@@ -106,23 +110,20 @@
 ### SPEC-005：ipc-protocol（**双仓库唯一权威 IPC 协议规格**）
 - **路径（上游仓库内）**：`docs/specs/SPEC-005-ipc-protocol.md`
 - **覆盖**：所有 IPC 方法名、字段、枚举、错误码、握手、心跳、版本协商、协议升级流程、schema 一致性测试约定
-- **SPEC-005 最后改动 commit**：`7108a45`（listeners[] 数组扩展，向后兼容、未 bump `protocol_version`）。截至 daemon HEAD `8d68912`，SPEC-005 文档最后改动仍为 `7108a45`。
-- **fixture 副本来源（SPEC §14.2）**：`Tests/SieveGUITests/Fixtures/v2/` 现为 daemon 全部 **19 个 method 目录 / 81 个权威 fixture** 的字节一致副本（2026-06-18 从 `sieve.health` 一个目录扩到全量），pin 自 daemon fixtures/v2 目录最近 commit **`ae20fd3`**（daemon HEAD `8d68912`，2026-06-11）。`IPCSchemaV2FixtureTests` 逐个用对应 Swift DTO 解码校验跨仓一致；pin 细节见 `Tests/SieveGUITests/Fixtures/v2/_PIN.md`。
-- **✅ 2026-06-18 D1-D7 跨仓漂移已修复并对齐**（daemon 按 SPEC-005 修正 wire，GUI 同步 DTO + fixture，`IPCSchemaV2FixtureTests` 断言已从 `#expect(throws:)` 翻转为「解码成功 + 字段正确」）：
-  1. **D1 hello.preset**：daemon `"default"→"standard"`（SPEC §5.6）；GUI 仅改 fixture（`Preset` enum 已含 `.standard`）。
-  2. **D3 preset_changed**：daemon 只发 `mode`（SPEC §10.1，无 `preset`）；GUI `PresetChangedParams` 删 `preset` 字段，router 改用 `Preset(rawValue: mode)`。
-  3. **D4 paused_changed**：daemon 补 `source`(required)；GUI DTO 本就要 `source`，仅补 fixture。
-  4. **D5 notify_status_bar**：daemon 发 `StatusBarNotify`（notify_id/created_at/kind/title/detail?/rule_id?/auto_dismiss_seconds，SPEC §10.1）；GUI `EventNotifyParams` 整体重写对齐，ToastController/AppStateIPCAdapter 消费点适配。
-  5. **D6 purge_history.purged_at**：daemon epoch ms → ISO8601 串（SPEC §11B）；GUI DTO 本就当 ISO 串解，仅改 fixture。
-  6. **D2 set_preset.request.minimal mode**：`"default"→"standard"`（与 D1 同源）；**D7 evaluate.would_recommendation**：daemon 对象（SPEC §6.1.4），GUI `Match.wouldRecommendation: String? → Recommendation?`。
-- **GUI 端缺 DTO 的 method（不在本轮擅自新增，待协商）**：`reload_user_rules`（无 handler/DTO）、`remove_graylist` / `set_preset_overrides` 的 result（fire-and-forget 不解码）。
-- **复核命令**（在 daemon 仓库执行）：`git log --oneline -- docs/specs/SPEC-005-ipc-protocol.md | head -1`
+- **fixture 副本来源**：`Tests/SieveGUITests/Fixtures/v2/` 是 daemon 全量权威 fixture 的字节一致副本（按 method 分目录），`IPCSchemaV2FixtureTests` 逐个用对应 Swift DTO 解码校验跨仓一致；pin 细节见 `Tests/SieveGUITests/Fixtures/v2/_PIN.md`。
+- **关键字段对齐项**（GUI DTO 与 SPEC-005 wire 对齐要点）：
+  - `hello.preset` / `set_preset` 的 minimal mode：枚举值为 `standard`（不是 `default`）
+  - `preset_changed`：只发 `mode`，GUI 用 `Preset(rawValue: mode)` 还原
+  - `paused_changed`：`source` 为 required 字段
+  - `notify_status_bar`：发 `StatusBarNotify`（notify_id / created_at / kind / title / detail? / rule_id? / auto_dismiss_seconds），GUI 端 Toast 消费点据此解码
+  - `purge_history.purged_at`：ISO8601 字符串
+  - `evaluate.would_recommendation`：对象（映射为 GUI `Recommendation?`）
 - **本仓库依赖**：所有 IPC 字段定义都来自此文件；GUI 端不复刻 schema 表
 - **本仓库实现端**：
   - [`docs/api/ipc-protocol.md`](../api/ipc-protocol.md) v2.0（GUI 实现注解，不再定义 schema）
   - [`SPEC-008-ipc-client.md`](../specs/SPEC-008-ipc-client.md)（GUI IPC 客户端实现规格）
   - `Sources/Services/IPC/`、`Sources/Models/HipsRequest*.swift` 等
-- **变更协调**：任何 SPEC-005 改动必须先在 daemon 仓库 merge SPEC PR，再分别在两仓提代码 PR；本仓库 commit pin 字段必须更新
+- **变更协调**：任何 SPEC-005 改动必须先在 daemon 仓库 merge SPEC PR，再分别在两仓提代码 PR；本仓库 fixture 副本同步更新
 
 ### SPEC-002：hips-popup-behavior
 - **覆盖**：HIPS 弹窗的 IPC 行为契约（多 issue 合并字段、超时三段、merged_decision 格式、`default_on_timeout` fail-closed）
@@ -180,11 +181,12 @@ GUI 必须 0700 / 0600 权限校验 `~/.sieve/`，不符合时引导修复（[`S
 
 ## 7. 协议版本兼容性
 
-| protocol_version | daemon 起始版本 | GUI 起始版本 | 状态 |
-|------------------|----------------|-------------|------|
-| `v1` | daemon v0.x（v1.5 实现） | GUI v0.x | **Deprecated**（schema drift 严重，已弃用） |
-| `v2` | daemon v0.7+（SPEC-005 v2.0 落地后） | GUI v1.0 | Active（双仓库统一 schema） |
-| `v2.x`（向后兼容扩展） | daemon v0.8+（port-based listener routing + 协议术语中性化落地后） | GUI v1.0+ | Active（health 新增 `listeners[]`、协议术语中性化；不 bump 主版本号） |
+| protocol_version | 状态 |
+|------------------|------|
+| `v2` | Active（双仓库统一 schema，白名单仅此一项） |
+| `v2.x`（向后兼容扩展） | Active（health 新增 `listeners[]`、协议术语中性化；不 bump 主版本号） |
+
+握手时 daemon 发任何非 `v2` 的版本号，GUI 立即进入 disconnected，不做向后兼容嗅探。
 
 未来递增策略：
 - 字段新增（向后兼容） → 不递增 `protocol_version`，但更新 `ipc-protocol.md` 标注引入版本

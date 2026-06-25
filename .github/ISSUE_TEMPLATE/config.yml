@@ -3,6 +3,6 @@ contact_links:
   - name: 安全漏洞
     url: mailto:security@sieveai.dev
     about: 安全相关问题请直接邮件，不要在公开 issue 里披露
-  - name: 闭测期间反馈
+  - name: 一般反馈
     url: mailto:security@sieveai.dev
-    about: 闭测期间一般反馈也可走邮件
+    about: 一般反馈也可走邮件

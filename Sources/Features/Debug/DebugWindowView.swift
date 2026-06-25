@@ -479,8 +479,9 @@ public struct SystemStatusTab: View {
             HStack {
                 Spacer()
                 Button("运行 sieve doctor…") {
+                    guard let bin = SieveBinaryLocator.resolve() else { return }
                     let p = Process()
-                    p.launchPath = "/usr/local/bin/sieve"
+                    p.launchPath = bin
                     p.arguments = ["doctor"]
                     try? p.run()
                 }

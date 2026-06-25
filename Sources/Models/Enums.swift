@@ -80,7 +80,7 @@ public enum DaemonStatus: Equatable, Sendable {
     case normal
     case warning
     case hold
-    case paused(until: Date)
+    case paused(until: Date?)   // until 可空：启动握手时 daemon 已暂停但 hello 不带 paused_until
     case disconnected(reason: DisconnectReason)
 
     public enum DisconnectReason: String, Sendable {

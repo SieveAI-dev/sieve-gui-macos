@@ -209,10 +209,10 @@ public struct PurgeHistoryResult: Decodable, Sendable {
 
 // MARK: - sieve.health §9.5
 
-/// `sieve.health` 响应。对照 SPEC-005 §9.5（v2 + ADR-026 listeners[] 扩展）。
+/// `sieve.health` 响应。对照 SPEC-005 §9.5（v2 + listeners[] 扩展）。
 ///
 /// 字段语义：
-/// - `listen` 与 `listeners[0]` 等价；`listen` 自 v2.x ADR-026 起标注 deprecated，
+/// - `listen` 与 `listeners[0]` 等价；`listen` 自 v2.x 起标注 deprecated，
 ///   仅向后兼容旧 client 读取，本 client 优先消费 `listeners`。
 /// - `listeners` 在旧 daemon 不发本字段时退化为空数组（`decodeIfPresent ?? []`），
 ///   client 应回落到 `listen` 单值展示。
@@ -270,13 +270,13 @@ public struct HealthResultDTO: Decodable, Sendable {
         }
     }
 
-    /// 旧字段，等价于 `listeners[0]`（ADR-026 起 deprecated）。
+    /// 旧字段，等价于 `listeners[0]`（已 deprecated）。
     public struct ListenSnapshot: Decodable, Sendable {
         public let addr: String
         public let port: UInt16
     }
 
-    /// 单 listener 完整快照（ADR-026 §决策 6 + Stage F）。
+    /// 单 listener 完整快照。
     public struct ListenerSnapshot: Decodable, Sendable, Identifiable {
         public var id: String { "\(addr):\(port)" }
         public let addr: String

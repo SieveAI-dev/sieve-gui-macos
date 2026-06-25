@@ -29,6 +29,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         IPCRouter.shared.hipsManager = HipsPanelManager.shared
         IPCRouter.shared.toastController = ToastController.shared
         ipcClient.delegate = IPCRouter.shared
+        // 回声判定依赖此引用：preset_changed / paused_changed 通知经 IPCRouter 用
+        // ipcClient.isMutatingEcho 判断是否为本 GUI 自己发出的变更回声。漏装配 → 恒 nil
+        // → isMutatingEcho 恒 false → 本地乐观更新会被 daemon 回声二次 apply（paused 回跳）。
+        IPCRouter.shared.ipcClient = ipcClient
         HipsPanelManager.shared.install(ipcClient: ipcClient)
         WindowManager.shared.ipcClient = ipcClient
 

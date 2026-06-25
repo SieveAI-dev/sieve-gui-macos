@@ -65,6 +65,13 @@ public final class AppState: ObservableObject {
     // MARK: - daemon 状态变更（由 IPCRouter 调用）
 
     public func updatePreset(_ p: Preset) { preset = p }
+
+    /// 标记引导完成：同步落盘（绕过 `settings` 的 200ms debounce），避免完成/跳过后
+    /// 立即退出导致时间戳未持久化、下次启动重复弹引导。
+    public func markOnboardingCompleted(at date: Date = Date()) {
+        settings.onboardingCompletedAt = date  // 更新内存 + 触发 @Published（UI 联动）
+        store.setOnboardingCompleted(date)      // 立即同步写 UserDefaults
+    }
     public func updatePaused(_ paused: Bool, until: Date?) {
         self.paused = paused
         self.pausedUntil = until
@@ -174,7 +181,9 @@ public final class AppState: ObservableObject {
             return
         }
         if activeRequest != nil { daemonStatus = .hold; return }
-        if paused, let until = pausedUntil { daemonStatus = .paused(until: until); return }
+        // paused 为真即进 .paused 态（until 可空）——不能因 pausedUntil 缺失就降级为 normal/warning
+        // 假装健康（违反硬约束 #6）。启动握手时 daemon 已暂停但 hello 不带 paused_until 即此情形。
+        if paused { daemonStatus = .paused(until: pausedUntil); return }
         if warningHitCount > 0 { daemonStatus = .warning; return }
         daemonStatus = .normal
     }

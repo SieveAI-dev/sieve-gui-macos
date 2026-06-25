@@ -1,239 +1,915 @@
 {
   "sourceLanguage" : "zh-Hans",
   "strings" : {
+    "—" : {
 
-    "允许" : {
-      "comment" : "HIPS 弹窗允许按钮",
+    },
+    "…" : {
+
+    },
+    "(%@)" : {
+
+    },
+    "（暂无规则数据）" : {
+
+    },
+    "%@" : {
+
+    },
+    "%@ / 65536 bytes" : {
+
+    },
+    "%@/%@" : {
       "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Allow" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "允许" } }
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@/%2$@"
+          }
+        }
       }
     },
+    "%@B" : {
 
-    "拒绝" : {
-      "comment" : "HIPS 弹窗拒绝按钮（主按钮）",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Deny" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "拒绝" } }
-      }
     },
+    "%@s" : {
 
-    "记住选择（加入灰名单）" : {
-      "comment" : "HIPS 弹窗 Remember checkbox（allow_remember=true 时才渲染）",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Remember choice (add to graylist)" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "记住选择（加入灰名单）" } }
-      }
     },
+    "×%@" : {
 
-    "此规则不允许加入灰名单" : {
-      "comment" : "HIPS 弹窗 allow_remember=false 时的提示",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "This rule does not allow graylisting" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "此规则不允许加入灰名单" } }
-      }
     },
+    "~/.sieve/audit.db" : {
 
-    "原始 JSON 可能含 evidence 等敏感字段，确认复制到剪贴板？\n5 秒后将自动清空剪贴板。" : {
-      "comment" : "HIPS 复制原始 JSON 二次确认 alert 消息",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Raw JSON may contain sensitive fields (evidence). Confirm copy to clipboard?\nClipboard will be cleared after 5 seconds." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "原始 JSON 可能含 evidence 等敏感字段，确认复制到剪贴板？\n5 秒后将自动清空剪贴板。" } }
-      }
     },
+    "~/.sieve/config.toml" : {
 
-    "退出 Sieve GUI？" : {
-      "comment" : "退出确认 alert 标题",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Quit Sieve GUI?" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "退出 Sieve GUI？" } }
-      }
     },
+    "~/.sieve/ipc.sock" : {
 
-    "退出后 daemon 仍会继续运行，但你将看不到 HIPS 弹窗与状态栏图标。" : {
-      "comment" : "退出确认 alert 消息",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "The daemon will continue running after quit, but you won't see HIPS prompts or the menu bar icon." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "退出后 daemon 仍会继续运行，但你将看不到 HIPS 弹窗与状态栏图标。" } }
-      }
     },
+    "⌘%@" : {
 
-    "退出" : {
-      "comment" : "通用退出按钮",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Quit" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "退出" } }
-      }
     },
+    "5 分钟" : {
 
-    "取消" : {
-      "comment" : "通用取消按钮",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Cancel" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "取消" } }
-      }
     },
+    "15 分钟" : {
 
-    "最近命中" : {
-      "comment" : "菜单栏快捷菜单「最近命中」区域标题",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Recent Hits" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "最近命中" } }
-      }
     },
+    "30 分钟" : {
 
-    "暂无" : {
-      "comment" : "列表为空时的占位文案",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "None" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "暂无" } }
-      }
     },
+    "allow" : {
 
+    },
+    "audit" : {
+
+    },
+    "audit.db schema 版本未知。已知字段继续展示。" : {
+
+    },
+    "block" : {
+
+    },
+    "caller_pid" : {
+
+    },
     "Critical 拦截仍然生效" : {
       "comment" : "暂停状态下的说明文字",
+      "extractionState" : "stale",
       "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Critical rules still active" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Critical 拦截仍然生效" } }
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Critical rules still active"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Critical 拦截仍然生效"
+          }
+        }
       }
     },
+    "critical_lock" : {
 
+    },
+    "daemon %@" : {
+
+    },
+    "daemon 暂未上报 listener" : {
+
+    },
+    "daemon 未安装时无法继续引导。" : {
+
+    },
+    "daemon 版本过旧，不支持清空历史（需升级 daemon）" : {
+
+    },
+    "daemon 版本过旧，不支持规则总览（需升级 daemon）" : {
+
+    },
+    "default" : {
+
+    },
     "Detection Preset" : {
       "comment" : "Settings → Detection Preset 标题",
       "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Detection Preset" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Detection Preset" } }
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Detection Preset"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Detection Preset"
+          }
+        }
       }
     },
+    "Dir" : {
 
-    "规则总览" : {
-      "comment" : "Settings → 规则总览区域标题",
+    },
+    "direction" : {
+
+    },
+    "disposition" : {
+
+    },
+    "disposition: %@" : {
+
+    },
+    "EIP-712 Domain" : {
+
+    },
+    "English" : {
+
+    },
+    "ERROR" : {
+
+    },
+    "event #%@" : {
+
+    },
+    "evidence_meta" : {
+
+    },
+    "fields: %@" : {
+
+    },
+    "fingerprint" : {
+
+    },
+    "got %@ / want %@" : {
       "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Rules Overview" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "规则总览" } }
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "got %1$@ / want %2$@"
+          }
+        }
       }
     },
+    "gui" : {
 
-    "切换 Preset" : {
-      "comment" : "Settings Preset 切换确认 alert 标题",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Switch Preset" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "切换 Preset" } }
-      }
     },
+    "hash" : {
 
-    "切换后会立即生效，正在弹出的 HIPS 弹窗会保留。" : {
-      "comment" : "Settings Preset 切换确认 alert 消息",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Takes effect immediately. Active HIPS prompts will be retained." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "切换后会立即生效，正在弹出的 HIPS 弹窗会保留。" } }
-      }
     },
+    "Inbound" : {
 
-    "确认切换" : {
-      "comment" : "Settings Preset 切换确认按钮",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Confirm" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "确认切换" } }
-      }
     },
+    "INFO" : {
 
-    "Touch ID 解锁" : {
-      "comment" : "History Inspector Touch ID 解锁按钮",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Unlock with Touch ID" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Touch ID 解锁" } }
-      }
     },
+    "ipc" : {
 
-    "解锁中…" : {
-      "comment" : "History Inspector Touch ID 解锁进行中",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Unlocking…" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "解锁中…" } }
-      }
     },
+    "Message (%@)" : {
 
-    "在调试窗口重放" : {
-      "comment" : "History Inspector 重放按钮",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Replay in Debug Window" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "在调试窗口重放" } }
-      }
     },
+    "on" : {
 
-    "导出…" : {
-      "comment" : "历史窗口导出按钮",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Export…" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "导出…" } }
-      }
     },
+    "Outbound" : {
 
-    "选择导出格式" : {
-      "comment" : "历史窗口导出格式选择 confirmation dialog 标题",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Choose Export Format" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "选择导出格式" } }
-      }
     },
+    "params 不展示（SPEC-005 红线）" : {
 
-    "历史记录将强制脱敏（ADR-011），不含 evidence 原文。" : {
-      "comment" : "历史窗口导出说明",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "History will be redacted (ADR-011). Raw evidence is excluded." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "历史记录将强制脱敏（ADR-011），不含 evidence 原文。" } }
-      }
     },
+    "params: 不展示" : {
 
+    },
+    "Payload (JSON)" : {
+
+    },
+    "Preset 选择" : {
+
+    },
+    "Preset: %@" : {
+
+    },
+    "redact" : {
+
+    },
+    "rule_id" : {
+
+    },
+    "session_id" : {
+
+    },
+    "severity" : {
+
+    },
+    "Sieve" : {
+
+    },
     "Sieve daemon 已重启，状态可能丢失" : {
       "comment" : "Toast：daemon 重启通知",
+      "extractionState" : "stale",
       "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Sieve daemon restarted, state may be lost" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Sieve daemon 已重启，状态可能丢失" } }
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sieve daemon restarted, state may be lost"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sieve daemon 已重启，状态可能丢失"
+          }
+        }
       }
     },
+    "Sieve daemon 未安装" : {
 
-    "已重新连接 daemon" : {
-      "comment" : "Toast：daemon 重连通知",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Reconnected to daemon" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已重新连接 daemon" } }
-      }
     },
+    "Sieve GUI" : {
 
-    "Sieve 设置" : {
-      "comment" : "设置窗口标题",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Sieve Settings" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Sieve 设置" } }
-      }
     },
+    "Sieve 与 daemon 失联" : {
 
+    },
     "Sieve 历史" : {
       "comment" : "历史窗口标题",
+      "extractionState" : "stale",
       "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Sieve History" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Sieve 历史" } }
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sieve History"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sieve 历史"
+          }
+        }
       }
     },
+    "Sieve 在 GUI 不在前台时通过系统通知提醒你处理 HIPS 弹窗。" : {
 
-    "Sieve 调试" : {
-      "comment" : "调试窗口标题",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Sieve Debug" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Sieve 调试" } }
-      }
     },
+    "Sieve 已就绪。你可以从菜单栏图标随时打开设置、历史与调试窗口。" : {
 
+    },
     "Sieve 引导" : {
       "comment" : "Onboarding 窗口标题",
       "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Sieve Setup" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Sieve 引导" } }
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sieve Setup"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sieve 引导"
+          }
+        }
       }
-    }
+    },
+    "Sieve 设置" : {
+      "comment" : "设置窗口标题",
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sieve Settings"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sieve 设置"
+          }
+        }
+      }
+    },
+    "Sieve 调试" : {
+      "comment" : "调试窗口标题",
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sieve Debug"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sieve 调试"
+          }
+        }
+      }
+    },
+    "Sieve 通过本地代理拦截 Claude Code 与 Agent 的可疑行为，并通过 GUI 弹窗征求你的决策。" : {
 
+    },
+    "sse_chunk" : {
+
+    },
+    "text" : {
+
+    },
+    "timeout" : {
+
+    },
+    "timeout(s)" : {
+
+    },
+    "title" : {
+
+    },
+    "Toast 时长：%@s" : {
+
+    },
+    "tool_use_input" : {
+
+    },
+    "Touch ID 解锁" : {
+      "comment" : "History Inspector Touch ID 解锁按钮",
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unlock with Touch ID"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch ID 解锁"
+          }
+        }
+      }
+    },
+    "typed_data（格式不识别）" : {
+
+    },
+    "v%@" : {
+
+    },
+    "WARN" : {
+
+    },
+    "would: %@" : {
+
+    },
+    "与 daemon 失联，你的决策将在连接恢复后发送" : {
+
+    },
+    "严重度未知" : {
+
+    },
+    "仅允许非 Critical 项（%@ 项）" : {
+
+    },
+    "仅影响 GUI 文案；daemon 推送的 rule title 由 daemon 处理。" : {
+
+    },
+    "从左侧选中一条记录查看详情" : {
+
+    },
+    "允许" : {
+      "comment" : "HIPS 弹窗允许按钮",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "允许"
+          }
+        }
+      }
+    },
+    "全部" : {
+
+    },
+    "全部允许" : {
+
+    },
+    "最近命中" : {
+      "comment" : "菜单栏快捷菜单「最近命中」区域标题",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recent Hits"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近命中"
+          }
+        }
+      }
+    },
+    "切换 Preset" : {
+      "comment" : "Settings Preset 切换确认 alert 标题",
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Switch Preset"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换 Preset"
+          }
+        }
+      }
+    },
+    "切换后会立即生效，正在弹出的 HIPS 弹窗会保留。" : {
+      "comment" : "Settings Preset 切换确认 alert 消息",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Takes effect immediately. Active HIPS prompts will be retained."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换后会立即生效，正在弹出的 HIPS 弹窗会保留。"
+          }
+        }
+      }
+    },
+    "删除后该条目将不再被灰名单豁免，后续命中会重新触发检测。" : {
+
+    },
+    "加载规则列表…" : {
+
+    },
+    "历史记录将强制脱敏，不含 evidence 原文。" : {
+
+    },
+    "历史记录将强制脱敏（ADR-011），不含 evidence 原文。" : {
+      "comment" : "历史窗口导出说明",
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "History will be redacted (ADR-011). Raw evidence is excluded."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "历史记录将强制脱敏（ADR-011），不含 evidence 原文。"
+          }
+        }
+      }
+    },
+    "原始 JSON 可能含 evidence 等敏感字段，确认复制到剪贴板？\n5 秒后将自动清空剪贴板。" : {
+      "comment" : "HIPS 复制原始 JSON 二次确认 alert 消息",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raw JSON may contain sensitive fields (evidence). Confirm copy to clipboard?\nClipboard will be cleared after 5 seconds."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "原始 JSON 可能含 evidence 等敏感字段，确认复制到剪贴板？\n5 秒后将自动清空剪贴板。"
+          }
+        }
+      }
+    },
+    "原始地址" : {
+
+    },
+    "取消" : {
+      "comment" : "通用取消按钮",
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消"
+          }
+        }
+      }
+    },
+    "合约" : {
+
+    },
+    "命中 %@ 次" : {
+
+    },
+    "命中摘要" : {
+
+    },
+    "在调试窗口重放" : {
+      "comment" : "History Inspector 重放按钮",
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Replay in Debug Window"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在调试窗口重放"
+          }
+        }
+      }
+    },
+    "外链 URL" : {
+
+    },
+    "失联" : {
+
+    },
+    "始终减少" : {
+
+    },
+    "完成" : {
+
+    },
+    "导出…" : {
+      "comment" : "历史窗口导出按钮",
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导出…"
+          }
+        }
+      }
+    },
+    "尚未评估" : {
+
+    },
+    "工具" : {
+
+    },
+    "已从历史记录填入 payload" : {
+
+    },
+    "已导出：%@" : {
+
+    },
+    "已暂停至 %@" : {
+
+    },
+    "已重新连接 daemon" : {
+      "comment" : "Toast：daemon 重连通知",
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reconnected to daemon"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已重新连接 daemon"
+          }
+        }
+      }
+    },
+    "开机启动" : {
+
+    },
+    "拒绝" : {
+      "comment" : "HIPS 弹窗拒绝按钮（主按钮）",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deny"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拒绝"
+          }
+        }
+      }
+    },
+    "拒绝全部" : {
+
+    },
+    "文件系统权限" : {
+
+    },
+    "暂停期间 Critical 拦截仍然生效" : {
+
+    },
+    "暂无" : {
+      "comment" : "列表为空时的占位文案",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "None"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂无"
+          }
+        }
+      }
+    },
+    "暂无灰名单条目" : {
+
+    },
+    "替换为" : {
+
+    },
+    "未命中（抽样）：%@" : {
+
+    },
+    "未在 PATH 或常见路径找到 sieve 命令，且 ~/.sieve/ipc.sock 不存在。请确保你已安装完整的 Sieve（.dmg），再重试。" : {
+
+    },
+    "欢迎使用 Sieve" : {
+
+    },
+    "此操作不可逆，且需要 Touch ID 二次确认。" : {
+
+    },
+    "此规则不允许加入灰名单" : {
+      "comment" : "HIPS 弹窗 allow_remember=false 时的提示",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This rule does not allow graylisting"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此规则不允许加入灰名单"
+          }
+        }
+      }
+    },
+    "浅色" : {
+
+    },
+    "消息流" : {
+
+    },
+    "消息详情" : {
+
+    },
+    "深色" : {
+
+    },
+    "灰名单管理" : {
+
+    },
+    "点击下方 “Health Check” 拉取 listener 列表" : {
+
+    },
+    "点击左侧行查看详情" : {
+
+    },
+    "环境检查" : {
+
+    },
+    "登录时自动启动 Sieve GUI（推荐）。可在 设置 → 通用 中关闭。" : {
+
+    },
+    "确认切换" : {
+      "comment" : "Settings Preset 切换确认按钮",
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirm"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "确认切换"
+          }
+        }
+      }
+    },
+    "禁用减少" : {
+
+    },
+    "种类" : {
+
+    },
+    "简体中文" : {
+
+    },
+    "置信度：%@" : {
+
+    },
+    "规则总览" : {
+      "comment" : "Settings → 规则总览区域标题",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rules Overview"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "规则总览"
+          }
+        }
+      }
+    },
+    "解锁中…" : {
+      "comment" : "History Inspector Touch ID 解锁进行中",
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unlocking…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "解锁中…"
+          }
+        }
+      }
+    },
+    "记住选择（加入灰名单）" : {
+      "comment" : "HIPS 弹窗 Remember checkbox（allow_remember=true 时才渲染）",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remember choice (add to graylist)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "记住选择（加入灰名单）"
+          }
+        }
+      }
+    },
+    "试试下面的 demo：发一个包含 BIP39 助记词的示例 prompt，体验真实的 HIPS 弹窗拦截流程。" : {
+
+    },
+    "语言已保存，重启 Sieve GUI 后生效。" : {
+
+    },
+    "跟随系统" : {
+
+    },
+    "退出" : {
+      "comment" : "通用退出按钮",
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quit"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "退出"
+          }
+        }
+      }
+    },
+    "退出 Sieve GUI？" : {
+      "comment" : "退出确认 alert 标题",
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quit Sieve GUI?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "退出 Sieve GUI？"
+          }
+        }
+      }
+    },
+    "退出后 daemon 仍会继续运行，但你将看不到 HIPS 弹窗与状态栏图标。" : {
+      "comment" : "退出确认 alert 消息",
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The daemon will continue running after quit, but you won't see HIPS prompts or the menu bar icon."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "退出后 daemon 仍会继续运行，但你将看不到 HIPS 弹窗与状态栏图标。"
+          }
+        }
+      }
+    },
+    "选择导出格式" : {
+      "comment" : "历史窗口导出格式选择 confirmation dialog 标题",
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose Export Format"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择导出格式"
+          }
+        }
+      }
+    },
+    "通知权限" : {
+
+    },
+    "链路" : {
+
+    },
+    "长度" : {
+
+    }
   },
   "version" : "1.0"
 }

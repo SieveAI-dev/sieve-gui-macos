@@ -10,7 +10,7 @@ public enum ExportState: Sendable {
     case failed(String)
 }
 
-/// 强制脱敏导出器 actor（ADR-011）。
+/// 强制脱敏导出器 actor。
 /// 实际格式化逻辑委托给 HistoryExportFormatter（Models 层，可单元测试）。
 public actor HistoryExporter {
     public static let shared = HistoryExporter()
@@ -60,11 +60,9 @@ public actor HistoryExporter {
 
         let output = lines.joined(separator: "\n") + "\n"
         do {
-            // atomic write: 先写临时文件再原子替换
-            let tmpURL = url.deletingLastPathComponent()
-                .appendingPathComponent(".\(url.lastPathComponent).tmp")
-            try output.data(using: .utf8)?.write(to: tmpURL, options: .atomic)
-            _ = try? FileManager.default.replaceItemAt(url, withItemAt: tmpURL)
+            // String.write(atomically:) 本身就是「写临时文件 → 原子 rename」，无需再手工套一层
+            // .tmp + replaceItemAt（旧实现的 replaceItemAt 还用 try? 吞错，失败仍报 .done 且残留 tmp）。
+            try output.write(to: url, atomically: true, encoding: .utf8)
             onUpdate(.done(url: url))
         } catch {
             onUpdate(.failed("写文件失败：\(error.localizedDescription)"))

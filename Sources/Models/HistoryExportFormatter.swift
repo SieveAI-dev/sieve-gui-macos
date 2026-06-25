@@ -13,7 +13,7 @@ public enum ExportFormat: String, CaseIterable, Sendable {
     }
 }
 
-/// 历史导出脱敏格式化（ADR-011 红线：不含 evidence_meta / fingerprint / session_id / caller_pid / caller_exe）
+/// 历史导出脱敏格式化（红线：不含 evidence_meta / fingerprint / session_id / caller_pid / caller_exe）
 /// 纯函数，无副作用，可单元测试。
 public struct HistoryExportFormatter: Sendable {
     public let format: ExportFormat
@@ -69,11 +69,15 @@ public struct HistoryExportFormatter: Sendable {
             ]
             if let uc = row.userChoice { dict["user_choice"] = uc }
             if let rid = row.requestId { dict["request_id"] = rid }
-            // evidence_meta / fingerprint / session_id / caller_pid / caller_exe → 强制不写入（ADR-011）
-            let pairs = dict.sorted(by: { $0.key < $1.key })
-                .map { "\"\($0.key)\":\"\($0.value)\"" }
-                .joined(separator: ",")
-            return "{\(pairs)}"
+            // evidence_meta / fingerprint / session_id / caller_pid / caller_exe → 强制不写入
+            // 用 JSONSerialization 生成，保证 value 中的引号 / 反斜杠 / 换行 / 控制字符被正确
+            // 转义；手工拼字符串会在 value 含特殊字符时产出非法 JSON 甚至被注入伪造字段。
+            // .sortedKeys 保持 key 顺序确定（与旧版按 key 排序一致）。
+            if let data = try? JSONSerialization.data(withJSONObject: dict, options: [.sortedKeys]),
+               let json = String(data: data, encoding: .utf8) {
+                return json
+            }
+            return "{}"
         }
     }
 

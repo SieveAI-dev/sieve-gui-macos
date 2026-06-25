@@ -64,7 +64,7 @@ public struct HipsPopupView: View {
         }
         .frame(minWidth: 540, minHeight: 480)
         .onAppear { rememberChecked = false }
-        // SPEC-002 §4.4：复制原始 JSON 二次确认（PRD §5.2.5）
+        // SPEC-002 §4.4：复制原始 JSON 二次确认
         .alert("原始 JSON 含敏感字段", isPresented: $showCopyJSONAlert) {
             Button("确认复制", role: .destructive) { copyRawJSON() }
             Button("取消", role: .cancel) {}

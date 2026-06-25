@@ -20,6 +20,15 @@ public enum SettingsKey {
     public static let lastSeenDaemonBootId = "kLastSeenDaemonBootId"
 
     public static let currentSchemaVersion: Int = 1
+
+    /// 本 App 管理的全部固定键（不含 `panelLastFramePrefix` 这类动态前缀键）。
+    /// schema 迁移时用它精确备份/清除，避免用模糊的 "k" 前缀匹配误伤系统全局键。
+    public static let allManagedKeys: [String] = [
+        prefsSchemaVersion, onboardingCompletedAt, onboardingSkippedSteps,
+        appearance, language, hipsSoundEnabled, hipsSoundName, reduceMotionOverride,
+        toastDurationSeconds, historyMaskByDefault, autoCheckUpdates, loginItemEnabled,
+        lastSeenDaemonVersion, lastIPCErrorTimestamp, lastSeenDaemonBootId
+    ]
 }
 
 public struct UserSettings: Sendable, Equatable {
@@ -128,10 +137,26 @@ public final class UserSettingsStore: @unchecked Sendable {
 
     private func backupAndReset(currentVersion: Int) {
         let stamp = ISO8601DateFormatter().string(from: Date())
-        let backup = defaults.dictionaryRepresentation()
         let backupKey = "_backup_\(stamp)_v\(currentVersion)"
+        let all = defaults.dictionaryRepresentation()
+
+        // 只备份本 App 管理的键（固定白名单 + 动态的 panel frame 前缀键），不 dump 整个
+        // UserDefaults 域——后者会把系统/全局键也写进备份，造成脏数据、体积膨胀甚至
+        // 写入非 plist 类型时崩溃。
+        var backup: [String: Any] = [:]
+        for key in SettingsKey.allManagedKeys {
+            if let v = defaults.object(forKey: key) { backup[key] = v }
+        }
+        for (k, v) in all where k.hasPrefix(SettingsKey.panelLastFramePrefix) {
+            backup[k] = v
+        }
         defaults.set(backup, forKey: backupKey)
-        for (k, _) in defaults.dictionaryRepresentation() where k.hasPrefix("k") {
+
+        // 精确清除本 App 管理的键，避免用 "k" 前缀模糊匹配误删系统/其他子系统的同前缀键。
+        for key in SettingsKey.allManagedKeys {
+            defaults.removeObject(forKey: key)
+        }
+        for k in all.keys where k.hasPrefix(SettingsKey.panelLastFramePrefix) {
             defaults.removeObject(forKey: k)
         }
         defaults.set(SettingsKey.currentSchemaVersion, forKey: SettingsKey.prefsSchemaVersion)

@@ -221,7 +221,7 @@ GUI 端按 SPEC-005 §12 段位划分处理：
 
 | Code | 显示文案（已本地化） |
 |---|---|
-| `-32001` `critical_lock_violated` | "此规则受 Critical 锁保护，不能调整。" + 引导用户读 PRD §9 #3 |
+| `-32001` `critical_lock_violated` | "此规则受 Critical 锁保护，不能调整。"（Critical 类规则对应不可逆动作，强制 fail-closed，所有版本均不可关闭） |
 | `-32002` `daemon_busy` | "daemon 正在重载，请几秒后重试。" |
 | `-32003` `payload_too_large` | "粘贴内容超过 64KB 上限，请压缩后重试。" |
 | `-32004` `unknown_fingerprint` | "该灰名单条目已不存在（可能被另一窗口删除）。"（同时刷新 graylist 列表） |
@@ -247,7 +247,7 @@ GUI 自身的 IPC 行为日志写入 `~/.sieve/gui.log`（详见 SPEC-006 / SPEC
 - 只允许记录 method 名、message id、解析成功/失败、错误码
 - `gui.log` rotate 策略：每天一份，保留 7 天
 
-诊断包默认脱敏；详见 [SPEC-009](../specs/SPEC-009-diagnostic-bundle.md)（如已落地）。
+诊断包默认脱敏，导出前强制走脱敏管线。
 
 ---
 
@@ -256,7 +256,7 @@ GUI 自身的 IPC 行为日志写入 `~/.sieve/gui.log`（详见 SPEC-006 / SPEC
 当 SPEC-005 升版（如 v2 → v3）：
 
 1. daemon 仓库先 merge SPEC + 代码 PR
-2. GUI 仓库 `docs/external/upstream-references.md` 更新 SPEC-005 commit pin
+2. GUI 仓库同步上游 SPEC-005 的 fixture 副本（`Tests/SieveGUITests/Fixtures/v2/`）
 3. 本仓库代码 PR 实施新 schema：
    - 升级 IPCClient 的 `protocol_version` 白名单（如 `["v2"]` → `["v3"]`，**通常不并存支持多版本**——避免分支爆炸）
    - 重写受影响的 Codable 结构
@@ -296,7 +296,7 @@ GUI 自身的 IPC 行为日志写入 `~/.sieve/gui.log`（详见 SPEC-006 / SPEC
 `sieve.health` 响应的 `listeners: ListenerSnapshot[]` 字段自多 listener 改造起新增（v2.x 向后兼容扩展，**未 bump 协议版本号**）。GUI 端按以下规则消费：
 
 1. **新 daemon**（已 ship 多 listener）：返回 `listeners[]`（每项 `addr / port / provider_id / protocol`）+ `listen` 字段（= `listeners[0]` 别名，向后兼容旧 client）
-2. **旧 daemon**（多 listener 落地前的 v0.7.x）：仅返回 `listen` 单值，不发 `listeners[]`
+2. **旧 daemon**（多 listener 落地前）：仅返回 `listen` 单值，不发 `listeners[]`
 3. **GUI 解码侧**：用 `decodeIfPresent(...) ?? []` 兜底，旧 daemon → `listeners` 为空数组
 4. **GUI 渲染侧**：通过 `HealthResultDTO.effectiveListeners` 统一访问 —— 优先 `listeners[]`，空时回落到 `listen` 派生的单元素数组（`provider_id / protocol` 字段填 `"(legacy)"`）
 

@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// 唯一窗口打开入口（[ADR-003](docs/design/adr/ADR-003-window-scene-model.md)）。
+/// 唯一窗口打开入口（窗口场景模型）。
 /// 不允许使用 `@Environment(\.openWindow)`。
 @MainActor
 public final class WindowManager: NSObject {
@@ -15,9 +15,17 @@ public final class WindowManager: NSObject {
 
     public weak var ipcClient: IPCClient?
 
+    /// 解析注入的 ipcClient。正常路径 AppDelegate 已注入并强持有；若 weak 链意外断裂，
+    /// debug 下 assert 暴露（避免静默 new 一个未 connect 的孤儿 client 让窗口请求进黑洞）。
+    private func resolvedIPCClient() -> IPCClient {
+        if let c = ipcClient { return c }
+        assertionFailure("WindowManager.ipcClient 未注入 — 窗口内 IPC 请求将无响应")
+        return IPCClient()
+    }
+
     public func openSettings() {
         if let w = settingsWindow { focus(w); return }
-        let view = SettingsWindowView(appState: AppState.shared, ipcClient: ipcClient ?? IPCClient())
+        let view = SettingsWindowView(appState: AppState.shared, ipcClient: resolvedIPCClient())
         let host = NSHostingController(rootView: view)
         let w = makeWindow(title: "Sieve 设置", contentVC: host, size: NSSize(width: 720, height: 540))
         settingsWindow = w
@@ -38,7 +46,7 @@ public final class WindowManager: NSObject {
 
     public func openDebug() {
         if let w = debugWindow { focus(w); return }
-        let view = DebugWindowView(appState: AppState.shared, ipcClient: ipcClient ?? IPCClient())
+        let view = DebugWindowView(appState: AppState.shared, ipcClient: resolvedIPCClient())
             .environmentObject(DebugReplayStore.shared)
         let host = NSHostingController(rootView: view)
         let w = makeWindow(title: "Sieve 调试", contentVC: host, size: NSSize(width: 960, height: 600))
@@ -63,7 +71,7 @@ public final class WindowManager: NSObject {
         if onboardingWindow != nil { return }
         let view = OnboardingView(
             appState: AppState.shared,
-            ipcClient: ipcClient ?? IPCClient(),
+            ipcClient: resolvedIPCClient(),
             skipBridge: onboardingSkipBridge,
             onClose: { [weak self] in self?.closeOnboarding() }
         )
@@ -89,7 +97,7 @@ public final class WindowManager: NSObject {
         onboardingCloseDelegate = delegate
         w.delegate = delegate
 
-        // 使用 runModalSession 不阻塞主 RunLoop（ADR-003 / SPEC-006）
+        // 使用 runModalSession 不阻塞主 RunLoop（SPEC-006）
         let session = NSApp.beginModalSession(for: w)
         onboardingSession = session
         // 模态轮询：每 100ms 用 runModalSession 喂一次事件，让其他主线程任务（IPC/audit）不饿死

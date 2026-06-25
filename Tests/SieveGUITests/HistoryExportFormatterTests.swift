@@ -2,7 +2,7 @@ import Testing
 import Foundation
 @testable import SieveGUICore
 
-@Suite("HistoryExportFormatter — CSV/NDJSON 格式 + 脱敏正确性（ADR-011）")
+@Suite("HistoryExportFormatter — CSV/NDJSON 格式 + 脱敏正确性")
 struct HistoryExportFormatterTests {
 
     private func makeRow(
@@ -36,7 +36,7 @@ struct HistoryExportFormatterTests {
 
     // MARK: - 脱敏验证
 
-    @Test("CSV 行不包含 evidenceMetaJSON（ADR-011 红线）")
+    @Test("CSV 行不包含 evidenceMetaJSON（红线）")
     func csv_does_not_contain_evidence() {
         let formatter = HistoryExportFormatter(format: .csv)
         let line = formatter.formatLine(row: makeRow(evidenceMetaJSON: "{\"secret\":\"BIP39-word-list\"}"))
@@ -44,7 +44,7 @@ struct HistoryExportFormatterTests {
         #expect(!line.contains("evidence"))
     }
 
-    @Test("NDJSON 行不包含 evidenceMetaJSON（ADR-011 红线）")
+    @Test("NDJSON 行不包含 evidenceMetaJSON（红线）")
     func ndjson_does_not_contain_evidence() {
         let formatter = HistoryExportFormatter(format: .ndjson)
         let line = formatter.formatLine(row: makeRow(evidenceMetaJSON: "{\"secret\":\"BIP39-word-list\"}"))
@@ -125,5 +125,16 @@ struct HistoryExportFormatterTests {
         let line = formatter.formatLine(row: row)
         #expect(line.contains("\"rule,with,commas\""))
         #expect(line.contains("\"has\"\"quote\""))
+    }
+
+    @Test("NDJSON 特殊字符（引号、反斜杠、换行）转义后仍是合法 JSON 且值无损")
+    func ndjson_escapes_special_chars() throws {
+        let formatter = HistoryExportFormatter(format: .ndjson)
+        let row = makeRow(ruleId: "rule\"with\\quote\nnewline", disposition: "x", requestId: "r\"id")
+        let line = formatter.formatLine(row: row)
+        let data = line.data(using: .utf8)!
+        let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        #expect(obj?["rule_id"] as? String == "rule\"with\\quote\nnewline")
+        #expect(obj?["request_id"] as? String == "r\"id")
     }
 }

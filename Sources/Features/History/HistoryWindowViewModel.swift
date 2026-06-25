@@ -99,6 +99,27 @@ public final class HistoryWindowViewModel: ObservableObject {
         vm.loading = false
     }
 
+    /// 导出用：按当前 filter 从 reader 分页拉取**全部**行（不受 UI 内存窗口 maxKept=200 限制）。
+    /// UI 列表只保留滑动窗口（翻页后早期行已被 removeFirst 丢弃），导出必须重新走全量分页查询，
+    /// 否则用户拿到的是残缺且不可预测的子集。在后台 reader queue 分页，避免阻塞主线程。
+    public func fetchAllForExport() async -> [AuditEventRow] {
+        let f = filter
+        let reader = self.reader
+        return await Task.detached {
+            var all: [AuditEventRow] = []
+            let page = 200
+            var offset = 0
+            while true {
+                let batch = reader.recentEvents(limit: page, offset: offset, filter: f)
+                if batch.isEmpty { break }
+                all.append(contentsOf: batch)
+                if batch.count < page { break }
+                offset += page
+            }
+            return all
+        }.value
+    }
+
     private func appendIncremental() {
         let from = lastSeenId
         let reader = self.reader

@@ -2,7 +2,7 @@ import Testing
 import Foundation
 @testable import SieveGUICore
 
-/// HIPS 倒计时阶段阈值公式测试（ADR-021 / SPEC-002）。
+/// HIPS 倒计时阶段阈值公式测试（SPEC-002）。
 ///
 /// 直接调用 `HipsPhase.resolve` —— 阈值公式的唯一权威实现（核心库纯函数）。
 /// HipsPopupView.currentPhase 已改为转发到本函数，故公式一旦漂移这里即报警。

@@ -294,7 +294,7 @@ struct HipsRequestDecoderTests {
         #expect(req.hasCriticalIssue == true)
     }
 
-    /// §6.1.2 merged 3 issues + 含 critical（ADR-021 三道防线触发路径）
+    /// §6.1.2 merged 3 issues + 含 critical（三道防线触发路径）
     @Test func v2_merged_3_issues_with_critical() throws {
         let json = """
         {
@@ -364,7 +364,7 @@ struct HipsRequestDecoderTests {
         #expect(req.defaultOnTimeout == .block)
         #expect(req.receivedAtDaemon != nil)
         #expect(req.hasCriticalIssue == true)
-        // ADR-021 第三道防线：hasCriticalIssue=true 时 GUI 必须禁止"全部允许"按钮
+        // 第三道防线：hasCriticalIssue=true 时 GUI 必须禁止"全部允许"按钮
         let i1 = req.issues.first { $0.id == "i-1" }
         #expect(i1?.severity == .critical)
         #expect(i1?.allowRemember == false)

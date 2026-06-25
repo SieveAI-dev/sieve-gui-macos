@@ -3,7 +3,7 @@
 > Version: v1.0 — 2026-05-02
 > Status: Stable
 > Owner: SieveAI
-> 关联：PRD §3 §5 · [上游 architecture](../external/upstream-references.md#5-上游-architecture)
+> 关联：[上游 architecture](../external/upstream-references.md#5-上游-architecture)
 
 ---
 
@@ -141,7 +141,7 @@ Sieve GUI 是单进程 macOS accessory app（`LSUIElement = true`），承担 da
    └─ Sparkle 启动（如果设置开启自动检查更新）
 ```
 
-### 3.2 HIPS 弹窗主流程（PRD §4.1 场景 A）
+### 3.2 HIPS 弹窗主流程（GuiPopup 类决策场景）
 
 ```
 daemon                              IPCClient                HipsPanelManager        User
@@ -284,7 +284,7 @@ IPCClient detect:
 
 ## 8. 性能预算
 
-PRD §8.1 量化要求落到架构层面：
+产品性能要求落到架构层面：
 
 | 指标 | 设计承诺 | 关键设计选择 |
 |------|---------|-------------|
@@ -297,7 +297,7 @@ PRD §8.1 量化要求落到架构层面：
 
 ## 9. 安全架构
 
-详见 PRD §8.4。架构层面的关键体现：
+架构层面的关键体现：
 
 - **网络隔离**：`com.apple.security.network.client = false`，Sparkle 例外项单独处理
 - **文件权限**：`~/.sieve/` 必须 0700；GUI 启动时检查，不符合时引导

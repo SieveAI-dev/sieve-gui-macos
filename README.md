@@ -12,7 +12,7 @@ English | [中文](./README.zh-CN.md)
 
 ## What is this
 
-[Sieve](https://github.com/SieveAI-dev/sieve) is a fully local, no-cloud LLM-traffic security proxy — a single Rust daemon that sits between your AI coding agent (Claude Code / Codex CLI / Cursor) and the upstream model API (Anthropic / OpenAI / relays). It inspects traffic in both directions: redacting secrets on the way out, and blocking dangerous tool calls on the way in (fail-closed).
+[Sieve](https://github.com/SieveAI-dev/sieve) is a fully local, no-cloud LLM-traffic security proxy — a single Rust daemon that sits between your AI coding agent (Claude Code / OpenClaw / Hermes / Codex CLI) and the upstream model API (Anthropic / OpenAI / relays). It inspects traffic in both directions: redacting secrets on the way out, and blocking dangerous tool calls on the way in (fail-closed). Inbound detection runs with equal coverage across all four content routes (Anthropic and OpenAI, each in streaming and JSON modes), Critical tool-call interception is always-on and cannot be disabled, and every check runs purely locally with no remote validation. Detection rules ship as signed rule packs.
 
 The daemon is a non-interactive background process — **it cannot, and should not, draw windows.** This repository is its visual extension. The GUI is where a human actually meets Sieve:
 
@@ -20,7 +20,7 @@ The daemon is a non-interactive background process — **it cannot, and should n
 - **Menu-bar status** — at-a-glance state indicator (normal / warning / hold / paused / disconnected).
 - **History / Debug / Settings / Onboarding** — the persistent windows around the daemon.
 
-Detection logic stays 100% in the daemon; the GUI never invents protocol fields and never rewrites the values the daemon pushes. See the daemon repository at [SieveAI-dev/sieve](https://github.com/SieveAI-dev/sieve), and the full product spec in `docs/requirements/sieve-gui-macos-prd-v1.0.md`.
+Detection logic stays 100% in the daemon; the GUI never invents protocol fields and never rewrites the values the daemon pushes. See the daemon repository at [SieveAI-dev/sieve](https://github.com/SieveAI-dev/sieve) for the security model and the IPC protocol specs.
 
 ---
 
@@ -44,13 +44,9 @@ Hard constraints live in [`CLAUDE.md`](CLAUDE.md).
 docs/
 ├── DOCS-STANDARD.md            ← documentation system standard
 ├── glossary.md                 ← glossary
-├── requirements/
-│   └── sieve-gui-macos-prd-v1.0.md
 ├── design/
 │   ├── architecture.md         ← GUI process architecture
-│   ├── data-model.md           ← local data model
-│   └── adr/
-│       └── INDEX.md
+│   └── data-model.md           ← local data model
 ├── specs/
 │   ├── INDEX.md
 │   └── SPEC-001 … SPEC-008
@@ -60,16 +56,15 @@ docs/
 │   ├── development.md
 │   └── deployment.md
 └── external/
-    └── upstream-references.md  ← PRD/ADR/SPEC references from the daemon repo
+    └── upstream-references.md  ← upstream contract references from the daemon repo
 ```
 
 Recommended reading order for newcomers:
 
 1. This README
-2. `docs/requirements/sieve-gui-macos-prd-v1.0.md`
-3. [`docs/design/architecture.md`](docs/design/architecture.md)
-4. [`docs/api/ipc-protocol.md`](docs/api/ipc-protocol.md)
-5. SPECs as needed
+2. [`docs/design/architecture.md`](docs/design/architecture.md)
+3. [`docs/api/ipc-protocol.md`](docs/api/ipc-protocol.md)
+4. SPECs as needed
 
 ---
 
@@ -97,23 +92,20 @@ open SieveGUI.xcodeproj
 
 > The project is dual-track: `Package.swift` compiles only the Core libraries (Models / IPC / AuditDB / Logger / Telemetry) for fast command-line testing; the full app is built via the XcodeGen-generated `.xcodeproj`. App-target code (UI / Features / Sparkle) is only compiled by `xcodebuild` — `swift test` will not catch UI-layer compile errors, so always run `xcodebuild` to validate UI changes.
 
-> The mock-daemon subproject is not wired up yet. For now, run against a real `sieve` daemon (listening on `~/.sieve/ipc.sock`); when the daemon is absent the GUI enters the disconnected state and shows the lost-connection view.
+> IPC behavior is covered by the `MockDaemonHarness` test fixtures for fast, deterministic unit testing. For end-to-end work, run against a real `sieve` daemon (listening on `~/.sieve/ipc.sock`); when the daemon is absent the GUI enters the disconnected state and shows the lost-connection view.
 
 ---
 
 ## Project status
 
-**Public repository · pre-GA closed beta (invite-only testers).** The source is public to honor Sieve's core promise — *verifiable, not merely trusted*: users can read the security model before installing the signed binary.
+**Public repository · early preview (alpha).** The source is public to honor Sieve's core promise — *verifiable, not merely trusted*: users can read the security model before installing the signed binary. Sieve is currently available as source you build yourself and as an invite-based alpha preview, with a one-click installer and automatic rule updates on the way.
 
-Current engineering baseline:
+Capabilities the GUI surfaces today:
 
-- 50+ Swift source files; IPC fully aligned with the cross-repo SPEC-005 v2.x protocol (`listeners[]` + protocol-term neutralization).
-- `swift test` — all tests green (extensive unit suite covering IPC decoding, HIPS state machine, masking, and audit-DB access).
-- `xcodebuild` — **BUILD SUCCEEDED**, producing `SieveGUI.app` (universal).
-- All Phase 1B UX / system integration shipped (HIPS / Settings / History / Debug / Onboarding / Toast).
-- Domain migrated to `sieveai.dev` (Sparkle `SUFeedURL` + appcast + About links).
-
-The progress source of truth is `tasks/PROGRESS.md`; engineering lessons are captured in `tasks/lessons.md`.
+- Bidirectional inspection driven entirely by the daemon: outbound secret redaction plus inbound dangerous-tool-call interception with fail-closed Critical confirmation.
+- IPC aligned with the cross-repo SPEC-005 v2 protocol (`listeners[]` + protocol-term neutralization).
+- Native macOS UX surfaces: HIPS prompts, Settings, History, Debug, Onboarding, and status-bar toasts.
+- Distribution via Apple Developer ID signing, notarization, and Sparkle auto-update; About / appcast links on `sieveai.dev`.
 
 ---
 

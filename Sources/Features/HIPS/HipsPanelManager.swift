@@ -77,10 +77,12 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
     // MARK: - Present
 
     private func present(_ req: HipsRequest) {
-        // 渲染前置校验：单 issue 模式必须有 context
-        guard req.merged || req.context != nil else {
-            // 非 merged 但 context 缺失 → 视为渲染失败
-            handleRenderFailure(req: req, reason: "context missing for single-issue request")
+        // 渲染前置校验：单 issue 模式必须有 context 且有 rule_id。
+        // 缺 rule_id 时详情卡（HipsPopupView 的 `if let context, let ruleId`）整块不渲染，
+        // 用户会面对一个无任何命中详情的危险确认弹窗却仍可点「允许」——知情同意失效。
+        // 任一缺失 → fail-closed 走渲染失败（发 -32101 + 系统通知 + 关窗）。
+        guard req.merged || (req.context != nil && req.ruleId != nil) else {
+            handleRenderFailure(req: req, reason: "context/rule_id missing for single-issue request")
             return
         }
 
@@ -174,7 +176,7 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
                 self.countdownRemaining -= 1
                 if self.countdownRemaining <= 0 {
                     self.countdownTimer?.invalidate()
-                    self.closePanel(notifyDaemon: false)
+                    self.handleCountdownTimeout()
                 }
             }
         }
@@ -263,6 +265,34 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
                 await self?.ipcClient?.sendDecisionResponse(id: p.requestId, result: p.resultJSON())
             }
         }
+    }
+
+    /// 倒计时归零：用户未在 daemon 指定时限内决策。fail-closed —— 主动向 daemon 回传「拒绝」
+    /// （`by_user=false` 表示超时/回退，正是 SPEC-005 §6.2 对该字段的协议预期），而非静默关窗
+    /// 让 daemon 干等自己的 default_on_timeout。merged 请求按 denyAll 回传。
+    private func handleCountdownTimeout() {
+        guard let req = activeRequest else { return }
+        let payload: PendingDecisionPayload
+        if req.merged {
+            let perIssue = MergedDecisionBuilder.perIssues(for: req.issues, action: .denyAll)
+            payload = .merged(MergedDecisionResponse(id: req.id, perIssue: perIssue, byUser: false))
+        } else {
+            let response = DecisionResponse(
+                id: req.id, decision: .deny, remember: false,
+                contextHint: nil, byUser: false, uiPhaseWhenClicked: .red
+            )
+            payload = .single(response, allowRemember: req.allowRemember)
+        }
+        if isDisconnected {
+            // 失联期间缓存，重连握手后由 resendDisconnectedDecisions() 重发（daemon 按 request_id 去重）。
+            disconnectedCache.store(payload)
+        } else {
+            Task { [weak self] in
+                await self?.ipcClient?.sendDecisionResponse(id: req.id, result: payload.resultJSON())
+            }
+        }
+        recordHit(for: req, decision: .deny)
+        closePanel(notifyDaemon: false)
     }
 
     private func handleClose() {

@@ -2,7 +2,7 @@ import Foundation
 import os.log
 import SQLite3
 
-/// 导出诊断包。强制脱敏（[ADR-011](docs/design/adr/ADR-011-redact-on-export.md)）。
+/// 导出诊断包。强制脱敏。
 /// 不提供"明文导出"选项。
 public actor DiagnosticPackager {
     public static let shared = DiagnosticPackager()
@@ -15,7 +15,7 @@ public actor DiagnosticPackager {
         "fingerprint"
     ]
 
-    /// audit.db 脱敏时清空的列（evidence 内容不得导出，ADR-011）
+    /// audit.db 脱敏时清空的列（evidence 内容不得导出）
     public static let auditRedactedColumns: Set<String> = [
         "evidence_meta", "fingerprint", "session_id", "caller_pid", "caller_exe"
     ]
@@ -67,7 +67,7 @@ public actor DiagnosticPackager {
             "gui_version": version,
             "included_files": includedFiles,
             "redacted_columns": Array(DiagnosticPackager.auditRedactedColumns).sorted(),
-            "note": "本包已自动脱敏（ADR-011）：evidence_meta / fingerprint / session_id / caller_pid / caller_exe 已清空"
+            "note": "本包已自动脱敏：evidence_meta / fingerprint / session_id / caller_pid / caller_exe 已清空"
         ]
         if let manifestData = try? JSONSerialization.data(withJSONObject: manifest, options: [.prettyPrinted, .sortedKeys]) {
             try? manifestData.write(to: tmpDir.appendingPathComponent("manifest.json"))
@@ -87,7 +87,7 @@ public actor DiagnosticPackager {
         }
     }
 
-    /// 拷贝 audit.db 并将 evidence 列清空（ADR-011）。
+    /// 拷贝 audit.db 并将 evidence 列清空。
     /// 方法：用 SQLite3 API 复制整个 DB 文件，再对 events 表的脱敏列执行 UPDATE SET col = ''。
     /// 返回：拷贝并脱敏是否成功。
     public func copyAuditDBRedacted(src: String, dst: String) -> Bool {
@@ -109,15 +109,28 @@ public actor DiagnosticPackager {
         }
         defer { sqlite3_close(db) }
 
-        // 获取 events 表实际存在的列
+        // 获取 events 表实际存在的列。
         let existingCols = getTableColumns(db: db, table: "events")
+        // events 表不存在（返回空集）= schema 不符预期。绝不能当作"无敏感列"放行——
+        // 那会把一个结构未知、可能含未脱敏 evidence 的库原样塞进诊断包。拒绝导出。
+        guard !existingCols.isEmpty else {
+            logger.error("audit.db redact: events 表不存在，拒绝导出未知 schema 的库")
+            return false
+        }
         let colsToRedact = DiagnosticPackager.auditRedactedColumns.filter { existingCols.contains($0) }
-        guard !colsToRedact.isEmpty else { return true }  // 没有敏感列则直接返回成功
-
-        let setClauses = colsToRedact.map { "\($0) = ''" }.joined(separator: ", ")
-        let sql = "UPDATE events SET \(setClauses)"
-        if sqlite3_exec(db, sql, nil, nil, nil) != SQLITE_OK {
-            logger.error("audit.db redact UPDATE failed")
+        // events 表存在但无任一敏感列 = 该 schema 本就不含 evidence，跳过 UPDATE。
+        if !colsToRedact.isEmpty {
+            let setClauses = colsToRedact.map { "\($0) = ''" }.joined(separator: ", ")
+            let sql = "UPDATE events SET \(setClauses)"
+            if sqlite3_exec(db, sql, nil, nil, nil) != SQLITE_OK {
+                logger.error("audit.db redact UPDATE failed")
+                return false
+            }
+        }
+        // VACUUM 回收被清空列占用的页，否则旧 evidence 明文残留在 SQLite freelist，
+        // strings(1) 仍可从拷贝文件恢复——脱敏形同虚设。
+        if sqlite3_exec(db, "VACUUM", nil, nil, nil) != SQLITE_OK {
+            logger.error("audit.db redact VACUUM failed")
             return false
         }
         return true
