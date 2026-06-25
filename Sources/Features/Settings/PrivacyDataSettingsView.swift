@@ -33,7 +33,7 @@ public struct PrivacyDataSettingsView: View {
                             Label("清空历史…", systemImage: "trash")
                         }
                     }
-                    .disabled(purging || purgeUnavailable)
+                    .disabled(purging || purgeUnavailable || isDisconnected)
 
                     if purgeUnavailable {
                         Text("daemon 版本过旧，不支持清空历史（需升级 daemon）")
@@ -132,6 +132,11 @@ public struct PrivacyDataSettingsView: View {
                 showPurgeError = true
             }
         }
+    }
+
+    private var isDisconnected: Bool {
+        if case .disconnected = appState.daemonStatus { return true }
+        return false
     }
 }
 
