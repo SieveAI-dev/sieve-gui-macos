@@ -204,8 +204,20 @@ public struct OnboardingView: View {
             HStack {
                 Spacer()
                 Button("继续") {
-                    ipcClient.sendRequestAndForget(id: UUID().uuidString, method: "sieve.set_preset", params: SetPresetParams(mode: selectedPreset.rawValue))
-                    appState.updatePreset(selectedPreset)
+                    let id = UUID().uuidString
+                    let chosen = selectedPreset
+                    appState.updatePreset(chosen) // 乐观更新
+                    Task {
+                        // echo 抑制：注册先于发送（同 DetectionPresetView 范式），否则 daemon
+                        // 回推的 preset_changed 不被识别为本地回声而被重复 applyPresetChanged。
+                        await ipcClient.registerMutatingRequest(id)
+                        _ = try? await ipcClient.sendRequest(
+                            id: id,
+                            method: "sieve.set_preset",
+                            params: SetPresetParams(mode: chosen.rawValue)
+                        )
+                        ipcClient.unregisterMutatingRequest(id)
+                    }
                     step = 6
                 }
                 .buttonStyle(.borderedProminent)
