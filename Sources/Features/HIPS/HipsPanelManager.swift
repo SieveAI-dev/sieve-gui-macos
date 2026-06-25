@@ -240,6 +240,14 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
             }
         }
 
+        // denyAll 时对各 issue 的 rule_id 记录 deny 时间（对称单 issue handleDecision），
+        // 使 5s 内同 rule_id 再弹窗触发防误点按钮换位——修 merged 决策从不进 denyTracker
+        // 致换位机制对 merged 拒绝后的后续单 issue 弹窗空转的问题。
+        if action == .denyAll {
+            for issue in req.issues {
+                denyTracker.recordDeny(ruleId: issue.ruleId)
+            }
+        }
         recordHit(for: req, decision: action == .denyAll ? .deny : .allow)
         closePanel(notifyDaemon: false)
     }
