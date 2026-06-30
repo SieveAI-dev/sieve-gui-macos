@@ -32,8 +32,12 @@ public final class WindowManager: NSObject {
         focus(w)
     }
 
-    public func openHistory() {
-        if let w = historyWindow { focus(w); return }
+    public func openHistory(requestId: String? = nil) {
+        if let w = historyWindow {
+            focus(w)
+            if let requestId { historyVM?.selectAndReveal(requestId: requestId) }
+            return
+        }
         let reader = AuditDBReader()
         let vm = HistoryWindowViewModel(reader: reader)
         historyVM = vm
@@ -42,6 +46,10 @@ public final class WindowManager: NSObject {
         let w = makeWindow(title: "Sieve 历史", contentVC: host, size: NSSize(width: 1080, height: 660))
         historyWindow = w
         focus(w)
+        if let requestId {
+            // View.onAppear 会先 open reader；下一轮 RunLoop 再执行精确定位。
+            DispatchQueue.main.async { vm.selectAndReveal(requestId: requestId) }
+        }
     }
 
     public func openDebug() {

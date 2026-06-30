@@ -17,7 +17,7 @@ public final class MenuBarController: NSObject, NSPopoverDelegate {
     public func install(ipcClient: IPCClient) {
         self.ipcClient = ipcClient
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        item.button?.image = StatusBarIcon.image(for: appState.daemonStatus)
+        configureStatusButton(item.button, for: appState.daemonStatus)
         item.button?.action = #selector(togglePopover(_:))
         item.button?.target = self
         item.button?.imagePosition = .imageLeading
@@ -30,8 +30,7 @@ public final class MenuBarController: NSObject, NSPopoverDelegate {
         appState.$daemonStatus
             .receive(on: DispatchQueue.main)
             .sink { [weak self] status in
-                self?.statusItem?.button?.image = StatusBarIcon.image(for: status)
-                self?.statusItem?.button?.toolTip = StatusBarIcon.accessibilityLabel(for: status)
+                self?.configureStatusButton(self?.statusItem?.button, for: status)
             }
             .store(in: &cancellables)
 
@@ -48,6 +47,12 @@ public final class MenuBarController: NSObject, NSPopoverDelegate {
                 self?.updateWarningBadge(count)
             }
             .store(in: &cancellables)
+    }
+
+    private func configureStatusButton(_ button: NSStatusBarButton?, for status: DaemonStatus) {
+        button?.image = StatusBarIcon.image(for: status)
+        button?.toolTip = StatusBarIcon.accessibilityLabel(for: status)
+        button?.setAccessibilityTitle(StatusBarIcon.accessibilityTitle(for: status))
     }
 
     private func updateHoldBadge(_ secs: Int) {
@@ -95,7 +100,7 @@ public final class MenuBarController: NSObject, NSPopoverDelegate {
         let view = QuickMenuView(
             appState: appState,
             onOpenSettings: { [weak self] in self?.openWindow(.settings) },
-            onOpenHistory: { [weak self] in self?.openWindow(.history) },
+            onOpenHistory: { [weak self] requestId in self?.openHistory(requestId: requestId) },
             onOpenDebug: { [weak self] in self?.openWindow(.debug) },
             onOpenOnboarding: { [weak self] in self?.openWindow(.onboarding) },
             onPause: { [weak self] minutes in self?.requestPause(minutes: minutes) },
@@ -120,6 +125,11 @@ public final class MenuBarController: NSObject, NSPopoverDelegate {
         case .debug: WindowManager.shared.openDebug()
         case .onboarding: WindowManager.shared.openOnboarding()
         }
+    }
+
+    private func openHistory(requestId: String?) {
+        popover?.performClose(nil)
+        WindowManager.shared.openHistory(requestId: requestId)
     }
 
     private func requestPause(minutes: Int) {
@@ -153,27 +163,37 @@ public final class MenuBarController: NSObject, NSPopoverDelegate {
 
     private func requestResume() {
         let resumeId = UUID().uuidString
+        let previousPaused = appState.paused
+        let previousPausedUntil = appState.pausedUntil
         appState.updatePaused(false, until: nil)
         Task { [weak self] in
             guard let self = self, let client = self.ipcClient else { return }
             await client.registerMutatingRequest(resumeId)   // 注册先于发送，避免 echo 漏判
-            client.sendRequestAndForget(
-                id: resumeId,
-                method: "sieve.set_paused",
-                params: SetPausedParams(minutes: 0)
-            )
-            // fire-and-forget 无法 await 结果，延迟 10s 后自动反注册（避免集合永久增长）
-            try? await Task.sleep(nanoseconds: 10_000_000_000)
-            client.unregisterMutatingRequest(resumeId)
+            do {
+                let data = try await client.sendRequest(
+                    id: resumeId,
+                    method: "sieve.set_paused",
+                    params: SetPausedParams(minutes: 0)
+                )
+                client.unregisterMutatingRequest(resumeId)
+                if let resp = try? JSONDecoder().decode(SetPausedResult.self, from: data) {
+                    await MainActor.run { self.appState.updatePaused(resp.paused, until: resp.pausedUntil) }
+                }
+            } catch {
+                client.unregisterMutatingRequest(resumeId)
+                await MainActor.run { self.appState.updatePaused(previousPaused, until: previousPausedUntil) }
+                await GUILog.shared.warn("resume set_paused 失败：\(error)", category: "menubar")
+            }
         }
     }
 
-    private func confirmQuit() {
+    public func confirmQuit() {
+        let content = QuitConfirmationContent.menuBarDefault
         let alert = NSAlert()
-        alert.messageText = "退出 Sieve GUI？"
-        alert.informativeText = "退出后 daemon 仍会继续运行，但你将看不到 HIPS 弹窗与状态栏图标。"
-        alert.addButton(withTitle: "退出")
-        alert.addButton(withTitle: "取消")
+        alert.messageText = content.message
+        alert.informativeText = content.informativeText
+        alert.addButton(withTitle: content.confirmButtonTitle)
+        alert.addButton(withTitle: content.cancelButtonTitle)
         if alert.runModal() == .alertFirstButtonReturn {
             NSApp.terminate(nil)
         }

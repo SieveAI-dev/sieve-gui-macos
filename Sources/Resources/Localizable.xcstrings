@@ -41,10 +41,10 @@
     "~/.sieve/audit.db" : {
 
     },
-    "~/.sieve/config.toml" : {
+    "~/.sieve/ipc.sock" : {
 
     },
-    "~/.sieve/ipc.sock" : {
+    "~/.sieve/sieve.toml" : {
 
     },
     "⌘%@" : {
@@ -69,9 +69,6 @@
 
     },
     "block" : {
-
-    },
-    "caller_pid" : {
 
     },
     "Critical 拦截仍然生效" : {
@@ -160,9 +157,6 @@
     "fields: %@" : {
 
     },
-    "fingerprint" : {
-
-    },
     "got %@ / want %@" : {
       "localizations" : {
         "zh-Hans" : {
@@ -177,6 +171,9 @@
 
     },
     "hash" : {
+
+    },
+    "HIPS 弹窗触发时播放（%@）。" : {
 
     },
     "Inbound" : {
@@ -212,13 +209,7 @@
     "Preset: %@" : {
 
     },
-    "redact" : {
-
-    },
     "rule_id" : {
-
-    },
-    "session_id" : {
 
     },
     "severity" : {
@@ -423,6 +414,9 @@
     "全部允许" : {
 
     },
+    "共 %@ 条" : {
+
+    },
     "最近命中" : {
       "comment" : "菜单栏快捷菜单「最近命中」区域标题",
       "localizations" : {
@@ -609,6 +603,9 @@
     "已导出：%@" : {
 
     },
+    "已暂停" : {
+
+    },
     "已暂停至 %@" : {
 
     },
@@ -686,6 +683,9 @@
 
     },
     "未在 PATH 或常见路径找到 sieve 命令，且 ~/.sieve/ipc.sock 不存在。请确保你已安装完整的 Sieve（.dmg），再重试。" : {
+
+    },
+    "模型回复片段" : {
 
     },
     "欢迎使用 Sieve" : {

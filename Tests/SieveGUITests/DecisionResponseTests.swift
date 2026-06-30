@@ -16,6 +16,7 @@ struct DecisionResponseTests {
         )
         let result = response.resultJSON(allowRemember: false)
         #expect(result["remember"] as? Bool == false)
+        #expect(result["context_hint"] is NSNull)
     }
 
     @Test("allow_remember=true 时如实传递 remember 值")
@@ -30,6 +31,39 @@ struct DecisionResponseTests {
         )
         let result = response.resultJSON(allowRemember: true)
         #expect(result["remember"] as? Bool == true)
+    }
+
+    @Test("context_hint 只在 allow + remember + allow_remember=true 时保留")
+    func context_hint_requires_allow_and_remember() {
+        let denied = DecisionResponse(
+            id: "r-deny",
+            decision: .deny,
+            remember: true,
+            contextHint: "keep?",
+            byUser: true,
+            uiPhaseWhenClicked: .blue
+        )
+        #expect(denied.resultJSON(allowRemember: true)["context_hint"] is NSNull)
+
+        let allowedNotRemembered = DecisionResponse(
+            id: "r-allow-no-remember",
+            decision: .allow,
+            remember: false,
+            contextHint: "keep?",
+            byUser: true,
+            uiPhaseWhenClicked: .blue
+        )
+        #expect(allowedNotRemembered.resultJSON(allowRemember: true)["context_hint"] is NSNull)
+
+        let allowedRemembered = DecisionResponse(
+            id: "r-allow-remember",
+            decision: .allow,
+            remember: true,
+            contextHint: "keep",
+            byUser: true,
+            uiPhaseWhenClicked: .blue
+        )
+        #expect(allowedRemembered.resultJSON(allowRemember: true)["context_hint"] as? String == "keep")
     }
 
     @Test("merged 部分允许：每个 issue 独立强制")

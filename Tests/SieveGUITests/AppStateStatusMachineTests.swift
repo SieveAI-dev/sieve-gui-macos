@@ -71,4 +71,54 @@ struct AppStateStatusMachineTests {
         state.markConnected()
         #expect(state.daemonStatus == .normal)
     }
+
+    @Test("socket 存在但拒绝连接时显示 connectionRefused，而不是误报 socketMissing")
+    func connectionRefusedIsDistinctFromMissingSocket() {
+        let state = makeState()
+        state.applyDisconnect(reason: .connectionRefused)
+        #expect(state.daemonStatus == .disconnected(reason: .connectionRefused))
+    }
+
+    @Test("Toast 栈满时 terminal/generic 降级可显式累计角标")
+    func toastOverflowBumpsWarningBadge() {
+        let state = makeState()
+        state.markConnected()
+        state.recordToastOverflow()
+        #expect(state.warningHitCount == 1)
+        #expect(state.daemonStatus == .warning)
+    }
+
+    @Test("菜单栏图标状态描述符合 SPEC-001 的颜色与无障碍名称")
+    func statusBarIconPresentationMatchesSpec() {
+        let normal = StatusBarIconPresentation.resolve(for: .normal)
+        #expect(normal.tint == .template)
+        #expect(normal.accessibilityTitle == "Sieve — 正常")
+
+        let warning = StatusBarIconPresentation.resolve(for: .warning)
+        #expect(warning.tint == .warning)
+        #expect(warning.symbolName.contains("exclamationmark"))
+        #expect(warning.accessibilityTitle == "Sieve — 有警告")
+
+        let hold = StatusBarIconPresentation.resolve(for: .hold)
+        #expect(hold.tint == .danger)
+        #expect(hold.accessibilityTitle == "Sieve — 等待用户决策")
+
+        let paused = StatusBarIconPresentation.resolve(for: .paused(until: nil))
+        #expect(paused.tint == .disabled)
+        #expect(paused.accessibilityTitle == "Sieve — 已暂停")
+
+        let disconnected = StatusBarIconPresentation.resolve(for: .disconnected(reason: .connectionRefused))
+        #expect(disconnected.tint == .danger)
+        #expect(disconnected.accessibilityTitle == "Sieve — 失联")
+    }
+
+    @Test("退出命令必须提示 daemon 仍在运行")
+    func quitConfirmationWarnsDaemonKeepsRunning() {
+        let content = QuitConfirmationContent.menuBarDefault
+        #expect(content.message == "退出 Sieve GUI？")
+        #expect(content.informativeText.contains("daemon 仍在运行"))
+        #expect(content.informativeText.contains("重新打开 Sieve GUI 即可恢复 HIPS 弹窗"))
+        #expect(content.confirmButtonTitle == "退出")
+        #expect(content.cancelButtonTitle == "取消")
+    }
 }

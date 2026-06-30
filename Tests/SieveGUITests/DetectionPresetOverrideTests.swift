@@ -21,16 +21,18 @@ struct DetectionPresetOverrideTests {
 
     @Test("timeout_seconds 在 [30, 600] 范围内不变")
     func valid_timeout_unchanged() {
-        let o = RuleOverride(ruleId: "OUT-02", timeoutSeconds: 120, defaultOnTimeout: "redact")
+        let o = RuleOverride(ruleId: "OUT-02", timeoutSeconds: 120, defaultOnTimeout: "allow")
         #expect(o.timeoutSeconds == 120)
     }
 
-    @Test("default_on_timeout 三个合法值不做变换")
+    @Test("default_on_timeout 只允许 block / allow")
     func valid_dot_values() {
-        for dot in RuleOverride.validDefaults {
-            let o = RuleOverride(ruleId: "OUT-01", timeoutSeconds: 60, defaultOnTimeout: dot)
-            #expect(o.defaultOnTimeout == dot)
-        }
+        #expect(RuleOverride.validDefaults == ["block", "allow"])
+        #expect(!RuleOverride.validDefaults.contains("redact"))
+        let allow = RuleOverride(ruleId: "OUT-01", timeoutSeconds: 60, defaultOnTimeout: "allow")
+        let block = RuleOverride(ruleId: "OUT-01", timeoutSeconds: 60, defaultOnTimeout: "block")
+        #expect(allow.defaultOnTimeout == "allow")
+        #expect(block.defaultOnTimeout == "block")
     }
 
     // MARK: - SetPresetOverridesParams 编码

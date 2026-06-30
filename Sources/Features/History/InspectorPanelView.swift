@@ -6,6 +6,7 @@ public struct InspectorPanelView: View {
     @State private var unlocking: Bool = false
 
     public var body: some View {
+        let presentation = HistoryInspectorPresentation(row: row, contentUnlocked: contentUnlocked)
         ScrollView {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 6) {
@@ -19,30 +20,14 @@ public struct InspectorPanelView: View {
                 fieldRow("disposition", row.disposition)
                 if let uc = row.userChoice { fieldRow("user_choice", uc) }
                 fieldRow("created_at", DateFormatter.localizedString(from: row.createdAt, dateStyle: .short, timeStyle: .medium))
-
-                if let fp = row.fingerprint {
-                    HStack {
-                        Text("fingerprint").font(.caption).foregroundStyle(.secondary)
-                        MaskedField(fp, style: .prefix4Suffix4, isUnlocked: contentUnlocked)
-                    }
-                }
-                if let sid = row.sessionId {
-                    HStack {
-                        Text("session_id").font(.caption).foregroundStyle(.secondary)
-                        MaskedField(sid, style: .sessionTrunc, isUnlocked: contentUnlocked)
-                    }
-                }
-                if let pid = row.callerPid {
-                    HStack {
-                        Text("caller_pid").font(.caption).foregroundStyle(.secondary)
-                        // 红线：敏感字段统一走 MaskedField，禁裸 Text；解锁判定与列表同源。
-                        MaskedField("\(pid)", style: .clearWhenUnlocked, isUnlocked: contentUnlocked)
-                    }
-                }
+                fieldRow("fingerprint", presentation.fingerprintText, mono: true)
+                fieldRow("session_id", presentation.sessionIdText, mono: true)
+                fieldRow("caller_pid", presentation.callerPidText, mono: true)
+                fieldRow("caller_exe", presentation.callerExeBasename, mono: true)
 
                 Divider()
 
-                evidenceMetaSection
+                evidenceMetaSection(presentation: presentation)
 
                 HStack(spacing: 8) {
                     if !appState.isUnlocked {
@@ -91,7 +76,7 @@ public struct InspectorPanelView: View {
         HistoryMaskPolicy.contentUnlocked(appState)
     }
 
-    private var evidenceMetaSection: some View {
+    private func evidenceMetaSection(presentation: HistoryInspectorPresentation) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("evidence_meta").font(.caption).foregroundStyle(.secondary)
             if contentUnlocked, let json = row.evidenceMetaJSON {
@@ -102,7 +87,8 @@ public struct InspectorPanelView: View {
                 }
                 .frame(maxHeight: 180)
             } else {
-                MaskedField(row.evidenceMetaJSON ?? "", style: .clearWhenUnlocked, isUnlocked: false)
+                // 已脱敏摘要只保留 len/tool_name 等安全字段；仍走 MaskedField 入口，避免裸渲染原始 evidence。
+                MaskedField(presentation.evidenceMetaText, style: .clearWhenUnlocked, isUnlocked: true)
             }
         }
     }

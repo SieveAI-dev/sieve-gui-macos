@@ -40,7 +40,7 @@ public actor HistoryExporter {
         let formatter = HistoryExportFormatter(format: format)
         var lines: [String] = []
         if format == .csv {
-            lines.append("id,created_at,direction,severity,rule_id,disposition,user_choice,request_id")
+            lines.append(HistoryExportFormatter.csvHeader)
         }
 
         for (i, row) in rows.enumerated() {

@@ -50,7 +50,11 @@ public final class ToastController: NSObject, IPCToastAdapter {
         }
         // 上限 3 条 → 转角标
         if stack.count >= 3 {
-            // appState 已在 IPCAdapter 累计 warningHitCount
+            // outboundRedacted/sequenceHit/loadFailed/reloaded 已由 AppState.recordHit
+            // 按 redact/marked 计数；terminal/generic 不在该 action 子集，需在降级时显式补计。
+            if params.kind == .hookTerminal || params.kind == .generic {
+                appState.recordToastOverflow()
+            }
             return
         }
         // direction/severity wire 不再携带，由 kind 派生展示语义（仅 Toast 图标用）。

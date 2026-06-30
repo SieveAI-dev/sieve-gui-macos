@@ -70,6 +70,33 @@ public struct UserSettings: Sendable, Equatable {
     }
 }
 
+public enum GraylistSheetPresentation: Sendable, Equatable {
+    case loading
+    case error(String)
+    case empty
+    case entries(Int)
+
+    public static func resolve(loading: Bool, errorMessage: String?, entryCount: Int) -> GraylistSheetPresentation {
+        if loading { return .loading }
+        if let errorMessage, !errorMessage.isEmpty { return .error(errorMessage) }
+        if entryCount == 0 { return .empty }
+        return .entries(entryCount)
+    }
+}
+
+@MainActor
+public protocol AppUpdater: AnyObject {
+    var isAutoCheckEnabled: Bool { get set }
+    func checkForUpdates()
+}
+
+@MainActor
+public enum UpdateSettingsSync {
+    public static func applyAutoCheckSetting(_ enabled: Bool, to updater: AppUpdater) {
+        updater.isAutoCheckEnabled = enabled
+    }
+}
+
 public final class UserSettingsStore: @unchecked Sendable {
     private let defaults: UserDefaults
 

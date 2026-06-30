@@ -174,26 +174,35 @@ struct ReloadConfigResultTests {
 
 @Suite("context_hint unicode scalar truncation")
 struct ContextHintTruncationTests {
-    @Test func truncates_at_200_scalars_not_chars() {
+    @Test func drops_hint_when_not_remembered_even_if_allowed() {
         // Each emoji is 1 Unicode scalar but may be > 1 Character in some encodings
         // Use CJK characters (each is 1 scalar) for predictability
         let longHint = String(repeating: "字", count: 250)
         let response = DecisionResponse(
             id: "r-1", decision: .allow, remember: false, contextHint: longHint, byUser: true, uiPhaseWhenClicked: .blue
         )
-        let result = response.resultJSON(allowRemember: false)
+        let result = response.resultJSON(allowRemember: true)
+        #expect(result["context_hint"] is NSNull)
+    }
+
+    @Test func truncates_at_200_scalars_when_allow_remember_and_remembered() {
+        let longHint = String(repeating: "字", count: 250)
+        let response = DecisionResponse(
+            id: "r-1", decision: .allow, remember: true, contextHint: longHint, byUser: true, uiPhaseWhenClicked: .blue
+        )
+        let result = response.resultJSON(allowRemember: true)
         let hint = result["context_hint"] as? String
         #expect(hint != nil)
         #expect(hint?.unicodeScalars.count == 200)
     }
 
-    @Test func passes_through_hint_within_limit() {
+    @Test func drops_hint_for_deny() {
         let shortHint = "short"
         let response = DecisionResponse(
             id: "r-2", decision: .deny, remember: false, contextHint: shortHint, byUser: true, uiPhaseWhenClicked: .blue
         )
-        let result = response.resultJSON(allowRemember: false)
-        #expect(result["context_hint"] as? String == "short")
+        let result = response.resultJSON(allowRemember: true)
+        #expect(result["context_hint"] is NSNull)
     }
 }
 

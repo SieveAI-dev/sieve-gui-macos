@@ -80,6 +80,26 @@ struct HealthResultDTOTests {
         #expect(dto.ipc.totalDecisionsInflight == 0)
     }
 
+    @Test("Daemon Settings：IPC 失联时只禁用 reload，health 和 doctor 仍可尝试")
+    func daemon_settings_actions_when_disconnected() {
+        let availability = DaemonSettingsActionAvailability.resolve(
+            daemonStatus: .disconnected(reason: .connectionRefused)
+        )
+
+        #expect(availability.canReloadConfig == false)
+        #expect(availability.canRunHealthCheck == true)
+        #expect(availability.canRunDoctor == true)
+    }
+
+    @Test("Daemon Settings：连接态允许 reload、health 和 doctor")
+    func daemon_settings_actions_when_connected() {
+        let availability = DaemonSettingsActionAvailability.resolve(daemonStatus: .normal)
+
+        #expect(availability.canReloadConfig == true)
+        #expect(availability.canRunHealthCheck == true)
+        #expect(availability.canRunDoctor == true)
+    }
+
     // MARK: - 旧 daemon 兼容路径
 
     @Test("旧 daemon：仅 listen 字段，无 listeners → effectiveListeners 退化")

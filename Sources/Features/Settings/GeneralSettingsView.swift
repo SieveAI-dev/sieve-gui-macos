@@ -1,11 +1,13 @@
 import SwiftUI
 import ServiceManagement
+import AppKit
 
 public struct GeneralSettingsView: View {
     @ObservedObject var appState: AppState
     @State private var loginItemError: String? = nil
     @State private var showLoginItemAlert: Bool = false
     @State private var languageRestartPending: Bool = false
+    @State private var soundPreviewError: String? = nil
 
     public var body: some View {
         Form {
@@ -64,7 +66,22 @@ public struct GeneralSettingsView: View {
                 }
             }
             Section("提示音与 Toast") {
-                Toggle("HIPS 弹窗提示音", isOn: $appState.settings.hipsSoundEnabled)
+                HStack {
+                    Toggle("HIPS 弹窗提示音", isOn: $appState.settings.hipsSoundEnabled)
+                    Spacer()
+                    Button("试听") {
+                        previewHipsSound()
+                    }
+                }
+                Text("HIPS 弹窗触发时播放（\(appState.settings.hipsSoundName)）。")
+                    .font(.caption).foregroundStyle(.secondary)
+                if let soundPreviewError {
+                    HStack(spacing: 6) {
+                        Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                        Text(soundPreviewError).font(.caption).foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 2)
+                }
                 Stepper(value: $appState.settings.toastDurationSeconds, in: 3...10) {
                     Text("Toast 时长：\(appState.settings.toastDurationSeconds)s")
                 }
@@ -84,6 +101,18 @@ public struct GeneralSettingsView: View {
         } message: {
             Text(loginItemError ?? "请前往 System Settings → General → Login Items 手动启用 Sieve GUI。")
         }
+    }
+
+    private func previewHipsSound() {
+        let requestedName = appState.settings.hipsSoundName
+        let sound = NSSound(named: NSSound.Name(requestedName)) ?? NSSound(named: NSSound.Name(UserSettings.default.hipsSoundName))
+        guard let sound else {
+            soundPreviewError = "无法播放提示音：\(requestedName)"
+            return
+        }
+        soundPreviewError = nil
+        sound.stop()
+        sound.play()
     }
 
     /// 应用主题：直接设置 NSApp.appearance，即时生效。

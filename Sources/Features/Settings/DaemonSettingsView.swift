@@ -6,8 +6,12 @@ public struct DaemonSettingsView: View {
 
     @State private var health: HealthResultDTO?
     @State private var healthFetchedAt: Date?
+    @State private var healthErrorMessage: String?
+    @State private var operationMessage: String?
+    @State private var operationIsError: Bool = false
 
     public var body: some View {
+        let availability = DaemonSettingsActionAvailability.resolve(daemonStatus: appState.daemonStatus)
         Form {
             Section("运行状态") {
                 LabeledContent("daemon 版本") { Text(appState.daemonVersion ?? "—") }
@@ -36,9 +40,14 @@ public struct DaemonSettingsView: View {
                 } else {
                     Text("daemon 暂未上报 listener").foregroundStyle(.secondary).font(.callout)
                 }
+                if let healthErrorMessage {
+                    Text(healthErrorMessage)
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
             }
             Section("配置") {
-                LabeledContent("配置文件") { Text("~/.sieve/config.toml").font(.system(.caption, design: .monospaced)) }
+                LabeledContent("配置文件") { Text("~/.sieve/sieve.toml").font(.system(.caption, design: .monospaced)) }
                 LabeledContent("audit.db") { Text("~/.sieve/audit.db").font(.system(.caption, design: .monospaced)) }
                 LabeledContent("ipc socket") { Text("~/.sieve/ipc.sock").font(.system(.caption, design: .monospaced)) }
             }
@@ -50,18 +59,33 @@ public struct DaemonSettingsView: View {
                                 let data = try await ipcClient.sendRequest(id: UUID().uuidString, method: "sieve.reload_config")
                                 if let r = try? JSONDecoder().decode(ReloadConfigResult.self, from: data) {
                                     await GUILog.shared.info("reload_config ok: system=\(r.systemRulesCount) user=\(r.userRulesCount) errors=\(r.userRulesErrors.count)", category: "settings")
+                                    await MainActor.run {
+                                        operationMessage = "配置已重载（\(r.systemRulesCount + r.userRulesCount) 条规则）"
+                                        operationIsError = false
+                                    }
                                 }
                             } catch {
                                 await GUILog.shared.warn("reload_config failed: \(error)", category: "settings")
+                                await MainActor.run {
+                                    operationMessage = "Reload 配置失败：\(error.localizedDescription)"
+                                    operationIsError = true
+                                }
                             }
                         }
                     }
+                    .disabled(!availability.canReloadConfig)
                     Button("Health Check") { Task { await fetchHealth() } }
+                        .disabled(!availability.canRunHealthCheck)
                     Button("运行 sieve doctor…") {
                         runSieveDoctor()
                     }
+                    .disabled(!availability.canRunDoctor)
                 }
-                .disabled(isDisconnected)
+                if let operationMessage {
+                    Text(operationMessage)
+                        .font(.caption)
+                        .foregroundStyle(operationIsError ? .orange : .secondary)
+                }
             }
         }
         .formStyle(.grouped)
@@ -91,15 +115,20 @@ public struct DaemonSettingsView: View {
             await MainActor.run {
                 self.health = dto
                 self.healthFetchedAt = Date()
+                self.healthErrorMessage = nil
+                self.operationMessage = "Health Check 已刷新"
+                self.operationIsError = false
             }
         } catch {
             await GUILog.shared.warn("sieve.health failed: \(error)", category: "settings")
+            await MainActor.run {
+                self.health = nil
+                self.healthFetchedAt = Date()
+                self.healthErrorMessage = "Health Check 失败：—"
+                self.operationMessage = "Health Check 失败，请检查 daemon 连接状态"
+                self.operationIsError = true
+            }
         }
-    }
-
-    private var isDisconnected: Bool {
-        if case .disconnected = appState.daemonStatus { return true }
-        return false
     }
 
     private func dateLabel(_ d: Date) -> String {
@@ -111,12 +140,22 @@ public struct DaemonSettingsView: View {
 
     private func runSieveDoctor() {
         guard let bin = SieveBinaryLocator.resolve() else {
+            operationMessage = "找不到 sieve 可执行文件，无法运行 doctor"
+            operationIsError = true
             Task { await GUILog.shared.warn("找不到 sieve 可执行文件，无法运行 doctor", category: "settings") }
             return
         }
         let task = Process()
         task.launchPath = bin
         task.arguments = ["doctor"]
-        try? task.run()
+        do {
+            try task.run()
+            operationMessage = "sieve doctor 已启动"
+            operationIsError = false
+        } catch {
+            operationMessage = "运行 sieve doctor 失败：\(error.localizedDescription)"
+            operationIsError = true
+            Task { await GUILog.shared.warn("sieve doctor failed: \(error)", category: "settings") }
+        }
     }
 }

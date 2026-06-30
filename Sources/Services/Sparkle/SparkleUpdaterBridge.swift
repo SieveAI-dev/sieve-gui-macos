@@ -31,3 +31,5 @@ public final class SparkleUpdaterBridge: NSObject {
     }
     #endif
 }
+
+extension SparkleUpdaterBridge: AppUpdater {}

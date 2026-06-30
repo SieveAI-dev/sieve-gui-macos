@@ -38,11 +38,10 @@ public struct CountdownView: View {
     private var flashOpacity: Double { phase == .red ? 0.4 : 1.0 }
 
     public var phase: HipsPhase {
-        guard totalSeconds > 0 else { return .red }
-        let r = Double(remainingSeconds) / Double(totalSeconds)
-        if r > 0.5 { return .blue }
-        if r > 0.2 { return .orange }
-        return .red
+        HipsPhase.resolve(
+            remaining: Double(remainingSeconds),
+            total: Double(totalSeconds)
+        )
     }
 
     private var progress: Double {
@@ -93,6 +92,7 @@ public struct DisconnectedBanner: View {
     private var detail: String {
         switch reason {
         case .socketMissing: return "找不到 ~/.sieve/ipc.sock，daemon 可能未启动。"
+        case .connectionRefused: return "~/.sieve/ipc.sock 存在，但 daemon 拒绝连接，请重启 daemon。"
         case .heartbeatTimeout: return "30 秒未收到 daemon 消息。"
         case .versionMismatch: return "协议版本不兼容，请同步升级 daemon 与 GUI。"
         case .daemonShutdown: return "daemon 主动关闭了连接。"

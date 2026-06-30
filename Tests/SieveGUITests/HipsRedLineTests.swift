@@ -40,36 +40,17 @@ struct HipsRedLineTests {
 
     @Test("Phase3：剩余 20% → currentPhase = .red")
     func phase3_at_20_percent_threshold() {
-        // 模拟 holdRemainingSeconds = 20% of 30 = 6
-        // 等价于 HipsPopupView.currentPhase 计算：ratio = 6/30 = 0.2 → .red
-        let total = 30
-        let remaining = 6  // 正好 20%
-        let ratio = Double(remaining) / Double(total)
-        let phase: HipsPhase = ratio > 0.5 ? .blue : (ratio > 0.2 ? .orange : .red)
-        // ratio == 0.2 不满足 > 0.2，所以是 .red
-        #expect(phase == .red)
+        #expect(HipsPhase.resolve(remaining: 6, total: 30) == .red)
     }
 
     @Test("Phase3：剩余 21% → currentPhase = .orange（边界）")
     func phase_just_above_20_percent_is_orange() {
-        let total = 100
-        let remaining = 21
-        let ratio = Double(remaining) / Double(total)
-        let phase: HipsPhase = ratio > 0.5 ? .blue : (ratio > 0.2 ? .orange : .red)
-        #expect(phase == .orange)
+        #expect(HipsPhase.resolve(remaining: 21, total: 100) == .orange)
     }
 
     @Test("Phase3：timeoutSeconds=0 → currentPhase = .red（防除零）")
     func phase_zero_timeout_is_red() {
-        let total = 0
-        let phase: HipsPhase
-        if total <= 0 {
-            phase = .red
-        } else {
-            let ratio = Double(30) / Double(total)
-            phase = ratio > 0.5 ? .blue : (ratio > 0.2 ? .orange : .red)
-        }
-        #expect(phase == .red)
+        #expect(HipsPhase.resolve(remaining: 30, total: 0) == .red)
     }
 
     // MARK: - 2. recommendation 缺失或 confidence != .high → 主按钮锁拒绝

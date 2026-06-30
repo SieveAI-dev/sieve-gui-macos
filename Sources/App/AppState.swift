@@ -23,7 +23,7 @@ public final class AppState: ObservableObject {
     // MARK: - 命中与事件
 
     @Published public private(set) var recentHits: [HitSummary] = []
-    @Published public private(set) var warningHitCount: Int = 0  // 5 分钟内 AutoRedact/StatusBar 命中数（用于角标）
+    @Published public private(set) var warningHitCount: Int = 0  // 5 分钟内警告命中/Toast 降级数（用于角标）
 
     // MARK: - HIPS
 
@@ -115,6 +115,11 @@ public final class AppState: ObservableObject {
         if hit.action == .redact || hit.action == .marked {
             bumpWarning()
         }
+    }
+
+    /// Toast 栈已满时，没有被 `recordHit` 的 action 语义计入角标的事件走此入口。
+    public func recordToastOverflow() {
+        bumpWarning()
     }
 
     private func bumpWarning() {

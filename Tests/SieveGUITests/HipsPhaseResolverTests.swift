@@ -72,4 +72,5 @@ struct HipsPhaseResolverTests {
     func negative_total_is_red() {
         #expect(HipsPhase.resolve(remaining: 10, total: -5) == .red)
     }
+
 }

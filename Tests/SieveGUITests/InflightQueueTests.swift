@@ -102,6 +102,58 @@ struct UserSettingsTests {
         store.setLastSeenDaemonBootId("boot-abc")
         #expect(store.lastSeenDaemonBootId() == "boot-abc")
     }
+
+    @Test func autoCheckUpdates_roundtrip() {
+        let d = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let store = UserSettingsStore(defaults: d)
+        var s = UserSettings.default
+        s.autoCheckUpdates = false
+        store.save(s)
+
+        #expect(store.load().autoCheckUpdates == false)
+
+        s.autoCheckUpdates = true
+        store.save(s)
+        #expect(store.load().autoCheckUpdates == true)
+    }
+
+    @Test func hips_sound_preferences_roundtrip() {
+        let d = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let store = UserSettingsStore(defaults: d)
+        var s = UserSettings.default
+        s.hipsSoundEnabled = false
+        s.hipsSoundName = "Ping"
+
+        store.save(s)
+        let loaded = store.load()
+
+        #expect(loaded.hipsSoundEnabled == false)
+        #expect(loaded.hipsSoundName == "Ping")
+    }
+}
+
+@MainActor
+private final class MockAppUpdater: AppUpdater {
+    var isAutoCheckEnabled: Bool = false
+    private(set) var checkCount: Int = 0
+
+    func checkForUpdates() {
+        checkCount += 1
+    }
+}
+
+@Suite("Updates Settings")
+@MainActor
+struct UpdatesSettingsTests {
+    @Test func syncs_auto_check_setting_to_updater() {
+        let updater = MockAppUpdater()
+
+        UpdateSettingsSync.applyAutoCheckSetting(true, to: updater)
+        #expect(updater.isAutoCheckEnabled == true)
+
+        UpdateSettingsSync.applyAutoCheckSetting(false, to: updater)
+        #expect(updater.isAutoCheckEnabled == false)
+    }
 }
 
 /// daemon_boot_id 三路判定的纯 store 层测试（AppStateIPCAdapter 在 App/ 层，SPM 测试用 store 验证）

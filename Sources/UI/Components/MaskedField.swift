@@ -6,7 +6,7 @@ public struct MaskedField: View {
     public enum Style {
         case fullMask           // 全部 ••••••••
         case prefix4Suffix4     // abcd••••wxyz
-        case sessionTrunc       // 取前 8 字符
+        case sessionTrunc       // 取前 8 字符 + …
         case clearWhenUnlocked  // 解锁后才显示原文
     }
 
@@ -48,7 +48,8 @@ public struct MaskedField: View {
             let s = value.suffix(4)
             return "\(p)••••\(s)"
         case .sessionTrunc:
-            return String(value.prefix(8))
+            guard !value.isEmpty else { return "—" }
+            return value.count > 8 ? "\(value.prefix(8))…" : value
         case .clearWhenUnlocked:
             return String(repeating: "•", count: 8)
         }

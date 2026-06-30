@@ -24,7 +24,7 @@ public struct SetPresetOverridesParams: Encodable, Sendable {
     public let ruleId: String
     /// 超时秒数（30~600，daemon 二次校验）。
     public let timeoutSeconds: Int
-    /// 超时后默认行为（block / allow / redact）。
+    /// 超时后默认行为（Custom preset 覆盖只允许 block / allow）。
     public let defaultOnTimeout: String
 
     public init(ruleId: String, timeoutSeconds: Int, defaultOnTimeout: String) {
@@ -53,6 +53,49 @@ public struct PurgeHistoryParams: Encodable, Sendable {
 
     enum CodingKeys: String, CodingKey {
         case confirmedAt = "confirmed_at"
+    }
+}
+
+public enum PurgeHistorySendDecision: Equatable, Sendable {
+    case send
+    case cancelSilently
+    case blocked(String)
+
+    public static func resolve(
+        touchIDPassed: Bool,
+        daemonStatus: DaemonStatus,
+        purgeUnavailable: Bool,
+        purging: Bool
+    ) -> PurgeHistorySendDecision {
+        guard touchIDPassed else { return .cancelSilently }
+        if purging { return .blocked("清空操作正在进行中，请稍候") }
+        if purgeUnavailable {
+            return .blocked("daemon 版本过旧，不支持清空历史（需升级 daemon）")
+        }
+        if case .disconnected = daemonStatus {
+            return .blocked("清空失败，请检查 daemon 连接状态")
+        }
+        return .send
+    }
+}
+
+public struct DaemonSettingsActionAvailability: Equatable, Sendable {
+    public let canReloadConfig: Bool
+    public let canRunHealthCheck: Bool
+    public let canRunDoctor: Bool
+
+    public static func resolve(daemonStatus: DaemonStatus) -> DaemonSettingsActionAvailability {
+        let disconnected: Bool
+        if case .disconnected = daemonStatus {
+            disconnected = true
+        } else {
+            disconnected = false
+        }
+        return DaemonSettingsActionAvailability(
+            canReloadConfig: !disconnected,
+            canRunHealthCheck: true,
+            canRunDoctor: true
+        )
     }
 }
 

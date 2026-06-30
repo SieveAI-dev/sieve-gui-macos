@@ -82,4 +82,66 @@ struct PurgeHistoryTests {
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         #expect(f.date(from: confirmedAtStr) != nil)
     }
+
+    // MARK: - 发送前状态门禁
+
+    @Test("Touch ID 取消或失败时静默取消，不发送 purge_history")
+    func send_decision_touchid_failure_cancels_silently() {
+        let decision = PurgeHistorySendDecision.resolve(
+            touchIDPassed: false,
+            daemonStatus: .normal,
+            purgeUnavailable: false,
+            purging: false
+        )
+
+        #expect(decision == .cancelSilently)
+    }
+
+    @Test("Touch ID 通过后 daemon 若已断线，仍不得发送 purge_history")
+    func send_decision_blocks_when_disconnected_after_touchid() {
+        let decision = PurgeHistorySendDecision.resolve(
+            touchIDPassed: true,
+            daemonStatus: .disconnected(reason: .connectionRefused),
+            purgeUnavailable: false,
+            purging: false
+        )
+
+        #expect(decision == .blocked("清空失败，请检查 daemon 连接状态"))
+    }
+
+    @Test("旧 daemon 标记后不得发送 purge_history")
+    func send_decision_blocks_when_purge_unavailable() {
+        let decision = PurgeHistorySendDecision.resolve(
+            touchIDPassed: true,
+            daemonStatus: .normal,
+            purgeUnavailable: true,
+            purging: false
+        )
+
+        #expect(decision == .blocked("daemon 版本过旧，不支持清空历史（需升级 daemon）"))
+    }
+
+    @Test("已在清空中时不得重复发送 purge_history")
+    func send_decision_blocks_duplicate_purge() {
+        let decision = PurgeHistorySendDecision.resolve(
+            touchIDPassed: true,
+            daemonStatus: .normal,
+            purgeUnavailable: false,
+            purging: true
+        )
+
+        #expect(decision == .blocked("清空操作正在进行中，请稍候"))
+    }
+
+    @Test("Touch ID 通过且 daemon 已连接时允许发送 purge_history")
+    func send_decision_allows_connected_daemon() {
+        let decision = PurgeHistorySendDecision.resolve(
+            touchIDPassed: true,
+            daemonStatus: .paused(until: nil),
+            purgeUnavailable: false,
+            purging: false
+        )
+
+        #expect(decision == .send)
+    }
 }

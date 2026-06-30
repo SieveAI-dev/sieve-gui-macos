@@ -9,6 +9,7 @@ public struct HitSummary: Identifiable, Sendable, Equatable {
     public let severity: Severity
     public let occurredAt: Date
     public let auditEventId: Int64?
+    public let requestId: String?
 
     public enum Action: String, Sendable {
         case allow, deny, redact, marked, terminal
@@ -21,7 +22,8 @@ public struct HitSummary: Identifiable, Sendable, Equatable {
         direction: Direction,
         severity: Severity,
         occurredAt: Date,
-        auditEventId: Int64?
+        auditEventId: Int64?,
+        requestId: String? = nil
     ) {
         self.id = id
         self.ruleId = ruleId
@@ -30,6 +32,7 @@ public struct HitSummary: Identifiable, Sendable, Equatable {
         self.severity = severity
         self.occurredAt = occurredAt
         self.auditEventId = auditEventId
+        self.requestId = requestId
     }
 }
 

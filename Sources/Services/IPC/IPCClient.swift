@@ -99,6 +99,10 @@ public final class IPCClient: @unchecked Sendable {
     private func _enqueueAndAwait(id: String, method: String, payload: Data) async throws -> Data {
         return try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Data, Error>) in
             Task {
+                guard await self.hasConnectionForSending() else {
+                    cont.resume(throwing: IPCError.socketUnavailable)
+                    return
+                }
                 // 顺序关键：先 enqueue + 注册 waiter，最后才 sendRaw 发出请求。
                 // 否则本地 Unix socket 的极快响应可能在 registerWaiter 之前就 fulfill，
                 // 而 fulfill 此时找不到 waiter 只丢弃 entry → continuation 永久挂起，
@@ -114,22 +118,41 @@ public final class IPCClient: @unchecked Sendable {
         }
     }
 
+    private func hasConnectionForSending() async -> Bool {
+        await withCheckedContinuation { cont in
+            ipcQueue.async { [weak self] in
+                guard let self = self else {
+                    cont.resume(returning: false)
+                    return
+                }
+                cont.resume(returning: self.connection != nil)
+            }
+        }
+    }
+
     /// fire-and-forget 版本（无参数，不关心响应）。
     public func sendRequestAndForget(id: String, method: String) {
         let data = IPCOutbound.request(id: id, method: method)
-        Task { await self.inflight.enqueue(.init(
-            id: id, method: method, payload: data,
-            createdAt: Date(), isDecisionResponse: false)) }
-        sendRaw(data)
+        _sendRequestAndForget(id: id, method: method, payload: data)
     }
 
     /// fire-and-forget 版本（带 Encodable 参数）。
     public func sendRequestAndForget<P: Encodable & Sendable>(id: String, method: String, params: P) {
         let data = IPCOutbound.request(id: id, method: method, params: params)
-        Task { await self.inflight.enqueue(.init(
-            id: id, method: method, payload: data,
-            createdAt: Date(), isDecisionResponse: false)) }
-        sendRaw(data)
+        _sendRequestAndForget(id: id, method: method, payload: data)
+    }
+
+    private func _sendRequestAndForget(id: String, method: String, payload: Data) {
+        Task {
+            guard await self.hasConnectionForSending() else {
+                await GUILog.shared.warn("drop fire-and-forget IPC while disconnected: \(method)", category: "ipc")
+                return
+            }
+            await self.inflight.enqueue(.init(
+                id: id, method: method, payload: payload,
+                createdAt: Date(), isDecisionResponse: false))
+            self.sendRaw(payload)
+        }
     }
 
     /// 发送 decision_response：必须用 result 形式，且 inflight 标记高优先级。
@@ -226,8 +249,14 @@ public final class IPCClient: @unchecked Sendable {
         case .failed(let err):
             logger.warning("nw state failed: \(String(describing: err), privacy: .public)")
             tearDown()
-            scheduleRetry(reason: .socketMissing)
+            scheduleRetry(reason: Self.disconnectReason(for: err))
         case .waiting(let err):
+            if Self.isConnectionRefused(err) {
+                logger.notice("nw state waiting with ECONNREFUSED; retrying immediately")
+                tearDown()
+                scheduleRetry(reason: .connectionRefused)
+                return
+            }
             // .waiting 是 Network.framework 的临时态（对端尚未就绪等），框架会自行重试恢复到
             // .ready。不主动 tearDown，以免扼杀框架自愈 + 触发不必要的自建 backoff。
             // 兜底：openConnection 已把 lastReceivedAt 设为连接时刻，超 heartbeatTimeout 仍未
@@ -266,6 +295,17 @@ public final class IPCClient: @unchecked Sendable {
             guard let self = self, self.shouldReconnect else { return }
             self.openConnection()
         }
+    }
+
+    internal static func disconnectReason(for error: NWError) -> DaemonStatus.DisconnectReason {
+        isConnectionRefused(error) ? .connectionRefused : .socketMissing
+    }
+
+    private static func isConnectionRefused(_ error: NWError) -> Bool {
+        if case .posix(let code) = error {
+            return code == .ECONNREFUSED
+        }
+        return false
     }
 
     // MARK: - Receive loop

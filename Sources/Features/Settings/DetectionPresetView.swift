@@ -4,7 +4,7 @@ public struct DetectionPresetView: View {
     @ObservedObject var appState: AppState
     let ipcClient: IPCClient
 
-    @State private var pendingPreset: Preset?
+    @State private var selectionState: DetectionPresetSelectionState
     @State private var showConfirm: Bool = false
 
     // Custom 模式规则覆盖：rule_id → 当前编辑中的 override
@@ -15,6 +15,12 @@ public struct DetectionPresetView: View {
     @State private var rulesLoading: Bool = false
     @State private var rulesError: String?
     @State private var rulesUnavailable: Bool = false   // -32601 降级标记
+
+    public init(appState: AppState, ipcClient: IPCClient) {
+        self.appState = appState
+        self.ipcClient = ipcClient
+        _selectionState = State(initialValue: DetectionPresetSelectionState(current: appState.preset))
+    }
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -35,9 +41,9 @@ public struct DetectionPresetView: View {
         }
         .padding()
         .alert("切换 Preset", isPresented: $showConfirm) {
-            Button("取消", role: .cancel) { pendingPreset = nil }
+            Button("取消", role: .cancel) { selectionState.cancel() }
             Button("确认切换") {
-                guard let p = pendingPreset else { return }
+                guard let p = selectionState.pending else { return }
                 applyPreset(p)
             }
         } message: {
@@ -50,7 +56,10 @@ public struct DetectionPresetView: View {
                 Task { await refreshRules() }
             }
         }
-        .onChange(of: appState.preset) { _ in initOverridesIfNeeded() }
+        .onChange(of: appState.preset) { preset in
+            selectionState.syncCurrent(preset)
+            initOverridesIfNeeded()
+        }
     }
 
     // MARK: - Preset Card
@@ -58,8 +67,7 @@ public struct DetectionPresetView: View {
     private func presetCard(_ p: Preset) -> some View {
         let selected = appState.preset == p
         return Button {
-            pendingPreset = p
-            showConfirm = true
+            showConfirm = selectionState.select(p)
         } label: {
             VStack(alignment: .leading, spacing: 4) {
                 Text(p.rawValue).font(.subheadline.weight(.semibold))
@@ -186,7 +194,6 @@ public struct DetectionPresetView: View {
         return Picker("", selection: dotBinding) {
             Text("block").tag("block")
             Text("allow").tag("allow")
-            Text("redact").tag("redact")
         }
         .labelsHidden()
         .font(.caption2)
@@ -351,7 +358,7 @@ public struct DetectionPresetView: View {
         let severity: String
         let criticalLock: Bool
         let defaultTimeout: Int
-        let defaultOnTimeout: String  // block / allow / redact
+        let defaultOnTimeout: String  // block / allow
     }
 
     private var knownRules: [RuleDisplayItem] {
@@ -486,7 +493,7 @@ public struct DetectionPresetView: View {
         let id = UUID().uuidString
         let previousPreset = appState.preset
         appState.updatePreset(p)         // 乐观更新
-        pendingPreset = nil
+        _ = selectionState.applyPending()
         Task {
             await ipcClient.registerMutatingRequest(id)   // 注册先于发送，避免 echo 漏判
             do {

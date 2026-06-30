@@ -111,14 +111,21 @@ docs/                               ← 你正在读
 ## 4. 跑测试
 
 ```bash
-# 全部测试
-xcodebuild test \
+# 逻辑单测（Core 库 + 纳入 Core 的 Features 逻辑）——命令行真实源
+swift test
+
+# UI / Features 层编译验证（swift test 按 Package.swift exclude 跳过 UI，必须经 xcodebuild build）
+xcodebuild build \
   -project SieveGUI.xcodeproj \
   -scheme SieveGUI \
   -destination 'platform=macOS'
-
-# 或在 Xcode：Cmd+U
 ```
+
+> `Tests/SieveGUITests` 的用例统一 `@testable import SieveGUICore`（`Package.swift` 的 SPM
+> 库名），是 SPM-only 设计，由 `swift test` 执行。本工程当前刻意不为 Core 建独立 framework
+> target（避免 `project.yml` 与 `Package.swift` 两份源清单同步漂移），故 Xcode 工程内无
+> `SieveGUICore` module，scheme 不配置 test action，`Cmd+U` / `xcodebuild test` 不适用——这是
+> deliberate tradeoff，非技术不可能。备选演进路径与排除理由详见 `project.yml` 顶部注释。
 
 测试框架：[swift-testing](https://github.com/apple/swift-testing)（`@Test` macro）。
 
@@ -253,7 +260,7 @@ A: 上次的 daemon 没退干净，或残留 socket 文件。`rm -f ~/.sieve/ipc
 ## 10. CI / 提交流程
 
 - 本地 `swiftformat --lint` 通过
-- `xcodebuild test` 通过
+- `swift test` 通过；动了 `Sources/UI` / `Sources/Features` 再跑 `xcodebuild build`
 - commit message：Conventional Commits（`feat(menu-bar): ...` / `fix(hips): ...` / `docs(spec-002): ...`）
 - 修改 IPC 相关代码 → 同步更新 `docs/api/ipc-protocol.md` + `docs/specs/SPEC-008-ipc-client.md`
 - 修改 SPEC 描述行为时 → 同步更新对应代码 + 测试

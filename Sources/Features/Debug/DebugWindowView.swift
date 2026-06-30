@@ -5,6 +5,7 @@ public struct DebugWindowView: View {
     @ObservedObject var appState: AppState
     let ipcClient: IPCClient
     @EnvironmentObject private var replayStore: DebugReplayStore
+    @State private var selectedTab: DebugTab = .liveEvents
 
     public init(appState: AppState, ipcClient: IPCClient) {
         self.appState = appState
@@ -12,19 +13,40 @@ public struct DebugWindowView: View {
     }
 
     public var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             LiveEventsTab(appState: appState)
                 .tabItem { Label("实时事件", systemImage: "waveform") }
+                .tag(DebugTab.liveEvents)
             RuleEvaluationTab(ipcClient: ipcClient)
                 .environmentObject(replayStore)
                 .tabItem { Label("规则评估", systemImage: "function") }
+                .tag(DebugTab.ruleEvaluation)
             IPCMonitorTab(ipcClient: ipcClient)
                 .tabItem { Label("IPC 监视", systemImage: "antenna.radiowaves.left.and.right") }
+                .tag(DebugTab.ipcMonitor)
             SystemStatusTab(ipcClient: ipcClient)
                 .tabItem { Label("系统状态", systemImage: "speedometer") }
+                .tag(DebugTab.systemStatus)
         }
         .frame(width: 960, height: 600)
+        .onAppear {
+            if replayStore.prefilledPrompt != nil {
+                selectedTab = .ruleEvaluation
+            }
+        }
+        .onChange(of: replayStore.prefilledPrompt) { prompt in
+            if prompt != nil {
+                selectedTab = .ruleEvaluation
+            }
+        }
     }
+}
+
+private enum DebugTab: Hashable {
+    case liveEvents
+    case ruleEvaluation
+    case ipcMonitor
+    case systemStatus
 }
 
 // MARK: - 实时事件

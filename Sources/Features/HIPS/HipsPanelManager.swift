@@ -24,11 +24,19 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
     /// 追踪每个 rule_id 上次 deny 时间，5s 内再次弹同 rule → 互换按钮位置
     private var denyTracker = HipsDenyTracker()
 
-    private var countdownTimer: Timer?
+    private var countdownCancellable: AnyCancellable?
     private var visibleSince: Date?
 
     public func install(ipcClient: IPCClient) {
         self.ipcClient = ipcClient
+        if countdownCancellable == nil {
+            countdownCancellable = appState.$holdRemainingSeconds
+                .removeDuplicates()
+                .sink { [weak self] remaining in
+                    guard let self, remaining <= 0, self.activeRequest != nil else { return }
+                    self.handleCountdownTimeout()
+                }
+        }
     }
 
     // MARK: - IPCHipsAdapter
@@ -95,6 +103,8 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
         let swapped: Bool
         if let ruleId = req.ruleId {
             swapped = denyTracker.shouldSwapLayout(ruleId: ruleId)
+        } else if req.merged {
+            swapped = req.issues.contains { denyTracker.shouldSwapLayout(ruleId: $0.ruleId) }
         } else {
             swapped = false
         }
@@ -125,7 +135,6 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
         panel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
 
-        startCountdown()
     }
 
     /// 渲染失败兜底：系统通知 + IPC error -32101（gui_render_failed） + 关闭弹窗
@@ -161,25 +170,6 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
         let size = panel.frame.size
         let origin = NSPoint(x: frame.midX - size.width / 2, y: frame.midY - size.height / 2)
         panel.setFrameOrigin(origin)
-    }
-
-    private var countdownRemaining: Int = 0
-
-    private func startCountdown() {
-        countdownTimer?.invalidate()
-        guard let req = activeRequest else { return }
-        countdownRemaining = req.timeoutSeconds
-        countdownTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            // Timer 回调线程性约束：scheduledTimer 在当前 RunLoop（这里是主线程）触发，self 已 MainActor。
-            MainActor.assumeIsolated {
-                guard let self = self else { return }
-                self.countdownRemaining -= 1
-                if self.countdownRemaining <= 0 {
-                    self.countdownTimer?.invalidate()
-                    self.handleCountdownTimeout()
-                }
-            }
-        }
     }
 
     // MARK: - Decision handling
@@ -260,7 +250,8 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
             direction: req.direction,
             severity: req.severity,
             occurredAt: Date(),
-            auditEventId: nil
+            auditEventId: nil,
+            requestId: req.requestId
         ))
     }
 
@@ -313,8 +304,6 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
     }
 
     private func closePanel(notifyDaemon: Bool) {
-        countdownTimer?.invalidate()
-        countdownTimer = nil
         visibleSince = nil
 
         // 红线：清空 rawJSON

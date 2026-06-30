@@ -73,9 +73,26 @@ public struct PrivacyDataSettingsView: View {
     func clearHistoryWithUnlock() async {
         // Step 1：Touch ID 二次确认
         let ok = await TouchIDService.shared.authenticate(reason: "确认清空 Sieve 历史记录")
-        guard ok else {
+        let decision = PurgeHistorySendDecision.resolve(
+            touchIDPassed: ok,
+            daemonStatus: appState.daemonStatus,
+            purgeUnavailable: purgeUnavailable,
+            purging: purging
+        )
+
+        switch decision {
+        case .send:
+            break
+        case .cancelSilently:
             // Touch ID 失败 → 不调 IPC
             await GUILog.shared.warn("Touch ID 失败，清空历史已取消", category: "privacy")
+            return
+        case .blocked(let message):
+            await MainActor.run {
+                purgeErrorMessage = message
+                showPurgeError = true
+            }
+            await GUILog.shared.warn("清空历史发送前被阻止：\(message)", category: "privacy")
             return
         }
 
@@ -150,6 +167,7 @@ public struct GraylistSheetView: View {
     @State private var showRemoveConfirm: Bool = false
     @State private var removeErrorMessage: String?
     @State private var showRemoveError: Bool = false
+    @State private var loadErrorMessage: String?
 
     public var body: some View {
         VStack(spacing: 0) {
@@ -160,11 +178,29 @@ public struct GraylistSheetView: View {
             }
             .padding()
             Divider()
-            if loading {
+            switch GraylistSheetPresentation.resolve(
+                loading: loading,
+                errorMessage: loadErrorMessage,
+                entryCount: entries.count
+            ) {
+            case .loading:
                 ProgressView().padding()
-            } else if entries.isEmpty {
+            case let .error(message):
+                VStack(spacing: 10) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                    Text(message)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                    Button("重试") {
+                        Task { await reload() }
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding()
+            case .empty:
                 Text("暂无灰名单条目").foregroundStyle(.secondary).padding()
-            } else {
+            case let .entries(count):
                 List(entries) { entry in
                     HStack {
                         VStack(alignment: .leading) {
@@ -188,6 +224,12 @@ public struct GraylistSheetView: View {
                     }
                 }
                 .frame(minHeight: 240)
+                Text("共 \(count) 条")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal)
+                    .padding(.bottom, 8)
             }
         }
         .frame(width: 480, height: 360)
@@ -216,6 +258,7 @@ public struct GraylistSheetView: View {
 
     private func reload() async {
         loading = true
+        loadErrorMessage = nil
         defer { loading = false }
         do {
             let data = try await ipcClient.sendRequest(id: UUID().uuidString, method: "sieve.list_graylist")
@@ -224,6 +267,7 @@ public struct GraylistSheetView: View {
         } catch {
             await GUILog.shared.warn("list_graylist failed: \(error)", category: "settings")
             entries = []
+            loadErrorMessage = "加载失败，请重试"
         }
     }
 

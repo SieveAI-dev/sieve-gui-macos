@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import Network
 @testable import SieveGUICore
 
 // MARK: - 测试 Delegate
@@ -93,6 +94,38 @@ final class TestIPCDelegate: IPCDelegate, @unchecked Sendable {
 
 @Suite("IPCClient 集成测试（mock daemon harness）")
 struct IPCClientIntegrationTests {
+
+    @Test("ECONNREFUSED 分类为 connectionRefused，不误报 socketMissing")
+    func refused_socket_classifies_distinct_reason() {
+        #expect(IPCClient.disconnectReason(for: .posix(.ECONNREFUSED)) == .connectionRefused)
+        #expect(IPCClient.disconnectReason(for: .posix(.ENOENT)) == .socketMissing)
+    }
+
+    @Test("未连接时 sendRequest 立即失败，不留下永远等待的 waiter")
+    func send_request_without_connection_fails_fast() async {
+        let delegate = TestIPCDelegate()
+        let client = IPCClient(delegate: delegate, socketPath: "/tmp/sieve-gui-test-missing.sock")
+
+        do {
+            _ = try await client.sendRequest(id: "req-no-conn", method: "sieve.health")
+            Issue.record("未连接时 sendRequest 不应成功")
+        } catch IPCError.socketUnavailable {
+            // 正确：UI 可立即显示失败/回滚，不会无限等待 inflight sweep。
+        } catch {
+            Issue.record("错误类型应为 IPCError.socketUnavailable，实际：\(error)")
+        }
+    }
+
+    @Test("未连接时 fire-and-forget 不应留下 orphan inflight")
+    func fire_and_forget_without_connection_does_not_leak_inflight() async throws {
+        let delegate = TestIPCDelegate()
+        let client = IPCClient(delegate: delegate, socketPath: "/tmp/sieve-gui-test-missing.sock")
+
+        client.sendRequestAndForget(id: "req-forget-no-conn", method: "sieve.set_paused", params: SetPausedParams(minutes: 0))
+        try await Task.sleep(nanoseconds: 100_000_000)
+
+        #expect(await client.inflightCount == 0)
+    }
 
     // MARK: - Test 1: 握手成功路径
 

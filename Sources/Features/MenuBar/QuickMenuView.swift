@@ -3,7 +3,7 @@ import SwiftUI
 public struct QuickMenuView: View {
     @ObservedObject var appState: AppState
     let onOpenSettings: () -> Void
-    let onOpenHistory: () -> Void
+    let onOpenHistory: (String?) -> Void
     let onOpenDebug: () -> Void
     let onOpenOnboarding: () -> Void
     let onPause: (Int) -> Void
@@ -15,7 +15,7 @@ public struct QuickMenuView: View {
     public init(
         appState: AppState,
         onOpenSettings: @escaping () -> Void,
-        onOpenHistory: @escaping () -> Void,
+        onOpenHistory: @escaping (String?) -> Void,
         onOpenDebug: @escaping () -> Void,
         onOpenOnboarding: @escaping () -> Void,
         onPause: @escaping (Int) -> Void,
@@ -97,16 +97,22 @@ public struct QuickMenuView: View {
                     .foregroundStyle(.tertiary)
             } else {
                 ForEach(appState.recentHits) { hit in
-                    HStack(spacing: 6) {
-                        DirectionBadge(hit.direction).font(.caption2)
-                        Text(hit.ruleId)
-                            .font(.caption)
-                            .foregroundStyle(actionColor(hit.action))
-                        Spacer()
-                        Text(timeLabel(hit.occurredAt))
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
+                    Button {
+                        onOpenHistory(hit.requestId)
+                    } label: {
+                        HStack(spacing: 6) {
+                            DirectionBadge(hit.direction).font(.caption2)
+                            Text(hit.ruleId)
+                                .font(.caption)
+                                .foregroundStyle(actionColor(hit.action))
+                            Spacer()
+                            Text(timeLabel(hit.occurredAt))
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
                     }
+                    .buttonStyle(.plain)
+                    .contentShape(Rectangle())
                 }
             }
         }
@@ -179,7 +185,7 @@ public struct QuickMenuView: View {
 
     private var footerSection: some View {
         VStack(spacing: 0) {
-            menuRow(symbol: "clock.arrow.circlepath", title: "历史…",  shortcut: "L", action: onOpenHistory)
+            menuRow(symbol: "clock.arrow.circlepath", title: "历史…",  shortcut: "L", action: { onOpenHistory(nil) })
             menuRow(symbol: "gearshape", title: "设置…",  shortcut: ",", action: onOpenSettings)
             menuRow(symbol: "ant.circle", title: "调试…",  shortcut: "D", action: onOpenDebug)
             Divider()
@@ -237,6 +243,7 @@ public struct QuickMenuView: View {
     private func disconnectReasonText(_ r: DaemonStatus.DisconnectReason) -> String {
         switch r {
         case .socketMissing: return "找不到 ~/.sieve/ipc.sock。daemon 可能未启动。"
+        case .connectionRefused: return "~/.sieve/ipc.sock 存在，但 daemon 拒绝连接。请重启 daemon。"
         case .heartbeatTimeout: return "30 秒未收到 daemon 消息。"
         case .versionMismatch: return "协议版本不兼容。请同步升级 daemon 与 GUI。"
         case .daemonShutdown: return "daemon 主动关闭了连接。"

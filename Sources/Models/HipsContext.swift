@@ -119,6 +119,51 @@ public struct AnyCodable: Codable, Sendable, Equatable {
     }
 }
 
+public struct MarkdownExfilPresentation: Sendable, Equatable {
+    public struct URLRow: Identifiable, Sendable, Equatable {
+        public let id: Int
+        public let maskedURL: String
+        public let reachable: Bool?
+
+        public var reachabilityLabel: String {
+            switch reachable {
+            case true: return "reachable"
+            case false: return "unreachable"
+            case nil: return "unknown"
+            }
+        }
+    }
+
+    public let maskedSnippet: String
+    public let urlRows: [URLRow]
+
+    public init(value: HipsContext.MarkdownExfil) {
+        var snippet = value.markdownSnippet
+        for url in value.urls {
+            snippet = snippet.replacingOccurrences(of: url, with: Self.maskURLQuery(url))
+        }
+        self.maskedSnippet = snippet
+        let reachable = value.reachable
+        self.urlRows = value.urls.enumerated().map { index, url in
+            URLRow(
+                id: index,
+                maskedURL: Self.maskURLQuery(url),
+                reachable: reachable?.indices.contains(index) == true ? reachable?[index] : nil
+            )
+        }
+    }
+
+    public static func maskURLQuery(_ rawURL: String) -> String {
+        guard let question = rawURL.firstIndex(of: "?") else { return rawURL }
+        let prefix = rawURL[..<question]
+        let afterQuestion = rawURL.index(after: question)
+        if let fragment = rawURL[afterQuestion...].firstIndex(of: "#") {
+            return "\(prefix)?••••\(rawURL[fragment...])"
+        }
+        return "\(prefix)?••••"
+    }
+}
+
 /// JSON 树的内部表示（不暴露给 Service 层）
 public indirect enum JSONValue: Codable, Sendable, Equatable {
     case null

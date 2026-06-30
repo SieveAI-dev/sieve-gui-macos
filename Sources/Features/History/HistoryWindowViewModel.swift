@@ -24,12 +24,16 @@ public final class HistoryWindowViewModel: ObservableObject {
     private let reader: AuditDBReader
     private var lastSeenId: Int64 = 0
     private let maxKept: Int = 200
+    private var nextPageOffset: Int = 0
     private var keywordCancellable: AnyCancellable?
     private var purgeObserverToken: AnyCancellable?
+    private var started: Bool = false
+    private var pendingRequestId: String?
 
     public init(reader: AuditDBReader) {
         self.reader = reader
         keywordCancellable = $keywordInput
+            .dropFirst()
             .removeDuplicates()
             .debounce(for: .milliseconds(200), scheduler: DispatchQueue.main)
             .sink { [weak self] kw in
@@ -46,12 +50,23 @@ public final class HistoryWindowViewModel: ObservableObject {
             }
     }
 
-    public func start() {
-        do { try reader.open() } catch { /* fail-soft */ }
+    public func start(openPath: String? = nil) {
+        do {
+            if let openPath {
+                try reader.open(path: openPath)
+            } else {
+                try reader.open()
+            }
+        } catch { /* fail-soft */ }
+        started = true
         // reader 打开后用实际 PRAGMA user_version 判定 schema 警告（fail-soft，SPEC-004 §异常）。
         // 即便 open() 抛错（未知/损坏 schema）也回写，schemaVersion 保持默认 0 → 未知 → 告警。
         schemaWarning = reader.schemaWarning
         reload()
+        if let requestId = pendingRequestId {
+            pendingRequestId = nil
+            selectAndReveal(requestId: requestId)
+        }
         reader.startWatching { [weak self] in
             Task { @MainActor in self?.appendIncremental() }
         }
@@ -73,6 +88,7 @@ public final class HistoryWindowViewModel: ObservableObject {
         guard let vm = viewModel else { return }
         vm.rows = rows
         vm.lastSeenId = rows.first?.id ?? 0
+        vm.nextPageOffset = rows.count
         vm.reachedEnd = rows.count < 50
         vm.loading = false
     }
@@ -81,7 +97,7 @@ public final class HistoryWindowViewModel: ObservableObject {
     public func loadMore() {
         guard !loading, !reachedEnd else { return }
         loading = true
-        let offset = rows.count
+        let offset = nextPageOffset
         let f = filter
         let reader = self.reader
         Task.detached {
@@ -90,10 +106,32 @@ public final class HistoryWindowViewModel: ObservableObject {
         }
     }
 
+    /// 从最近命中跳转：按 request_id 精确查询；若不在当前分页窗口，将其置顶并选中。
+    public func selectAndReveal(requestId: String) {
+        guard started else {
+            pendingRequestId = requestId
+            return
+        }
+        let reader = self.reader
+        Task.detached {
+            let target = reader.event(requestId: requestId)
+            await MainActor.run {
+                guard let target else { return }
+                if !self.rows.contains(where: { $0.id == target.id }) {
+                    self.rows.insert(target, at: 0)
+                    if self.rows.count > self.maxKept { self.rows.removeLast() }
+                }
+                self.selected = self.rows.first(where: { $0.id == target.id })
+            }
+        }
+    }
+
     @MainActor
     private static func applyAppend(_ more: [AuditEventRow], viewModel: HistoryWindowViewModel?) {
         guard let vm = viewModel else { return }
-        vm.rows.append(contentsOf: more)
+        vm.nextPageOffset += more.count
+        let existingIds = Set(vm.rows.map(\.id))
+        vm.rows.append(contentsOf: more.filter { !existingIds.contains($0.id) })
         if vm.rows.count > vm.maxKept { vm.rows.removeFirst(vm.rows.count - vm.maxKept) }
         vm.reachedEnd = more.count < 50
         vm.loading = false
@@ -136,6 +174,7 @@ public final class HistoryWindowViewModel: ObservableObject {
         guard let vm = viewModel else { return }
         vm.rows.insert(contentsOf: added.reversed(), at: 0)
         vm.lastSeenId = added.last?.id ?? fromId
+        vm.nextPageOffset += added.count
         if vm.rows.count > maxKept { vm.rows.removeLast(vm.rows.count - maxKept) }
     }
 }

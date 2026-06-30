@@ -57,6 +57,7 @@ public final class NotificationCenterAdapter {
     private func shortReason(_ r: DaemonStatus.DisconnectReason) -> String {
         switch r {
         case .socketMissing: return "找不到 daemon socket。"
+        case .connectionRefused: return "daemon socket 拒绝连接，请重启 daemon。"
         case .heartbeatTimeout: return "30 秒未收到 daemon 消息。"
         case .versionMismatch: return "协议版本不兼容，请同步升级。"
         case .daemonShutdown: return "daemon 主动关闭。"

@@ -298,13 +298,32 @@ enum EIP712Parser {
 
 public struct MarkdownExfilCard: View {
     let value: HipsContext.MarkdownExfil
+    private var presentation: MarkdownExfilPresentation {
+        MarkdownExfilPresentation(value: value)
+    }
+
     public var body: some View {
         VStack(alignment: .leading, spacing: 6) {
+            Text("模型回复片段").font(.caption).foregroundStyle(.secondary)
+            Text(presentation.maskedSnippet)
+                .font(.system(.caption, design: .monospaced))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(8)
+                .background(Color.gray.opacity(0.06))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
             Text("外链 URL").font(.caption).foregroundStyle(.secondary)
-            ForEach(value.urls, id: \.self) { url in
+            ForEach(presentation.urlRows) { row in
                 HStack {
                     Image(systemName: "link").foregroundStyle(.secondary)
-                    Text(url).font(.system(.callout, design: .monospaced)).lineLimit(1).truncationMode(.middle)
+                    Text(row.maskedURL).font(.system(.callout, design: .monospaced)).lineLimit(1).truncationMode(.middle)
+                    Spacer(minLength: 8)
+                    Text(row.reachabilityLabel)
+                        .font(.caption2.weight(.semibold))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(row.reachable == true ? Color.orange.opacity(0.15) : Color.gray.opacity(0.15))
+                        .foregroundStyle(row.reachable == true ? Color.orange : Color.secondary)
+                        .clipShape(Capsule())
                 }
             }
         }

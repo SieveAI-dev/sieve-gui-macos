@@ -34,7 +34,10 @@ public enum MergedDecisionBuilder {
             case .denyAll:
                 decision = .deny
             case .allowAll:
-                decision = .allow
+                // Fail-safe：即使 UI/调用方误传 allowAll，含 Critical 的合并请求也绝不能
+                // 允许 Critical issue。UI 层仍负责隐藏“全部允许”按钮；编码层保底降级为
+                // “仅允许非 Critical 项”。
+                decision = issue.severity == .critical && !canAllowAll(issues) ? .deny : .allow
             case .allowNonCritical:
                 decision = issue.severity == .critical ? .deny : .allow
             }

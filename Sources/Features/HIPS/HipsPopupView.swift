@@ -155,6 +155,17 @@ public struct HipsPopupView: View {
                         .font(.callout)
                 }
                 .toggleStyle(.checkbox)
+                if rememberChecked {
+                    TextField("可选备注（≤ 200 字符）", text: $contextHint, axis: .vertical)
+                        .textFieldStyle(.roundedBorder)
+                        .lineLimit(2...3)
+                        .onChange(of: contextHint) { new in
+                            // SPEC-005 §1.3: 截断按 Unicode scalar 计数（≤ 200）
+                            if new.unicodeScalars.count > 200 {
+                                contextHint = String(String.UnicodeScalarView(new.unicodeScalars.prefix(200)))
+                            }
+                        }
+                }
             } else {
                 HStack(spacing: 6) {
                     Image(systemName: "lock.fill").foregroundStyle(.secondary)
@@ -163,17 +174,6 @@ public struct HipsPopupView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-
-            // 备注
-            TextField("可选备注（≤ 200 字符）", text: $contextHint, axis: .vertical)
-                .textFieldStyle(.roundedBorder)
-                .lineLimit(2...3)
-                .onChange(of: contextHint) { new in
-                    // SPEC-005 §1.3: 截断按 Unicode scalar 计数（≤ 200）
-                    if new.unicodeScalars.count > 200 {
-                        contextHint = String(String.UnicodeScalarView(new.unicodeScalars.prefix(200)))
-                    }
-                }
 
             HStack(spacing: 10) {
                 // SPEC-002 §4.4：复制原始 JSON 正式按钮（底部最左），二次确认
@@ -236,23 +236,42 @@ public struct HipsPopupView: View {
     @ViewBuilder
     private var mergedActionButtons: some View {
         if MergedDecisionBuilder.canAllowAll(request.issues) {
-            // 无 Critical：拒绝全部（副）+ 全部允许（主）
-            Button(action: { tryMerged(.denyAll) }) { Text("拒绝全部") }
-                .buttonStyle(.bordered)
-            Button(action: { tryMerged(.allowAll) }) { Text("全部允许") }
-                .buttonStyle(.borderedProminent)
-                .keyboardShortcut(.defaultAction)
-        } else {
-            // 有 Critical：仅允许非 Critical 项（副）+ 拒绝全部（主，Return 默认拒绝）
-            Button(action: { tryMerged(.allowNonCritical) }) {
-                Text("仅允许非 Critical 项（\(MergedDecisionBuilder.nonCriticalCount(request.issues)) 项）")
+            if swappedLayout {
+                Button(action: { tryMerged(.denyAll) }) { Text("拒绝全部") }
+                    .buttonStyle(.borderedProminent)
+                    .keyboardShortcut(.defaultAction)
+                Button(action: { tryMerged(.allowAll) }) { Text("全部允许") }
+                    .buttonStyle(.bordered)
+            } else {
+                // 无 Critical：拒绝全部（副）+ 全部允许（主）
+                Button(action: { tryMerged(.denyAll) }) { Text("拒绝全部") }
+                    .buttonStyle(.bordered)
+                Button(action: { tryMerged(.allowAll) }) { Text("全部允许") }
+                    .buttonStyle(.borderedProminent)
+                    .keyboardShortcut(.defaultAction)
             }
-            .buttonStyle(.bordered)
-            .disabled(MergedDecisionBuilder.nonCriticalCount(request.issues) == 0)
-            Button(action: { tryMerged(.denyAll) }) { Text("拒绝全部") }
-                .buttonStyle(.borderedProminent)
-                .keyboardShortcut(.defaultAction)
+        } else {
+            if swappedLayout {
+                Button(action: { tryMerged(.denyAll) }) { Text("拒绝全部") }
+                    .buttonStyle(.borderedProminent)
+                    .keyboardShortcut(.defaultAction)
+                allowNonCriticalButton
+            } else {
+                // 有 Critical：仅允许非 Critical 项（副）+ 拒绝全部（主，Return 默认拒绝）
+                allowNonCriticalButton
+                Button(action: { tryMerged(.denyAll) }) { Text("拒绝全部") }
+                    .buttonStyle(.borderedProminent)
+                    .keyboardShortcut(.defaultAction)
+            }
         }
+    }
+
+    private var allowNonCriticalButton: some View {
+        Button(action: { tryMerged(.allowNonCritical) }) {
+            Text("仅允许非 Critical 项（\(MergedDecisionBuilder.nonCriticalCount(request.issues)) 项）")
+        }
+        .buttonStyle(.bordered)
+        .disabled(MergedDecisionBuilder.nonCriticalCount(request.issues) == 0)
     }
 
     private func tryMerged(_ action: MergedAction) {

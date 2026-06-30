@@ -30,6 +30,17 @@ struct MergedDecisionBuilderTests {
         #expect(r.map(\.decision) == [.allow, .allow])
     }
 
+    @Test("红线：含 Critical 时即便误传 allowAll，也不得允许 Critical")
+    func allow_all_with_critical_degrades_to_partial() {
+        let issues = [issue("a", .critical), issue("b", .high)]
+        let r = MergedDecisionBuilder.perIssues(for: issues, action: .allowAll)
+        #expect(r.first { $0.issueId == "a" }?.decision == .deny)
+        #expect(r.first { $0.issueId == "b" }?.decision == .allow)
+
+        let response = MergedDecisionResponse(id: "merged-critical", perIssue: r, byUser: true)
+        #expect(response.mergedDecisionLabel == "partial")
+    }
+
     @Test("allowNonCritical：Critical 拒绝、非 Critical 允许")
     func allow_non_critical() {
         let issues = [issue("a", .critical), issue("b", .high), issue("c", .low)]

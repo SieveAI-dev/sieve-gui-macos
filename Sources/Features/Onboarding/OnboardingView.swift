@@ -15,6 +15,8 @@ public struct OnboardingView: View {
     @State private var selectedPreset: Preset = .standard
     /// daemon 二进制找不到时为 true（场景 C），驱动「未安装」专用提示 + 禁用继续。
     @State private var daemonNotInstalled: Bool = false
+    @State private var setupError: String?
+    @State private var setupRunning: Bool = false
 
     public init(appState: AppState, ipcClient: IPCClient, skipBridge: OnboardingSkipBridge? = nil, onClose: @escaping () -> Void) {
         self.appState = appState
@@ -103,9 +105,17 @@ public struct OnboardingView: View {
                             .foregroundStyle(check.ok ? .green : .red)
                         Text(check.name)
                         Spacer()
-                        if !check.ok { Button("修复") { runSetup() } }
+                        if !check.ok {
+                            Button(setupRunning ? "修复中…" : "修复") { runSetup() }
+                                .disabled(setupRunning)
+                        }
                     }
                 }
+            }
+            if let setupError {
+                Label(setupError, systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.red)
             }
             Spacer()
             HStack {
@@ -330,27 +340,11 @@ public struct OnboardingView: View {
     /// 生产环境探测：`which sieve` + 常见安装路径 + ipc.sock 存在性。
     private static func detectDaemonInstalled() -> Bool {
         let fm = FileManager.default
-        let candidates = ["/usr/local/bin/sieve", "/opt/homebrew/bin/sieve"]
         let socket = (NSHomeDirectory() as NSString).appendingPathComponent(".sieve/ipc.sock")
-        let whichHit: Bool = {
-            let p = Process()
-            p.launchPath = "/usr/bin/which"
-            p.arguments = ["sieve"]
-            let pipe = Pipe()
-            p.standardOutput = pipe
-            p.standardError = Pipe()
-            do {
-                try p.run()
-                p.waitUntilExit()
-                return p.terminationStatus == 0
-            } catch {
-                return false
-            }
-        }()
         return isDaemonInstalled(
-            candidatePaths: candidates,
+            candidatePaths: SieveBinaryLocator.candidatePaths,
             socketPath: socket,
-            pathLookupHit: whichHit,
+            pathLookupHit: SieveBinaryLocator.resolve() != nil,
             fileExists: { path in fm.fileExists(atPath: path) }
         )
     }
@@ -407,14 +401,42 @@ public struct OnboardingView: View {
     }
 
     private func runSetup() {
+        setupError = nil
         guard let bin = SieveBinaryLocator.resolve() else {
+            setupError = "找不到 sieve 可执行文件。请重新安装完整的 Sieve（.dmg）后重试。"
             Task { await GUILog.shared.warn("找不到 sieve 可执行文件，无法运行 setup", category: "onboarding") }
             return
         }
-        let p = Process()
-        p.launchPath = bin
-        p.arguments = ["setup"]
-        try? p.run()
+        setupRunning = true
+        Task.detached {
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: bin)
+            p.arguments = ["setup"]
+            let errorPipe = Pipe()
+            p.standardError = errorPipe
+            do {
+                try p.run()
+                p.waitUntilExit()
+                let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+                let errorText = String(data: errorData, encoding: .utf8)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                await MainActor.run {
+                    setupRunning = false
+                    if p.terminationStatus == 0 {
+                        runDoctor()
+                    } else if let errorText, !errorText.isEmpty {
+                        setupError = "修复失败：\(errorText)"
+                    } else {
+                        setupError = "修复失败：sieve setup 退出码 \(p.terminationStatus)"
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    setupRunning = false
+                    setupError = "无法启动修复：\(error.localizedDescription)"
+                }
+            }
+        }
     }
 
     private func applyLoginItem(_ on: Bool) {

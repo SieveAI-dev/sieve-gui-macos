@@ -85,9 +85,78 @@ public enum DaemonStatus: Equatable, Sendable {
 
     public enum DisconnectReason: String, Sendable {
         case socketMissing = "socket_missing"
+        case connectionRefused = "connection_refused"
         case heartbeatTimeout = "heartbeat_timeout"
         case versionMismatch = "version_mismatch"
         case daemonShutdown = "daemon_shutdown"
         case unknown
     }
+}
+
+public enum StatusBarIconTint: Equatable, Sendable {
+    case template
+    case warning
+    case danger
+    case disabled
+}
+
+public struct StatusBarIconPresentation: Equatable, Sendable {
+    public let symbolName: String
+    public let tint: StatusBarIconTint
+    public let accessibilityTitle: String
+    public let tooltip: String
+
+    public static func resolve(for status: DaemonStatus) -> StatusBarIconPresentation {
+        switch status {
+        case .normal:
+            return StatusBarIconPresentation(
+                symbolName: "shield.lefthalf.filled",
+                tint: .template,
+                accessibilityTitle: "Sieve — 正常",
+                tooltip: "Sieve 正常"
+            )
+        case .warning:
+            return StatusBarIconPresentation(
+                symbolName: "shield.lefthalf.filled.badge.exclamationmark",
+                tint: .warning,
+                accessibilityTitle: "Sieve — 有警告",
+                tooltip: "Sieve 有警告"
+            )
+        case .hold:
+            return StatusBarIconPresentation(
+                symbolName: "shield.lefthalf.filled.trianglebadge.exclamationmark",
+                tint: .danger,
+                accessibilityTitle: "Sieve — 等待用户决策",
+                tooltip: "Sieve 正在等待用户决策"
+            )
+        case .paused:
+            return StatusBarIconPresentation(
+                symbolName: "pause.circle",
+                tint: .disabled,
+                accessibilityTitle: "Sieve — 已暂停",
+                tooltip: "Sieve 已暂停"
+            )
+        case .disconnected:
+            return StatusBarIconPresentation(
+                symbolName: "shield.slash",
+                tint: .danger,
+                accessibilityTitle: "Sieve — 失联",
+                tooltip: "Sieve 失联"
+            )
+        }
+    }
+}
+
+public struct QuitConfirmationContent: Equatable, Sendable {
+    public let message: String
+    public let informativeText: String
+    public let confirmButtonTitle: String
+    public let cancelButtonTitle: String
+
+    public static let menuBarDefault = QuitConfirmationContent(
+        message: "退出 Sieve GUI？",
+        informativeText: "daemon 仍在运行，重新打开 Sieve GUI 即可恢复 HIPS 弹窗。",
+        confirmButtonTitle: "退出",
+        cancelButtonTitle: "取消"
+    )
 }

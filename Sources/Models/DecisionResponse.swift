@@ -38,8 +38,10 @@ public struct DecisionResponse: Sendable {
             "by_user": byUser,
             "ui_phase_when_clicked": Self.phaseLabel(uiPhaseWhenClicked)
         ]
+        // SPEC-002 §4.6：context_hint 只属于“允许并记住”路径；未 remember 或 deny 时不外带。
+        let maySendContextHint = decision == .allow && allowRemember && remember
         // SPEC-005 §1.3: context_hint ≤ 200 Unicode scalars；编码层按 scalar 计数截断（最终防线）
-        if let hint = contextHint, !hint.isEmpty {
+        if maySendContextHint, let hint = contextHint, !hint.isEmpty {
             let trimmed = hint.unicodeScalars.count > 200
                 ? String(String.UnicodeScalarView(hint.unicodeScalars.prefix(200)))
                 : hint
@@ -110,8 +112,10 @@ public struct MergedDecisionResponse: Sendable {
                 "decision": p.decision.rawValue,
                 "remember": p.allowRemember ? p.remember : false  // ← 强制
             ]
+            // SPEC-002 §4.6：context_hint 只属于“允许并记住”路径；未 remember 或 deny 时不外带。
+            let maySendContextHint = p.decision == .allow && p.allowRemember && p.remember
             // SPEC-005 §1.3: context_hint ≤ 200 Unicode scalars
-            if let h = p.contextHint, !h.isEmpty {
+            if maySendContextHint, let h = p.contextHint, !h.isEmpty {
                 let trimmed = h.unicodeScalars.count > 200
                     ? String(String.UnicodeScalarView(h.unicodeScalars.prefix(200)))
                     : h
