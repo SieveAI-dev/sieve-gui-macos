@@ -102,14 +102,16 @@ Sources/
 
 关键几条：
 
-1. **`allow_remember == false` 时，HIPS 弹窗禁止渲染 Remember checkbox**（不允许灰显代替）。这是三态决策（allow / deny / remember）+ critical_lock 三道防线中的第三道：GUI 无条件信任 daemon 计算出的 `allow_remember`，字段为 false 即不渲染。
+1. **`allow_remember == false` 时，HIPS 弹窗禁止渲染 Remember checkbox**（不允许灰显代替）。这是 daemon「Allow Remember 四道防线」中 GUI 承担的第 2 道（UI 不渲染 Remember 控件）——GUI 无条件信任 daemon 计算出的 `allow_remember`，字段为 false 即不渲染；GUI 另在编码层强制 `remember=false`（第 3 道，`completeDecision` 的 `safeRemember`）。四道防线权威定义见 SPEC-005 §6.1.1。
 2. **GUI 决策路径不联网**。Sparkle 检查更新和 external link 例外，且二者不影响 HIPS 弹窗。
 3. **不存储原始 prompt / 命中片段**。daemon 推送的 evidence 只在内存中持有，弹窗关闭即丢弃。
-4. **HIPS 主按钮在 `recommendation` 缺失或 `confidence != high` 时永远是「拒绝」**。键盘 Return 默认到拒绝。
+4. **HIPS 主按钮在 `recommendation` 缺失或 `confidence != high` 时永远是「拒绝」**。**Return 恒绑拒绝**：允许类按钮在任何组合下永不挂 `keyboardShortcut`（键盘无法触发允许），由 `HipsFooterPolicy.bindsReturnKey` 策略驱动、矩阵测试锚定——非"默认到拒绝"的弱约定。
 5. **协议版本不识别 → disconnected**。不允许向后兼容字段嗅探。
 6. **菜单栏状态以 `sieve.hello` 实际握手为准**，不允许"假装健康"。
 7. **导出诊断包默认脱敏**，不依赖用户阅读条款。
 8. **写文件操作走 atomic rename**（preset 缓存 / 用户设置 / GUI log）。
+9. **Critical allow 决策放行前强制「人在场」认证**（`CriticalAllowGate` + `TouchIDService.authenticateForCriticalDecision`，含系统密码回退）。认证失败/取消降级 deny，不建解锁会话；**无任何跳过开关或环境变量**。
+10. **HIPS 字段脱敏解锁与 History 会话完全隔离**（`HipsFieldUnlock` 上收 `AppState.hipsFieldUnlock`，绑定 `request_id` 仅当前弹窗有效，认证不建会话；决策提交/关窗/hold 归零/锁屏/会话过期任一即失效）。双向隔离，见 SPEC-002 §4.4。
 
 ---
 
