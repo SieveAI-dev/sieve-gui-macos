@@ -1,6 +1,6 @@
 # SPEC-004：历史记录窗口
 
-> Version: v1.2 — 2026-07-02
+> Version: v1.3 — 2026-07-02
 > Status: Stable
 > Owner: SieveAI
 
@@ -195,7 +195,8 @@ evidence_meta:
   （`HipsFieldUnlock` 单弹窗有效，见 SPEC-002 §4.4），互不放行
 - 会话到期由 `AppState.setUnlockSession` 的过期定时器主动清空（P1-1），
   不依赖 UI 读取时惰性重算；锁屏（com.apple.screenIsLocked）/ 显示器睡眠 /
-  快速用户切换任一信号即清（P1-2）
+  快速用户切换任一信号即清（P1-2）。同一信号经 `TouchIDService.clearSession`
+  一并清除 HIPS 字段解锁，会话过期定时器亦联动之（见 SPEC-002 §4.4 失效条件 d/e）
 - 开启后 `prefix_hash` 等字段显示完整内容
 - 注：audit.db 本来就不存原始 prompt 字节
 
@@ -309,3 +310,4 @@ timestamp, direction, severity, rule_id, disposition, user_choice, fingerprint, 
 | v1.0 | 2026-05-02 | SieveAI | 首次起草 |
 | v1.1 | 2026-07-02 | SieveAI | 标注解锁会话被 HIPS 跨窗口消费（隔离决策待定）；补记会话过期主动清空（P1-1）与三路锁屏清会话信号（P1-2） |
 | v1.2 | 2026-07-02 | SieveAI | 跨窗口共享已移除：解锁会话仅属 History，HIPS 字段解锁独立（SPEC-002 §4.4） |
+| v1.3 | 2026-07-02 | SieveAI | 补记锁屏 / 会话过期信号联动清除 HIPS 字段解锁（SPEC-002 §4.4 失效条件 d/e）；History 侧 5 分钟 unlockSession 语义不变 |

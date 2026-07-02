@@ -1,6 +1,6 @@
 # SPEC-002：HIPS 弹窗 GUI 渲染规格
 
-> Version: v1.2 — 2026-07-02
+> Version: v1.3 — 2026-07-02
 > Status: Stable
 > Owner: SieveAI
 > 上游依赖：[上游 SPEC-002 hips-popup-behavior](../external/upstream-references.md#spec-002hips-popup-behavior) · [上游 tri-state-decision-and-graylist 三道防线](../external/upstream-references.md#tri-state-decision-and-graylist)
@@ -277,8 +277,18 @@ History 解锁不放行 HIPS，HIPS 解锁也不影响 History。
 - **解锁入口**：详情卡下方「显示完整字段（Touch ID）」按钮（仅
   address_compare / signing_tool_use / generic_json 与 merged issue 卡渲染；
   secret_outbound / markdown_exfil 不推全文，无解锁入口）。
-- **解锁范围**：`HipsFieldUnlock` 绑定 `request_id`，仅当前弹窗有效——关窗/换弹窗
-  自动失效（即使 SwiftUI 状态因 rootView 复用存活也不跨弹窗泄漏，Core 单测锚定）。
+- **解锁态 owner**：`HipsFieldUnlock`（绑定 `request_id`）的实例上收到 `AppState.hipsFieldUnlock`，
+  是与 History `unlockSession` **并列的独立 `@Published` 字段**（读写互不触碰，双向隔离由此保证）。
+  owner 不在 `HipsPopupView` 的 `@State`——否则锁屏 / 会话过期等外部信号无法实时驱动其失效，
+  且 `NSHostingController` 复用会让 `@State` 跨弹窗存活。
+- **作用域 = 当前弹窗实例；以下失效条件任一触发即回脱敏**：
+  1. 决策提交、2. 弹窗关闭、3. hold 倒计时归零 —— 经 `HipsPanelManager.closePanel`（所有决策终点汇聚）
+     统一 `resetHipsFieldUnlock`；`present` 在每个新弹窗入口也先 reset，**即使 daemon 因 GUI 重连
+     重发同一 `request_id`（`@State` 本会跨弹窗存活），也强制回脱敏、须重新认证——不被同 id 重发击穿**。
+  4. 锁屏（`com.apple.screenIsLocked` / 显示器睡眠 / 快速用户切换）—— 经 `TouchIDService.clearSession`
+     与 History 会话一并清除。
+  5. History 会话过期信号 —— `AppState` 过期定时器到期时联动失效。
+  不跨请求、不持久化、无 TTL（依赖上述失效条件 + daemon 倒计时兜底）。
 - **认证路径**：`TouchIDService.authenticateForFieldUnlock`，一次性「人在场」认证，
   **不建立**任何解锁会话；失败/取消保持脱敏、不自动重弹（可手动再点）。
 - 与 P0-1 的区分：Critical allow 的 Touch ID 门是决策放行因子，本节是字段脱敏解锁；
@@ -472,3 +482,4 @@ GUI 内存域模型 `HipsRequest`：见 [data-model.md §3.1](../design/data-mod
 | v1.0 | 2026-05-02 | SieveAI | 首次起草，覆盖全部渲染规格 |
 | v1.1 | 2026-07-02 | SieveAI | 模板 4 删除「显示助记词（需 Touch ID）」——wire 不含全文，数据层不可实现；§4.4 补记 HIPS 与 History 跨窗口共享解锁会话（现状 + 隔离决策待定） |
 | v1.2 | 2026-07-02 | SieveAI | §4.4 隔离决策落地：HIPS 字段解锁独立于 History（HipsFieldUnlock 绑定 request_id 单弹窗有效，认证不建会话），新增「显示完整字段」入口 |
+| v1.3 | 2026-07-02 | SieveAI | §4.4 收敛：字段解锁态 owner 上收 `AppState.hipsFieldUnlock`（与 History `unlockSession` 并列的独立字段），显式实现 5 失效条件（决策提交/弹窗关闭/hold 归零/锁屏/会话过期），修复同 `request_id` 重发（GUI 重连）时 `@State` 存活致明文击穿；swift test 覆盖双向隔离 + 各失效条件状态语义 |
