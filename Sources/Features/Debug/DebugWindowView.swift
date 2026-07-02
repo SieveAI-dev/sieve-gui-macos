@@ -115,7 +115,7 @@ public struct LiveEventsTab: View {
 
     private func row(_ e: LiveEventsRingBuffer.Entry) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text(timeLabel(e.timestamp)).foregroundStyle(.secondary).frame(width: 80, alignment: .leading)
+            Text(timeLabel(e.timestamp)).foregroundStyle(.secondary).frame(width: 120, alignment: .leading)
             Text(e.source.rawValue).foregroundStyle(sourceColor(e.source)).frame(width: 50, alignment: .leading)
             Text(e.level.rawValue.uppercased()).foregroundStyle(levelColor(e.level)).frame(width: 50, alignment: .leading)
             Text(e.category).foregroundStyle(.secondary).frame(width: 90, alignment: .leading)
@@ -127,7 +127,11 @@ public struct LiveEventsTab: View {
     }
 
     private func sourceColor(_ s: LiveEventsRingBuffer.Entry.Source) -> Color {
-        switch s { case .audit: return .blue; case .ipc: return .purple; case .gui: return .gray }
+        switch LiveEventsRingBuffer.sourceColorToken(s) {
+        case .blue: return .blue
+        case .orange: return .orange
+        case .green: return .green
+        }
     }
     private func levelColor(_ l: LiveEventsRingBuffer.Entry.Level) -> Color {
         switch l { case .info: return .secondary; case .warn: return .orange; case .error: return .red }

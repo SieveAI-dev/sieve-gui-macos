@@ -18,13 +18,28 @@ public final class LiveEventsRingBuffer: ObservableObject {
         public enum Level: String, Sendable { case info, warn, error }
     }
 
+    public enum SourceColorToken: String, Sendable, Equatable {
+        case blue
+        case orange
+        case green
+    }
+
     public static let capacity: Int = 1000
     @Published public private(set) var entries: [Entry] = []
-    /// UI 暂停标志（只影响 LiveEventsTab 滚动，不影响 ring buffer 写入）
-    @Published public var paused: Bool = false
+    private var pausedSnapshot: [Entry]? = nil
+    /// UI 暂停标志：冻结可见快照，不影响 ring buffer 继续写入。
+    @Published public var paused: Bool = false {
+        didSet {
+            if paused, !oldValue {
+                pausedSnapshot = entries
+            } else if !paused {
+                pausedSnapshot = nil
+            }
+        }
+    }
 
     public func append(_ entry: Entry) {
-        // 始终写入 ring buffer，paused 只影响 UI 层滚动行为
+        // 始终写入 ring buffer，paused 只冻结 UI 快照，不停止记录。
         entries.append(entry)
         if entries.count > Self.capacity {
             entries.removeFirst(entries.count - Self.capacity)
@@ -36,14 +51,26 @@ public final class LiveEventsRingBuffer: ObservableObject {
     }
 
     public func filter(source: String, level: String, grep: String) -> [Entry] {
-        entries.filter { e in
+        let visibleEntries = pausedSnapshot ?? entries
+        return visibleEntries.filter { e in
             (source == "all" || e.source.rawValue == source)
             && (level == "all" || e.level.rawValue == level)
             && (grep.isEmpty || e.message.localizedCaseInsensitiveContains(grep) || e.category.localizedCaseInsensitiveContains(grep))
         }
     }
 
-    public func clear() { entries.removeAll() }
+    public func clear() {
+        entries.removeAll()
+        if paused { pausedSnapshot = [] }
+    }
+
+    public static func sourceColorToken(_ source: Entry.Source) -> SourceColorToken {
+        switch source {
+        case .audit: return .blue
+        case .ipc: return .orange
+        case .gui: return .green
+        }
+    }
 }
 
 /// IPC 监视 ring buffer（容量 100）。仅记录消息元信息——params 列硬显「不展示」。
