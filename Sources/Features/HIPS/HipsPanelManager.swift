@@ -102,6 +102,10 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
 
         activeRequest = req
         appState.setActiveRequest(req)
+        // SPEC-002 §5.2 失效条件 b：每个新弹窗实例从脱敏态开始。即使 daemon 因 GUI 重连
+        // 重发同一 request_id（NSHostingController 复用致解锁态本会跨弹窗存活），也强制回脱敏，
+        // 用户须对新弹窗重新认证——「解锁作用域 = 当前弹窗实例」不被同 id 重发击穿。
+        appState.resetHipsFieldUnlock()
         visibleSince = Date()
 
         let panel = ensurePanel()
@@ -392,6 +396,10 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
         activeRequest?.clearRawJSON()
         activeRequest = nil
         appState.setActiveRequest(nil)
+        // SPEC-002 §5.2 失效条件 a/c：所有决策终点（completeDecision/completeMergedDecision/
+        // handleCountdownTimeout/handleClose/cancelRequest）与关窗都汇聚于此，统一失效 HIPS 字段解锁，
+        // 不残留到下一个弹窗（配合 present 入口的 reset 形成双保险）。
+        appState.resetHipsFieldUnlock()
 
         panel?.orderOut(nil)
         // 不销毁 panel；下次复用

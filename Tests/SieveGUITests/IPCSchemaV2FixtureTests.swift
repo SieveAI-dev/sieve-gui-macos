@@ -5,8 +5,8 @@ import Testing
 /// SPEC-005 §14.2：消费 daemon 权威 fixture 副本（`Tests/SieveGUITests/Fixtures/v2/`），
 /// 而非内联手写 JSON——保证 GUI 解码与 daemon 序列化输出对齐，杜绝跨仓 schema 漂移。
 ///
-/// 本套件覆盖 daemon 仓 `crates/sieve-ipc/tests/fixtures/v2/` 全部 19 个 method 目录、
-/// 81 个权威 fixture（pin 见 `Fixtures/v2/_PIN.md` + `docs/external/upstream-references.md`）。
+/// 本套件覆盖 daemon 仓 `crates/sieve-ipc/tests/fixtures/v2/` 全部 21 个 method 目录、
+/// 88 个权威 fixture（pin 见 `Fixtures/v2/_PIN.md` + `docs/external/upstream-references.md`）。
 /// daemon 侧 `schema_v2_fixtures.rs` 的双向稳定测试保证这些 fixture 等于 daemon 真实 wire 输出；
 /// 本测试保证 GUI 端对应 DTO 能消费同一份权威 fixture。两侧共用同一 JSON = 无漂移空间。
 ///

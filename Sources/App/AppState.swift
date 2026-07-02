@@ -37,6 +37,13 @@ public final class AppState: ObservableObject {
     /// P1-1：会话过期的主动清空定时器（重设/清空会话时取消旧任务）。
     private var unlockExpiryTask: Task<Void, Never>?
 
+    /// SPEC-002 §4.4/§5.2：HIPS 弹窗字段解锁态——与 History `unlockSession` **完全隔离**的
+    /// 独立解锁态。绑定 request_id、仅当前弹窗有效、认证不建会话；owner 上收到此处（而非
+    /// HipsPopupView 的 @State），使 present/closePanel 与锁屏、会话过期信号都能驱动其失效
+    /// （@State 无法被外部信号实时驱动，且 NSHostingController 复用会让 @State 跨弹窗存活）。
+    /// 双向隔离不变式：本字段的读写绝不触碰 unlockSession/isUnlocked。
+    @Published public private(set) var hipsFieldUnlock = HipsFieldUnlock()
+
     // MARK: - 设置
 
     @Published public var settings: UserSettings = .default
@@ -187,7 +194,21 @@ public final class AppState: ObservableObject {
             try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
             guard !Task.isCancelled else { return }
             self?.setUnlockSession(nil)
+            // SPEC-002 §5.2 失效条件 e：既有（History）会话过期信号触发时，HIPS 字段解锁一并失效。
+            self?.resetHipsFieldUnlock()
         }
+    }
+
+    /// SPEC-002 §4.4：字段解锁认证成功后调用，仅解锁指定 request 的当前弹窗。
+    /// 只写 `hipsFieldUnlock`，不触碰 `unlockSession`（隔离方向 2：HIPS 解锁不建/延长 History 会话）。
+    public func unlockHipsField(requestId: String) {
+        hipsFieldUnlock.unlock(requestId: requestId)
+    }
+
+    /// SPEC-002 §5.2：HIPS 字段解锁失效。由 present（新弹窗）/closePanel（决策提交·关窗·倒计时归零）
+    /// 及锁屏 `clearSession()`、会话过期定时器统一驱动。幂等，不触碰 `unlockSession`。
+    public func resetHipsFieldUnlock() {
+        hipsFieldUnlock.reset()
     }
 
     /// 由 History ViewModel 在打开/读取 audit.db 后回写 schema 警告位。

@@ -60,8 +60,12 @@ public final class TouchIDService: NSObject {
         }
     }
 
+    /// 锁屏/显示器睡眠/快速用户切换三路信号的统一失效点（UnlockSessionClearBinding 注入）。
+    /// 清 History 5 分钟解锁会话 + SPEC-002 §5.2 失效条件 d：HIPS 字段解锁一并回脱敏。
+    /// 两者是并列独立的解锁态，此处一次信号统一收敛，不代表二者耦合。
     public func clearSession() {
         appState.setUnlockSession(nil)
+        appState.resetHipsFieldUnlock()
     }
 
     private func observeScreenLock() {
