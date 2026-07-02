@@ -67,6 +67,21 @@ struct HipsFieldUnlockAppStateTests {
         return AppState(store: UserSettingsStore(defaults: defaults))
     }
 
+    /// 轮询等待条件成立（最多 timeoutMs），替代对 async 定时器的固定 sleep 断言。
+    /// 慢 / 高负载 CI runner 上定时器唤醒 + async 调度延迟不确定，固定 sleep 会 flaky。
+    private func pollUntil(
+        timeoutMs: Int,
+        pollMs: UInt64 = 20,
+        _ cond: @MainActor () -> Bool
+    ) async throws -> Bool {
+        let maxPolls = max(1, timeoutMs / Int(pollMs))
+        for _ in 0 ..< maxPolls {
+            if cond() { return true }
+            try await Task.sleep(nanoseconds: pollMs * 1_000_000)
+        }
+        return cond()
+    }
+
     @Test("unlockHipsField 解锁当前 request，reset 后失效（失效条件 a/c 的状态语义）")
     func unlock_and_reset() throws {
         let state = try makeState()
@@ -112,12 +127,15 @@ struct HipsFieldUnlockAppStateTests {
     func hips_unlock_expires_with_history_session() async throws {
         let state = try makeState()
         state.unlockHipsField(requestId: "req-1")
-        state.setUnlockSession(UnlockSession(validFor: 0.15)) // 短 TTL 触发 AppState 过期定时器
+        state.setUnlockSession(UnlockSession(validFor: 0.1)) // 短 TTL 触发 AppState 过期定时器
         #expect(state.hipsFieldUnlock.isUnlocked(for: "req-1"))
-        // 过期定时器回调：setUnlockSession(nil) + resetHipsFieldUnlock
-        try await Task.sleep(nanoseconds: 450_000_000)
-        #expect(state.isUnlocked == false)
-        #expect(!state.hipsFieldUnlock.isUnlocked(for: "req-1"))
+        // 过期定时器回调（setUnlockSession(nil) + resetHipsFieldUnlock）是 async 定时器：
+        // 轮询等待而非固定 sleep——慢 / 高负载 runner 上定时器唤醒 + async 调度延迟不确定，
+        // 原固定 450ms 在 macos-15 CI 上 flaky（同 commit 一 run fail 一 run pass 坐实）。
+        let cleared = try await pollUntil(timeoutMs: 3000) {
+            !state.isUnlocked && !state.hipsFieldUnlock.isUnlocked(for: "req-1")
+        }
+        #expect(cleared, "过期定时器应在超时前清除 History 会话与 HIPS 字段解锁")
     }
 
     @Test("失效条件 d：锁屏统一失效点应同时清 History 会话与 HIPS 字段解锁（clearSession 双清语义）")
