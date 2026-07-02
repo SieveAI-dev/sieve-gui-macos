@@ -8,22 +8,23 @@ public actor DiagnosticPackager {
     public static let shared = DiagnosticPackager()
     private let logger = Logger(subsystem: "com.sieve.gui", category: "diagnostic")
 
-    /// 排除字段：prefix_hash / suffix_hash / session_id / caller_pid / caller_exe完整路径 / evidence_meta 原文
+    /// 排除字段：prefix_hash / suffix_hash / session_id / caller_pid / caller_exe完整路径 / evidence_meta/raw_json 原文
     public static let redactedFields: Set<String> = [
         "prefix_hash", "suffix_hash", "session_id",
-        "caller_pid", "caller_exe", "evidence_meta",
+        "caller_pid", "caller_exe", "evidence_meta", "raw_json",
         "fingerprint"
     ]
 
     /// audit.db 脱敏时清空的列（evidence 内容不得导出）
     public static let auditRedactedColumns: Set<String> = [
-        "evidence_meta", "fingerprint", "session_id", "caller_pid", "caller_exe"
+        "evidence_meta", "raw_json", "fingerprint", "session_id", "caller_pid", "caller_exe"
     ]
 
     public func exportRedacted() async -> URL? {
         let stamp = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-")
         let fm = FileManager.default
-        let downloads = fm.urls(for: .downloadsDirectory, in: .userDomainMask).first ?? URL(fileURLWithPath: NSHomeDirectory() + "/Downloads")
+        let downloads = fm.urls(for: .downloadsDirectory, in: .userDomainMask)
+            .first ?? URL(fileURLWithPath: NSHomeDirectory() + "/Downloads")
         let outURL = downloads.appendingPathComponent("sieve-diagnostic-\(stamp).zip")
 
         // 1. 收集源文件
@@ -69,7 +70,10 @@ public actor DiagnosticPackager {
             "redacted_columns": Array(DiagnosticPackager.auditRedactedColumns).sorted(),
             "note": "本包已自动脱敏：evidence_meta / fingerprint / session_id / caller_pid / caller_exe 已清空"
         ]
-        if let manifestData = try? JSONSerialization.data(withJSONObject: manifest, options: [.prettyPrinted, .sortedKeys]) {
+        if let manifestData = try? JSONSerialization.data(
+            withJSONObject: manifest,
+            options: [.prettyPrinted, .sortedKeys]
+        ) {
             try? manifestData.write(to: tmpDir.appendingPathComponent("manifest.json"))
         }
 
@@ -88,7 +92,7 @@ public actor DiagnosticPackager {
     }
 
     /// 拷贝 audit.db 并将 evidence 列清空。
-    /// 方法：用 SQLite3 API 复制整个 DB 文件，再对 events 表的脱敏列执行 UPDATE SET col = ''。
+    /// 方法：用 SQLite3 API 复制整个 DB 文件，再对 audit_events/events 表的脱敏列执行 UPDATE SET col = ''。
     /// 返回：拷贝并脱敏是否成功。
     public func copyAuditDBRedacted(src: String, dst: String) -> Bool {
         // Step 1: 文件层面拷贝（保留 schema + 全量行）
@@ -109,19 +113,24 @@ public actor DiagnosticPackager {
         }
         defer { sqlite3_close(db) }
 
-        // 获取 events 表实际存在的列。
-        let existingCols = getTableColumns(db: db, table: "events")
-        // events 表不存在（返回空集）= schema 不符预期。绝不能当作"无敏感列"放行——
+        guard let auditTable = resolveAuditTable(db: db) else {
+            logger.error("audit.db redact: audit_events/events 表不存在，拒绝导出未知 schema 的库")
+            return false
+        }
+
+        // 获取实际审计表存在的列。
+        let existingCols = getTableColumns(db: db, table: auditTable)
+        // 审计表不存在（返回空集）= schema 不符预期。绝不能当作"无敏感列"放行——
         // 那会把一个结构未知、可能含未脱敏 evidence 的库原样塞进诊断包。拒绝导出。
         guard !existingCols.isEmpty else {
-            logger.error("audit.db redact: events 表不存在，拒绝导出未知 schema 的库")
+            logger.error("audit.db redact: 审计表无列信息，拒绝导出未知 schema 的库")
             return false
         }
         let colsToRedact = DiagnosticPackager.auditRedactedColumns.filter { existingCols.contains($0) }
-        // events 表存在但无任一敏感列 = 该 schema 本就不含 evidence，跳过 UPDATE。
+        // 审计表存在但无任一敏感列 = 该 schema 本就不含 evidence，跳过 UPDATE。
         if !colsToRedact.isEmpty {
             let setClauses = colsToRedact.map { "\($0) = ''" }.joined(separator: ", ")
-            let sql = "UPDATE events SET \(setClauses)"
+            let sql = "UPDATE \(auditTable) SET \(setClauses)"
             if sqlite3_exec(db, sql, nil, nil, nil) != SQLITE_OK {
                 logger.error("audit.db redact UPDATE failed")
                 return false
@@ -134,6 +143,20 @@ public actor DiagnosticPackager {
             return false
         }
         return true
+    }
+
+    private func resolveAuditTable(db: OpaquePointer?) -> String? {
+        if tableExists(db: db, table: "audit_events") { return "audit_events" }
+        if tableExists(db: db, table: "events") { return "events" }
+        return nil
+    }
+
+    private func tableExists(db: OpaquePointer?, table: String) -> Bool {
+        var stmt: OpaquePointer?
+        let sql = "SELECT 1 FROM sqlite_master WHERE type='table' AND name='\(table)' LIMIT 1"
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return false }
+        defer { sqlite3_finalize(stmt) }
+        return sqlite3_step(stmt) == SQLITE_ROW
     }
 
     /// 获取表的列名列表

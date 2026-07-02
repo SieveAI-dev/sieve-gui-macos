@@ -1,6 +1,6 @@
-import Testing
 import Foundation
 import SQLite3
+import Testing
 @testable import SieveGUICore
 
 /// 直接驱动真实 AuditDBReader（非复现逻辑）覆盖：
@@ -13,7 +13,6 @@ import SQLite3
 /// 注入，不依赖 dbPath/HOME，永不触碰用户真实 ~/.sieve/audit.db。
 @Suite("AuditDBReader — 真实只读 reader 覆盖", .serialized)
 struct AuditDBReaderTests {
-
     // MARK: - 临时 db 路径（经 open(path:) 注入）
 
     /// 每次调用返回独立临时 db 路径。测试经 `reader.open(path:)` 注入，不依赖
@@ -53,6 +52,31 @@ struct AuditDBReaderTests {
         """)
     }
 
+    /// 当前 daemon v3 schema：表名 audit_events，时间列 timestamp_rfc3339，decision/raw_json。
+    private func createV3AuditEventsSchema(at path: String, userVersion: Int = 3) throws {
+        try removeIfExists(path)
+        var db: OpaquePointer?
+        guard sqlite3_open(path, &db) == SQLITE_OK else { throw FixtureError.openFailed }
+        defer { sqlite3_close(db) }
+        try exec(db, "PRAGMA user_version = \(userVersion)")
+        try exec(db, """
+        CREATE TABLE audit_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp_rfc3339 TEXT NOT NULL,
+            direction TEXT NOT NULL,
+            rule_id TEXT NOT NULL,
+            severity TEXT NOT NULL,
+            disposition TEXT NOT NULL,
+            decision TEXT,
+            request_id TEXT NOT NULL,
+            raw_json TEXT,
+            caller_pid INTEGER,
+            caller_exe TEXT,
+            provider_id TEXT NOT NULL DEFAULT 'unknown'
+        )
+        """)
+    }
+
     /// v1 旧 schema：缺少 v2 才有的 caller_pid / caller_exe 列（fail-soft 路径）。
     private func createV1Schema(at path: String, userVersion: Int = 1) throws {
         try removeIfExists(path)
@@ -84,6 +108,7 @@ struct AuditDBReaderTests {
         ruleId: String = "IN-CR-01",
         direction: String = "inbound",
         severity: String = "high",
+        fingerprint: String? = nil,
         callerPid: Int = 4242,
         callerExe: String = "/usr/bin/claude"
     ) throws {
@@ -96,8 +121,30 @@ struct AuditDBReaderTests {
          fingerprint, session_id, caller_pid, caller_exe, evidence_meta, request_id)
         VALUES
         (\(id), '2026-01-01T00:00:0\(id % 10)Z', '\(direction)', '\(severity)', '\(ruleId)',
-         'gui_popup', 'deny', 'fp_\(id)', 'sess_\(id)', \(callerPid), '\(callerExe)',
+         'gui_popup', 'deny', '\(fingerprint ?? "fp_\(id)")', 'sess_\(id)', \(callerPid), '\(callerExe)',
          '{"k":"v"}', 'req_\(id)')
+        """)
+    }
+
+    private func insertV3AuditEventRow(
+        at path: String,
+        id: Int,
+        ruleId: String = "IN-CR-05-EVM",
+        direction: String = "inbound",
+        severity: String = "Critical",
+        decision: String = "Block"
+    ) throws {
+        var db: OpaquePointer?
+        guard sqlite3_open(path, &db) == SQLITE_OK else { throw FixtureError.openFailed }
+        defer { sqlite3_close(db) }
+        try exec(db, """
+        INSERT INTO audit_events
+        (id, timestamp_rfc3339, direction, rule_id, severity, disposition, decision,
+         request_id, raw_json, caller_pid, caller_exe, provider_id)
+        VALUES
+        (\(id), '2026-01-01T00:00:0\(id % 10)Z', '\(direction)', '\(ruleId)', '\(severity)',
+         'pending', '\(decision)', 'req_v3_\(id)', '{"tool":"eth_signTransaction"}',
+         5150, '/usr/bin/codex', 'anthropic')
         """)
     }
 
@@ -155,6 +202,52 @@ struct AuditDBReaderTests {
         #expect(row.requestId == "req_1")
     }
 
+    @Test("v3 daemon schema：audit_events 表字段映射正确，schemaWarning=false")
+    func v3_audit_events_schema_reads_correctly() throws {
+        let path = resolvedDBPath()
+        try createV3AuditEventsSchema(at: path)
+        try insertV3AuditEventRow(at: path, id: 1)
+
+        let reader = AuditDBReader()
+        try reader.open(path: path)
+        defer { reader.close() }
+
+        #expect(reader.schemaVersion == 3)
+        #expect(reader.schemaWarning == false, "当前 daemon user_version=3 不应触发 schema 警告")
+
+        let rows = reader.recentEvents(limit: 50)
+        #expect(rows.count == 1)
+        let row = try #require(rows.first)
+        #expect(row.id == 1)
+        #expect(row.ruleId == "IN-CR-05-EVM")
+        #expect(row.direction == .inbound)
+        #expect(row.severity == .critical)
+        #expect(row.disposition == "pending")
+        #expect(row.userChoice == "deny")
+        #expect(row.fingerprint == nil)
+        #expect(row.sessionId == nil)
+        #expect(row.callerPid == 5150)
+        #expect(row.callerExe == "/usr/bin/codex")
+        #expect(row.evidenceMetaJSON == #"{"tool":"eth_signTransaction"}"#)
+        #expect(row.requestId == "req_v3_1")
+    }
+
+    @Test("event(requestId:) 精确返回匹配记录，不受最近分页位置影响")
+    func event_by_request_id() throws {
+        let path = resolvedDBPath()
+        try createV2Schema(at: path)
+        for i in 1 ... 5 {
+            try insertV2Row(at: path, id: i)
+        }
+
+        let reader = AuditDBReader()
+        try reader.open(path: path)
+        defer { reader.close() }
+
+        #expect(reader.event(requestId: "req_3")?.id == 3)
+        #expect(reader.event(requestId: "missing") == nil)
+    }
+
     // MARK: - 测试：schemaWarning 判定
 
     @Test("schemaWarning：未知 user_version（999）→ true")
@@ -193,7 +286,9 @@ struct AuditDBReaderTests {
     func incremental_returns_only_new_rows() throws {
         let path = resolvedDBPath()
         try createV2Schema(at: path)
-        for i in 1...5 { try insertV2Row(at: path, id: i) }
+        for i in 1 ... 5 {
+            try insertV2Row(at: path, id: i)
+        }
 
         let reader = AuditDBReader()
         try reader.open(path: path)
@@ -217,7 +312,9 @@ struct AuditDBReaderTests {
     func incremental_respects_limit() throws {
         let path = resolvedDBPath()
         try createV2Schema(at: path)
-        for i in 1...10 { try insertV2Row(at: path, id: i) }
+        for i in 1 ... 10 {
+            try insertV2Row(at: path, id: i)
+        }
 
         let reader = AuditDBReader()
         try reader.open(path: path)
@@ -268,7 +365,27 @@ struct AuditDBReaderTests {
         #expect(Set(inbound.map(\.id)) == [1, 3], "direction 过滤应仅留 inbound 行")
 
         let kw = reader.recentEvents(limit: 50, filter: .init(keyword: "OUT"))
-        #expect(kw.map(\.id) == [2], "keyword 过滤应命中 rule_id LIKE")
+        #expect(kw.map(\.id) == [2], "keyword 过滤应命中 rule_id 前缀")
+    }
+
+    @Test("recentEvents keyword：仅匹配 rule_id/fingerprint 前缀，且转义 LIKE 通配符")
+    func keyword_matches_rule_or_fingerprint_prefix_only() throws {
+        let path = resolvedDBPath()
+        try createV2Schema(at: path)
+        try insertV2Row(at: path, id: 1, ruleId: "IN-CR-01", fingerprint: "sha256:abc123")
+        try insertV2Row(at: path, id: 2, ruleId: "X-IN-CR-02", fingerprint: "fp-middle")
+        try insertV2Row(at: path, id: 3, ruleId: "OUT-07", fingerprint: "sha256:def456")
+        try insertV2Row(at: path, id: 4, ruleId: "PERCENT%RULE", fingerprint: "literal_under_score")
+
+        let reader = AuditDBReader()
+        try reader.open(path: path)
+        defer { reader.close() }
+
+        #expect(reader.recentEvents(limit: 50, filter: .init(keyword: "IN-CR")).map(\.id) == [1])
+        #expect(reader.recentEvents(limit: 50, filter: .init(keyword: "sha256:de")).map(\.id) == [3])
+        #expect(reader.recentEvents(limit: 50, filter: .init(keyword: "%")).map(\.id).isEmpty)
+        #expect(reader.recentEvents(limit: 50, filter: .init(keyword: "PERCENT%")).map(\.id) == [4])
+        #expect(reader.recentEvents(limit: 50, filter: .init(keyword: "literal_")).map(\.id) == [4])
     }
 
     // MARK: - 辅助

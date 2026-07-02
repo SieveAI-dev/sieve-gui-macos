@@ -5,7 +5,7 @@ import Foundation
 /// 导出进度状态
 public enum ExportState: Sendable {
     case idle
-    case running(progress: Double)   // 0.0 ... 1.0
+    case running(progress: Double) // 0.0 ... 1.0
     case done(url: URL)
     case failed(String)
 }
@@ -18,7 +18,12 @@ public actor HistoryExporter {
     private var currentTask: Task<Void, Never>?
 
     /// 发起导出。已有进行中的任务会被取消后重新开始。
-    public func export(rows: [AuditEventRow], format: ExportFormat, to url: URL, onUpdate: @escaping @Sendable (ExportState) -> Void) {
+    public func export(
+        rows: [AuditEventRow],
+        format: ExportFormat,
+        to url: URL,
+        onUpdate: @escaping @Sendable (ExportState) -> Void
+    ) {
         currentTask?.cancel()
         currentTask = Task {
             await runExport(rows: rows, format: format, to: url, onUpdate: onUpdate)
@@ -30,7 +35,12 @@ public actor HistoryExporter {
         currentTask = nil
     }
 
-    private func runExport(rows: [AuditEventRow], format: ExportFormat, to url: URL, onUpdate: @escaping @Sendable (ExportState) -> Void) async {
+    private func runExport(
+        rows: [AuditEventRow],
+        format: ExportFormat,
+        to url: URL,
+        onUpdate: @escaping @Sendable (ExportState) -> Void
+    ) async {
         let total = rows.count
         guard total > 0 else {
             onUpdate(.failed("无数据可导出"))
@@ -40,7 +50,7 @@ public actor HistoryExporter {
         let formatter = HistoryExportFormatter(format: format)
         var lines: [String] = []
         if format == .csv {
-            lines.append("id,created_at,direction,severity,rule_id,disposition,user_choice,request_id")
+            lines.append(HistoryExportFormatter.csvHeader)
         }
 
         for (i, row) in rows.enumerated() {

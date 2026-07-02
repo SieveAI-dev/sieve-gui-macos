@@ -9,6 +9,7 @@ public struct HitSummary: Identifiable, Sendable, Equatable {
     public let severity: Severity
     public let occurredAt: Date
     public let auditEventId: Int64?
+    public let requestId: String?
 
     public enum Action: String, Sendable {
         case allow, deny, redact, marked, terminal
@@ -21,7 +22,8 @@ public struct HitSummary: Identifiable, Sendable, Equatable {
         direction: Direction,
         severity: Severity,
         occurredAt: Date,
-        auditEventId: Int64?
+        auditEventId: Int64?,
+        requestId: String? = nil
     ) {
         self.id = id
         self.ruleId = ruleId
@@ -30,6 +32,7 @@ public struct HitSummary: Identifiable, Sendable, Equatable {
         self.severity = severity
         self.occurredAt = occurredAt
         self.auditEventId = auditEventId
+        self.requestId = requestId
     }
 }
 
@@ -44,8 +47,8 @@ public struct AuditEventRow: Identifiable, Sendable, Equatable {
     public let userChoice: String?
     public let fingerprint: String?
     public let sessionId: String?
-    public let callerPid: Int?          // v2 schema
-    public let callerExe: String?       // v2 schema
+    public let callerPid: Int? // v2 schema
+    public let callerExe: String? // v2 schema
     public let evidenceMetaJSON: String?
     public let requestId: String?
 
@@ -81,7 +84,10 @@ public struct AuditEventRow: Identifiable, Sendable, Equatable {
 }
 
 public struct GraylistEntry: Identifiable, Sendable, Equatable, Decodable {
-    public var id: String { fingerprint }
+    public var id: String {
+        fingerprint
+    }
+
     public let fingerprint: String
     public let ruleId: String
     /// added_at: Unix milliseconds timestamp (SPEC-005 §9.7)
@@ -92,7 +98,8 @@ public struct GraylistEntry: Identifiable, Sendable, Equatable, Decodable {
     public let addedBy: String
 
     public init(fingerprint: String, ruleId: String, addedAt: Date, contextHint: String?,
-                matchCountSince: Int, ruleKind: String, addedBy: String) {
+                matchCountSince: Int, ruleKind: String, addedBy: String)
+    {
         self.fingerprint = fingerprint
         self.ruleId = ruleId
         self.addedAt = addedAt
@@ -114,15 +121,15 @@ public struct GraylistEntry: Identifiable, Sendable, Equatable, Decodable {
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        self.fingerprint = try c.decode(String.self, forKey: .fingerprint)
-        self.ruleId = try c.decode(String.self, forKey: .ruleId)
-        self.contextHint = try c.decodeIfPresent(String.self, forKey: .contextHint)
-        self.matchCountSince = try c.decodeIfPresent(Int.self, forKey: .matchCountSince) ?? 0
-        self.ruleKind = try c.decodeIfPresent(String.self, forKey: .ruleKind) ?? "unknown"
-        self.addedBy = try c.decodeIfPresent(String.self, forKey: .addedBy) ?? "unknown"
+        fingerprint = try c.decode(String.self, forKey: .fingerprint)
+        ruleId = try c.decode(String.self, forKey: .ruleId)
+        contextHint = try c.decodeIfPresent(String.self, forKey: .contextHint)
+        matchCountSince = try c.decodeIfPresent(Int.self, forKey: .matchCountSince) ?? 0
+        ruleKind = try c.decodeIfPresent(String.self, forKey: .ruleKind) ?? "unknown"
+        addedBy = try c.decodeIfPresent(String.self, forKey: .addedBy) ?? "unknown"
         // added_at: Unix milliseconds integer
         let ms = try c.decodeIfPresent(Int64.self, forKey: .addedAt) ?? 0
-        self.addedAt = Date(timeIntervalSince1970: Double(ms) / 1000.0)
+        addedAt = Date(timeIntervalSince1970: Double(ms) / 1000.0)
     }
 }
 
@@ -136,7 +143,10 @@ public struct HealthResult: Sendable {
     public let metrics: Metrics
 
     public struct Check: Sendable, Identifiable {
-        public var id: String { name }
+        public var id: String {
+            name
+        }
+
         public let name: String
         public let ok: Bool
         public let detail: String?
@@ -155,8 +165,10 @@ public struct UnlockSession: Sendable {
 
     public init(unlockedAt: Date = Date(), validFor seconds: TimeInterval = 300) {
         self.unlockedAt = unlockedAt
-        self.expiresAt = unlockedAt.addingTimeInterval(seconds)
+        expiresAt = unlockedAt.addingTimeInterval(seconds)
     }
 
-    public func isValid(now: Date = Date()) -> Bool { now < expiresAt }
+    public func isValid(now: Date = Date()) -> Bool {
+        now < expiresAt
+    }
 }

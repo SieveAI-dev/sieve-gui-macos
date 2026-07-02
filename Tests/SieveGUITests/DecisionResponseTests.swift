@@ -1,5 +1,5 @@
-import Testing
 import Foundation
+import Testing
 @testable import SieveGUICore
 
 @Suite("DecisionResponse encoding-layer guard")
@@ -9,13 +9,14 @@ struct DecisionResponseTests {
         let response = DecisionResponse(
             id: "r-1",
             decision: .allow,
-            remember: true,                 // UI 端传 true
+            remember: true, // UI 端传 true
             contextHint: "test",
             byUser: true,
             uiPhaseWhenClicked: .blue
         )
         let result = response.resultJSON(allowRemember: false)
         #expect(result["remember"] as? Bool == false)
+        #expect(result["context_hint"] is NSNull)
     }
 
     @Test("allow_remember=true 时如实传递 remember 值")
@@ -32,11 +33,44 @@ struct DecisionResponseTests {
         #expect(result["remember"] as? Bool == true)
     }
 
+    @Test("context_hint 只在 allow + remember + allow_remember=true 时保留")
+    func context_hint_requires_allow_and_remember() {
+        let denied = DecisionResponse(
+            id: "r-deny",
+            decision: .deny,
+            remember: true,
+            contextHint: "keep?",
+            byUser: true,
+            uiPhaseWhenClicked: .blue
+        )
+        #expect(denied.resultJSON(allowRemember: true)["context_hint"] is NSNull)
+
+        let allowedNotRemembered = DecisionResponse(
+            id: "r-allow-no-remember",
+            decision: .allow,
+            remember: false,
+            contextHint: "keep?",
+            byUser: true,
+            uiPhaseWhenClicked: .blue
+        )
+        #expect(allowedNotRemembered.resultJSON(allowRemember: true)["context_hint"] is NSNull)
+
+        let allowedRemembered = DecisionResponse(
+            id: "r-allow-remember",
+            decision: .allow,
+            remember: true,
+            contextHint: "keep",
+            byUser: true,
+            uiPhaseWhenClicked: .blue
+        )
+        #expect(allowedRemembered.resultJSON(allowRemember: true)["context_hint"] as? String == "keep")
+    }
+
     @Test("merged 部分允许：每个 issue 独立强制")
     func merged_per_issue_force() {
         let response = MergedDecisionResponse(id: "m-1", perIssue: [
             .init(issueId: "i-1", decision: .allow, remember: true, contextHint: nil, allowRemember: false),
-            .init(issueId: "i-2", decision: .allow, remember: true, contextHint: nil, allowRemember: true),
+            .init(issueId: "i-2", decision: .allow, remember: true, contextHint: nil, allowRemember: true)
         ], byUser: true)
         let result = response.resultJSON()
         let arr = result["per_issue"] as? [[String: Any]] ?? []
@@ -64,7 +98,7 @@ struct DecisionResponseTests {
         #expect(result["by_user"] as? Bool == true)
         let decidedAt = result["decided_at"] as? String
         #expect(decidedAt != nil)
-        #expect(decidedAt?.contains("2025") == true)  // 2025-04-30 左右
+        #expect(decidedAt?.contains("2025") == true) // 2025-04-30 左右
     }
 
     @Test("resultJSON 包含 by_user=false（超时回退场景）")
@@ -74,7 +108,7 @@ struct DecisionResponseTests {
             decision: .deny,
             remember: false,
             contextHint: nil,
-            byUser: false,   // 超时/失联 auto-deny
+            byUser: false, // 超时/失联 auto-deny
             uiPhaseWhenClicked: .red
         )
         let result = response.resultJSON(allowRemember: false)
@@ -107,7 +141,7 @@ struct DecisionResponseTests {
                 .init(issueId: "i-1", decision: .deny, remember: false, contextHint: nil, allowRemember: false)
             ],
             decidedAt: fixedDate,
-            byUser: false   // 超时场景
+            byUser: false // 超时场景
         )
         let result = response.resultJSON()
 

@@ -1,12 +1,11 @@
-import Testing
 import Foundation
+import Testing
 @testable import SieveGUICore
 
 /// SPEC-002 §6：HIPS 失联期间用户决策的本地缓存（入队 / 去重 / 重发-清空）。
 /// 纯逻辑核心库类型；重连后由 HipsPanelManager 遍历重发，daemon 端按 request_id 去重。
 @Suite("DisconnectedDecisionCache — 失联决策缓存")
 struct DisconnectedDecisionCacheTests {
-
     private func makeSingle(id: String, decision: Decision) -> PendingDecisionPayload {
         let r = DecisionResponse(
             id: id, decision: decision, remember: false, contextHint: nil,
@@ -31,21 +30,21 @@ struct DisconnectedDecisionCacheTests {
         let drained = cache.drain()
         #expect(drained.count == 1)
         #expect(drained.first?.requestId == "req-1")
-        #expect(cache.isEmpty)          // drain 后清空
-        #expect(cache.drain().isEmpty)  // 二次 drain 为空（防重复重发）
+        #expect(cache.isEmpty) // drain 后清空
+        #expect(cache.drain().isEmpty) // 二次 drain 为空（防重复重发）
     }
 
     @Test("同 request_id 去重，后者覆盖，仅重发一次")
     func dedupe_by_request_id_latest_wins() {
         var cache = DisconnectedDecisionCache()
         cache.store(makeSingle(id: "req-1", decision: .deny))
-        cache.store(makeSingle(id: "req-1", decision: .allow))  // 同 id 覆盖
+        cache.store(makeSingle(id: "req-1", decision: .allow)) // 同 id 覆盖
         #expect(cache.count == 1)
 
         let drained = cache.drain()
         #expect(drained.count == 1)
         if case let .single(r, _) = drained[0] {
-            #expect(r.decision == .allow)   // 后者胜出
+            #expect(r.decision == .allow) // 后者胜出
         } else {
             Issue.record("expected .single payload")
         }

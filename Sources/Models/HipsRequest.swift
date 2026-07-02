@@ -57,11 +57,13 @@ public final class HipsRequest: Identifiable, @unchecked Sendable {
         self.recommendation = recommendation
         self.issues = issues
         self.rawJSON = rawJSON
-        self.receivedAtGUI = Date()
+        receivedAtGUI = Date()
     }
 
     /// 关闭后必须调用：rawJSON 内可能含 evidence，不允许跨弹窗存留
-    public func clearRawJSON() { self.rawJSON = nil }
+    public func clearRawJSON() {
+        rawJSON = nil
+    }
 
     /// 多 issue 中是否含 critical（决定能否渲染"全部允许"）
     public var hasCriticalIssue: Bool {
@@ -71,7 +73,7 @@ public final class HipsRequest: Identifiable, @unchecked Sendable {
 }
 
 public struct HipsIssue: Identifiable, Sendable {
-    public let id: String          // issue_id
+    public let id: String // issue_id
     public let ruleId: String
     public let title: String
     public let severity: Severity

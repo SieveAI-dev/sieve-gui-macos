@@ -1,12 +1,11 @@
-import Testing
 import Foundation
+import Testing
 @testable import SieveGUICore
 
 /// UserSettings.reduceMotionEnabled(systemReduceMotion:) 纯函数解析测试。
 /// 验证 override（system/always/never）如何与系统 flag 合成最终 reduce-motion 生效值。
 @Suite("reduceMotionEnabled 解析")
 struct ReduceMotionResolveTests {
-
     private func settings(_ override: String) -> UserSettings {
         var s = UserSettings.default
         s.reduceMotionOverride = override

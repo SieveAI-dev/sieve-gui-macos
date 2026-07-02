@@ -1,10 +1,9 @@
-import Testing
 import Foundation
+import Testing
 @testable import SieveGUICore
 
 @Suite("sieve.list_rules 解码 + 错误分支（SPEC-005 §11A）")
 struct ListRulesTests {
-
     // MARK: - ListRulesResult 解码
 
     @Test("minimal 单条规则解码成功")

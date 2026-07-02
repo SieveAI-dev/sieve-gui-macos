@@ -18,7 +18,8 @@
 
 - [ ] 修改了哪些代码就跑了哪些测试，并附粘贴/截图
 - [ ] `swiftformat --lint` 通过
-- [ ] `xcodebuild test` 通过
+- [ ] `swift test` 通过（Core 逻辑单测，命令行真实源）
+- [ ] 动了 `Sources/UI` / `Sources/Features` 则 `xcodebuild build` 通过（`swift test` 不覆盖 UI 层编译）
 - [ ] commit message 是 Conventional Commits 格式（`feat(scope): ...` / `fix(scope): ...`）
 - [ ] **没有** 在 commit 里加任何 AI 署名 / `Co-Authored-By: Claude` 之类
 

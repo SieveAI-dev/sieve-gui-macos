@@ -10,7 +10,7 @@ public final class SparkleUpdaterBridge: NSObject {
     public static let shared = SparkleUpdaterBridge()
 
     #if canImport(Sparkle)
-    private let updaterController: SPUStandardUpdaterController = SPUStandardUpdaterController(
+    private let updaterController: SPUStandardUpdaterController = .init(
         startingUpdater: true,
         updaterDelegate: nil,
         userDriverDelegate: nil
@@ -31,3 +31,5 @@ public final class SparkleUpdaterBridge: NSObject {
     }
     #endif
 }
+
+extension SparkleUpdaterBridge: AppUpdater {}

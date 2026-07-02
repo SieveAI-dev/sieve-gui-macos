@@ -1,6 +1,6 @@
+import ServiceManagement
 import SwiftUI
 import UserNotifications
-import ServiceManagement
 
 public struct OnboardingView: View {
     @ObservedObject var appState: AppState
@@ -15,8 +15,15 @@ public struct OnboardingView: View {
     @State private var selectedPreset: Preset = .standard
     /// daemon 二进制找不到时为 true（场景 C），驱动「未安装」专用提示 + 禁用继续。
     @State private var daemonNotInstalled: Bool = false
+    @State private var setupError: String?
+    @State private var setupRunning: Bool = false
 
-    public init(appState: AppState, ipcClient: IPCClient, skipBridge: OnboardingSkipBridge? = nil, onClose: @escaping () -> Void) {
+    public init(
+        appState: AppState,
+        ipcClient: IPCClient,
+        skipBridge: OnboardingSkipBridge? = nil,
+        onClose: @escaping () -> Void
+    ) {
         self.appState = appState
         self.ipcClient = ipcClient
         self.skipBridge = skipBridge
@@ -40,7 +47,7 @@ public struct OnboardingView: View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Sieve 引导").font(.title3.weight(.semibold)).padding(16)
             Divider()
-            ForEach(1...6, id: \.self) { i in
+            ForEach(1 ... 6, id: \.self) { i in
                 stepRow(index: i, title: stepTitle(i))
             }
             Spacer()
@@ -103,9 +110,17 @@ public struct OnboardingView: View {
                             .foregroundStyle(check.ok ? .green : .red)
                         Text(check.name)
                         Spacer()
-                        if !check.ok { Button("修复") { runSetup() } }
+                        if !check.ok {
+                            Button(setupRunning ? "修复中…" : "修复") { runSetup() }
+                                .disabled(setupRunning)
+                        }
                     }
                 }
+            }
+            if let setupError {
+                Label(setupError, systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.red)
             }
             Spacer()
             HStack {
@@ -113,7 +128,9 @@ public struct OnboardingView: View {
                 Spacer()
                 Button("继续") { step = 3 }
                     .buttonStyle(.borderedProminent)
-                    .disabled(daemonNotInstalled || doctorResults.isEmpty || doctorResults.contains { check in !check.ok })
+                    .disabled(daemonNotInstalled || doctorResults.isEmpty || doctorResults.contains { check in
+                        !check.ok
+                    })
             }
         }
         .onAppear { runDoctor() }
@@ -237,7 +254,8 @@ public struct OnboardingView: View {
                 .foregroundStyle(.secondary)
             if !demoResult.isEmpty {
                 HStack(spacing: 6) {
-                    Image(systemName: demoResult.hasPrefix("✓") ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                    Image(systemName: demoResult
+                        .hasPrefix("✓") ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                         .foregroundStyle(demoResult.hasPrefix("✓") ? .green : .orange)
                     Text(demoResult).font(.caption)
                 }
@@ -261,9 +279,9 @@ public struct OnboardingView: View {
         demoResult = ""
         // Demo payload: 触发 OUT-* 规则的 BIP39 助记词 + 地址片段
         let demoPayload = """
-            transfer 0x71C7656EC7ab88b098defB751B7401B5f6d8976F amount=2.5 ETH
-            seed: abandon ability able about above absent absorb abstract absurd abuse access accident
-            """
+        transfer 0x71C7656EC7ab88b098defB751B7401B5f6d8976F amount=2.5 ETH
+        seed: abandon ability able about above absent absorb abstract absurd abuse access accident
+        """
         Task {
             do {
                 _ = try await ipcClient.sendRequest(
@@ -330,27 +348,11 @@ public struct OnboardingView: View {
     /// 生产环境探测：`which sieve` + 常见安装路径 + ipc.sock 存在性。
     private static func detectDaemonInstalled() -> Bool {
         let fm = FileManager.default
-        let candidates = ["/usr/local/bin/sieve", "/opt/homebrew/bin/sieve"]
         let socket = (NSHomeDirectory() as NSString).appendingPathComponent(".sieve/ipc.sock")
-        let whichHit: Bool = {
-            let p = Process()
-            p.launchPath = "/usr/bin/which"
-            p.arguments = ["sieve"]
-            let pipe = Pipe()
-            p.standardOutput = pipe
-            p.standardError = Pipe()
-            do {
-                try p.run()
-                p.waitUntilExit()
-                return p.terminationStatus == 0
-            } catch {
-                return false
-            }
-        }()
         return isDaemonInstalled(
-            candidatePaths: candidates,
+            candidatePaths: SieveBinaryLocator.candidatePaths,
             socketPath: socket,
-            pathLookupHit: whichHit,
+            pathLookupHit: SieveBinaryLocator.resolve() != nil,
             fileExists: { path in fm.fileExists(atPath: path) }
         )
     }
@@ -361,17 +363,17 @@ public struct OnboardingView: View {
                 let data = try await ipcClient.sendRequest(id: UUID().uuidString, method: "sieve.health")
                 let dto = try JSONDecoder().decode(HealthResultDTO.self, from: data)
                 await MainActor.run {
-                    self.daemonNotInstalled = false
-                    self.doctorResults = Self.checks(from: dto)
+                    daemonNotInstalled = false
+                    doctorResults = Self.checks(from: dto)
                 }
             } catch {
                 // 失联：先区分「未安装」（场景 C）与「装了但没起来」（场景 B）。
                 let installed = Self.detectDaemonInstalled()
                 await MainActor.run {
                     if installed {
-                        self.daemonNotInstalled = false
+                        daemonNotInstalled = false
                         // 装了但失联：展示占位条目，引导用户跑 sieve setup（场景 B）。
-                        self.doctorResults = [
+                        doctorResults = [
                             DoctorCheck(name: "ipc.sock 可连接", ok: false),
                             DoctorCheck(name: "daemon listener 已绑定", ok: false),
                             DoctorCheck(name: "audit.db 可访问", ok: false),
@@ -380,8 +382,8 @@ public struct OnboardingView: View {
                         ]
                     } else {
                         // 未安装：展示专用提示 + 禁用继续（场景 C）。
-                        self.daemonNotInstalled = true
-                        self.doctorResults = []
+                        daemonNotInstalled = true
+                        doctorResults = []
                     }
                 }
             }
@@ -392,29 +394,63 @@ public struct OnboardingView: View {
     static func checks(from dto: HealthResultDTO) -> [DoctorCheck] {
         let listeners = dto.effectiveListeners
         let listenerSummary = listeners
-            .map { "\($0.port) [\($0.providerId)/\($0.`protocol`)]" }
+            .map { "\($0.port) [\($0.providerId)/\($0.protocol)]" }
             .joined(separator: ", ")
         let auditOK = dto.auditDb.schemaVersion >= 2
         let rulesOK = dto.rules.systemCount > 0
         let ipcOK = dto.ipc.connectedClients >= 1
         return [
             DoctorCheck(name: "ipc.sock 可连接（daemon v\(dto.daemonVersion) / 协议 \(dto.protocolVersion)）", ok: true),
-            DoctorCheck(name: "daemon listener 已绑定：\(listenerSummary.isEmpty ? "无" : listenerSummary)", ok: !listeners.isEmpty),
-            DoctorCheck(name: "audit.db schema v\(dto.auditDb.schemaVersion)（\(dto.auditDb.eventsTotal) 条事件）", ok: auditOK),
+            DoctorCheck(
+                name: "daemon listener 已绑定：\(listenerSummary.isEmpty ? "无" : listenerSummary)",
+                ok: !listeners.isEmpty
+            ),
+            DoctorCheck(
+                name: "audit.db schema v\(dto.auditDb.schemaVersion)（\(dto.auditDb.eventsTotal) 条事件）",
+                ok: auditOK
+            ),
             DoctorCheck(name: "规则引擎已加载（系统 \(dto.rules.systemCount) / 用户 \(dto.rules.userCount)）", ok: rulesOK),
             DoctorCheck(name: "client 握手成功（在线 \(dto.ipc.connectedClients) 个）", ok: ipcOK)
         ]
     }
 
     private func runSetup() {
+        setupError = nil
         guard let bin = SieveBinaryLocator.resolve() else {
+            setupError = "找不到 sieve 可执行文件。请重新安装完整的 Sieve（.dmg）后重试。"
             Task { await GUILog.shared.warn("找不到 sieve 可执行文件，无法运行 setup", category: "onboarding") }
             return
         }
-        let p = Process()
-        p.launchPath = bin
-        p.arguments = ["setup"]
-        try? p.run()
+        setupRunning = true
+        Task.detached {
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: bin)
+            p.arguments = ["setup"]
+            let errorPipe = Pipe()
+            p.standardError = errorPipe
+            do {
+                try p.run()
+                p.waitUntilExit()
+                let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+                let errorText = String(data: errorData, encoding: .utf8)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                await MainActor.run {
+                    setupRunning = false
+                    if p.terminationStatus == 0 {
+                        runDoctor()
+                    } else if let errorText, !errorText.isEmpty {
+                        setupError = "修复失败：\(errorText)"
+                    } else {
+                        setupError = "修复失败：sieve setup 退出码 \(p.terminationStatus)"
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    setupRunning = false
+                    setupError = "无法启动修复：\(error.localizedDescription)"
+                }
+            }
+        }
     }
 
     private func applyLoginItem(_ on: Bool) {
@@ -430,10 +466,10 @@ public struct OnboardingView: View {
 
     private func presetDesc(_ p: Preset) -> String {
         switch p {
-        case .strict: return "全员严格"
-        case .standard: return "默认推荐"
-        case .relaxed: return "宽松"
-        case .custom: return "自定义"
+        case .strict: "全员严格"
+        case .standard: "默认推荐"
+        case .relaxed: "宽松"
+        case .custom: "自定义"
         }
     }
 }

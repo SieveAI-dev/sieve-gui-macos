@@ -1,15 +1,14 @@
-import Testing
 import Foundation
+import Testing
 @testable import SieveGUICore
 
-/// HIPS 失联期间 disconnectedCache 路径完整性测试
-///
-/// 注意：HipsPanelManager 是 AppKit/SwiftUI 层（不在 Package.swift swift build 范围），
-/// 这里测试 Models 层 + IPCClient 的相关协议行为。
+// HIPS 失联期间 disconnectedCache 路径完整性测试
+//
+// 注意：HipsPanelManager 是 AppKit/SwiftUI 层（不在 Package.swift swift build 范围），
+// 这里测试 Models 层 + IPCClient 的相关协议行为。
 
 @Suite("HIPS 失联 disconnectedCache 路径")
 struct HipsDisconnectedCacheTests {
-
     // MARK: - 1. InflightQueue clearAndDiscard → reconnectedDiscarded
 
     @Test("clearAndDiscard：pending waiter 收到 reconnectedDiscarded 错误")
@@ -109,7 +108,7 @@ struct HipsDisconnectedCacheTests {
         ))
         await queue.enqueue(.init(
             id: "decision", method: "decision_response",
-            payload: Data(), createdAt: Date(),  // 更晚创建但高优先级
+            payload: Data(), createdAt: Date(), // 更晚创建但高优先级
             isDecisionResponse: true
         ))
         let pending = await queue.allPending()

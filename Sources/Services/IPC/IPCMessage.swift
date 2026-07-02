@@ -5,17 +5,23 @@ import Foundation
 
 public struct SetPausedParams: Encodable, Sendable {
     public let minutes: Int
-    public init(minutes: Int) { self.minutes = minutes }
+    public init(minutes: Int) {
+        self.minutes = minutes
+    }
 }
 
 public struct SetPresetParams: Encodable, Sendable {
     public let mode: String
-    public init(mode: String) { self.mode = mode }
+    public init(mode: String) {
+        self.mode = mode
+    }
 }
 
 public struct RemoveGraylistParams: Encodable, Sendable {
     public let fingerprint: String
-    public init(fingerprint: String) { self.fingerprint = fingerprint }
+    public init(fingerprint: String) {
+        self.fingerprint = fingerprint
+    }
 }
 
 /// Custom preset 单条规则覆盖参数（SPEC-003 §4 / ipc-protocol §4.3）。
@@ -24,7 +30,7 @@ public struct SetPresetOverridesParams: Encodable, Sendable {
     public let ruleId: String
     /// 超时秒数（30~600，daemon 二次校验）。
     public let timeoutSeconds: Int
-    /// 超时后默认行为（block / allow / redact）。
+    /// 超时后默认行为（Custom preset 覆盖只允许 block / allow）。
     public let defaultOnTimeout: String
 
     public init(ruleId: String, timeoutSeconds: Int, defaultOnTimeout: String) {
@@ -53,6 +59,48 @@ public struct PurgeHistoryParams: Encodable, Sendable {
 
     enum CodingKeys: String, CodingKey {
         case confirmedAt = "confirmed_at"
+    }
+}
+
+public enum PurgeHistorySendDecision: Equatable, Sendable {
+    case send
+    case cancelSilently
+    case blocked(String)
+
+    public static func resolve(
+        touchIDPassed: Bool,
+        daemonStatus: DaemonStatus,
+        purgeUnavailable: Bool,
+        purging: Bool
+    ) -> PurgeHistorySendDecision {
+        guard touchIDPassed else { return .cancelSilently }
+        if purging { return .blocked("清空操作正在进行中，请稍候") }
+        if purgeUnavailable {
+            return .blocked("daemon 版本过旧，不支持清空历史（需升级 daemon）")
+        }
+        if case .disconnected = daemonStatus {
+            return .blocked("清空失败，请检查 daemon 连接状态")
+        }
+        return .send
+    }
+}
+
+public struct DaemonSettingsActionAvailability: Equatable, Sendable {
+    public let canReloadConfig: Bool
+    public let canRunHealthCheck: Bool
+    public let canRunDoctor: Bool
+
+    public static func resolve(daemonStatus: DaemonStatus) -> DaemonSettingsActionAvailability {
+        let disconnected = if case .disconnected = daemonStatus {
+            true
+        } else {
+            false
+        }
+        return DaemonSettingsActionAvailability(
+            canReloadConfig: !disconnected,
+            canRunHealthCheck: true,
+            canRunDoctor: true
+        )
     }
 }
 
@@ -87,7 +135,8 @@ public enum IPCIncoming: Sendable {
 
     public static func decode(line: Data) throws -> IPCIncoming {
         guard let value = try? JSONDecoder().decode(JSONValue.self, from: line),
-              case .object(let dict) = value else {
+              case let .object(dict) = value
+        else {
             throw IPCError.parseError
         }
         guard let jsonrpc = dict["jsonrpc"]?.asString, jsonrpc == "2.0" else {
@@ -103,14 +152,14 @@ public enum IPCIncoming: Sendable {
             return Data("{}".utf8)
         }()
 
-        if let method = method, let id = id {
+        if let method, let id {
             return .request(id: id, method: method, paramsData: paramsData)
         }
-        if let method = method {
+        if let method {
             return .notification(method: method, paramsData: paramsData)
         }
-        if let id = id {
-            if let err = dict["error"], case .object(let edict) = err {
+        if let id {
+            if let err = dict["error"], case let .object(edict) = err {
                 let code = edict["code"]?.asInt ?? -32603
                 let msg = edict["message"]?.asString ?? "unknown_error"
                 let edata = edict["data"].flatMap { try? JSONEncoder().encode($0) }
@@ -146,7 +195,7 @@ public enum IPCOutbound {
     }
 
     /// 发送通知（Encodable 参数版本）。
-    public static func notification<P: Encodable>(method: String, params: P) -> Data {
+    public static func notification(method: String, params: some Encodable) -> Data {
         var dict: [String: Any] = ["jsonrpc": "2.0", "method": method]
         if let p = encodeParams(params) { dict["params"] = p }
         return encodeLine(dict)
@@ -159,7 +208,7 @@ public enum IPCOutbound {
     }
 
     /// 发送请求（Encodable 参数版本）。
-    public static func request<P: Encodable>(id: String, method: String, params: P) -> Data {
+    public static func request(id: String, method: String, params: some Encodable) -> Data {
         var dict: [String: Any] = ["jsonrpc": "2.0", "method": method, "id": id]
         if let p = encodeParams(params) { dict["params"] = p }
         return encodeLine(dict)
@@ -180,7 +229,7 @@ public enum IPCOutbound {
     }
 
     /// Encodable → JSONSerialization 对象（保证 sortedKeys 输出一致性）。
-    private static func encodeParams<P: Encodable>(_ params: P) -> Any? {
+    private static func encodeParams(_ params: some Encodable) -> Any? {
         guard let data = try? JSONEncoder().encode(params) else { return nil }
         return try? JSONSerialization.jsonObject(with: data)
     }

@@ -11,11 +11,17 @@ public enum SieveBinaryLocator {
 
     /// 解析 sieve 可执行文件路径：先查已知路径，再回退 `which sieve`。找不到返回 nil。
     public static func resolve() -> String? {
-        let fm = FileManager.default
-        for path in candidatePaths where fm.isExecutableFile(atPath: path) {
+        resolve(isExecutable: FileManager.default.isExecutableFile(atPath:), whichLookup: whichSieve)
+    }
+
+    static func resolve(
+        isExecutable: (String) -> Bool,
+        whichLookup: () -> String?
+    ) -> String? {
+        for path in candidatePaths where isExecutable(path) {
             return path
         }
-        return whichSieve()
+        return whichLookup()
     }
 
     private static func whichSieve() -> String? {

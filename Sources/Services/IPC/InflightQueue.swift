@@ -9,7 +9,7 @@ public actor InflightQueue {
         public let method: String
         public let payload: Data
         public let createdAt: Date
-        public let isDecisionResponse: Bool   // 决定优先级：true 优先重发
+        public let isDecisionResponse: Bool // 决定优先级：true 优先重发
     }
 
     public enum AwaitError: Error, Sendable, Equatable {
@@ -23,12 +23,12 @@ public actor InflightQueue {
 
         public static func == (lhs: AwaitError, rhs: AwaitError) -> Bool {
             switch (lhs, rhs) {
-            case (.rpcError(let c1, let m1, _), .rpcError(let c2, let m2, _)): return c1 == c2 && m1 == m2
-            case (.canceled, .canceled): return true
-            case (.versionMismatch, .versionMismatch): return true
-            case (.reconnectedDiscarded, .reconnectedDiscarded): return true
-            case (.timeout, .timeout): return true
-            default: return false
+            case let (.rpcError(c1, m1, _), .rpcError(c2, m2, _)): c1 == c2 && m1 == m2
+            case (.canceled, .canceled): true
+            case (.versionMismatch, .versionMismatch): true
+            case (.reconnectedDiscarded, .reconnectedDiscarded): true
+            case (.timeout, .timeout): true
+            default: false
             }
         }
     }
@@ -98,8 +98,13 @@ public actor InflightQueue {
         }
     }
 
-    public func count() -> Int { entries.count }
-    public func waiterCount() -> Int { waiters.count }
+    public func count() -> Int {
+        entries.count
+    }
+
+    public func waiterCount() -> Int {
+        waiters.count
+    }
 
     /// 清空所有 pending entries 并对所有 waiter 抛 .reconnectedDiscarded（重连后丢弃）。
     /// SPEC-005 §3.4：重连后不重发 inflight，旧的 oneshot channel 已失效。
@@ -112,7 +117,9 @@ public actor InflightQueue {
     }
 
     /// 仅清 entries，不通知 waiters（内部用途）。
-    public func clear() { entries.removeAll() }
+    public func clear() {
+        entries.removeAll()
+    }
 
     /// 超时清扫：对所有超过 deadline（按 method 区分，SPEC-008 §6 / OQ-008-02）的 entry，
     /// 以 `.timeout` 错误 reject 对应 waiter 并移除 entry，防止 daemon 静默时 await 永久挂起。

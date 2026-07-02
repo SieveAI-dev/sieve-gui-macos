@@ -4,29 +4,37 @@ import SwiftUI
 /// 五状态菜单栏图标。SF Symbols 模板图，按 daemonStatus 切换。
 public enum StatusBarIcon {
     public static func image(for status: DaemonStatus) -> NSImage {
-        let symbolName: String
-        switch status {
-        case .normal: symbolName = "shield.lefthalf.filled"
-        case .warning: symbolName = "shield.lefthalf.filled.badge.checkmark"
-        case .hold: symbolName = "shield.lefthalf.filled.trianglebadge.exclamationmark"
-        case .paused: symbolName = "pause.circle"
-        case .disconnected: symbolName = "shield.slash"
+        let presentation = StatusBarIconPresentation.resolve(for: status)
+        var cfg = NSImage.SymbolConfiguration(pointSize: 14, weight: .regular)
+        if let color = paletteColor(for: presentation.tint) {
+            cfg = cfg.applying(NSImage.SymbolConfiguration(paletteColors: [color]))
         }
-        let cfg = NSImage.SymbolConfiguration(pointSize: 14, weight: .regular)
-        let img = NSImage(systemSymbolName: symbolName, accessibilityDescription: accessibilityLabel(for: status))
+        let img = NSImage(systemSymbolName: presentation.symbolName, accessibilityDescription: presentation.tooltip)
             ?? NSImage(named: NSImage.applicationIconName)
             ?? NSImage()
-        img.isTemplate = true
-        return img.withSymbolConfiguration(cfg) ?? img
+        let configured = img.withSymbolConfiguration(cfg) ?? img
+        configured.isTemplate = presentation.tint == .template
+        return configured
     }
 
     public static func accessibilityLabel(for status: DaemonStatus) -> String {
-        switch status {
-        case .normal: return "Sieve 正常"
-        case .warning: return "Sieve 有警告"
-        case .hold: return "Sieve 正在等待用户决策"
-        case .paused: return "Sieve 已暂停"
-        case .disconnected: return "Sieve 失联"
+        StatusBarIconPresentation.resolve(for: status).tooltip
+    }
+
+    public static func accessibilityTitle(for status: DaemonStatus) -> String {
+        StatusBarIconPresentation.resolve(for: status).accessibilityTitle
+    }
+
+    private static func paletteColor(for tint: StatusBarIconTint) -> NSColor? {
+        switch tint {
+        case .template:
+            nil
+        case .warning:
+            .systemYellow
+        case .danger:
+            .systemRed
+        case .disabled:
+            .systemGray
         }
     }
 }

@@ -16,21 +16,21 @@ public final class IPCRouter: IPCDelegate {
 
     // MARK: - IPCDelegate
 
-    nonisolated public func ipc(_ client: IPCClient, didChangeState state: IPCState) {
+    public nonisolated func ipc(_: IPCClient, didChangeState state: IPCState) {
         Task { @MainActor in
             if case .retrying = state { IPCMonitorRingBuffer.shared.recordReconnect() }
             self.applyState(state)
         }
     }
 
-    nonisolated public func ipc(_ client: IPCClient, didReceive incoming: IPCIncoming) {
+    public nonisolated func ipc(_: IPCClient, didReceive incoming: IPCIncoming) {
         Task { @MainActor in
             self.recordMonitor(incoming)
             self.dispatch(incoming)
         }
     }
 
-    nonisolated public func ipcDidHandshake(_ client: IPCClient, params: HelloParams) {
+    public nonisolated func ipcDidHandshake(_: IPCClient, params: HelloParams) {
         Task { @MainActor in
             IPCMonitorRingBuffer.shared.recordHandshake()
             LiveEventsRingBuffer.shared.append(source: .ipc, level: .info, category: "ipc",
@@ -45,11 +45,11 @@ public final class IPCRouter: IPCDelegate {
         }
     }
 
-    nonisolated public func ipcDidLoseConnection(_ client: IPCClient, reason: DaemonStatus.DisconnectReason) {
+    public nonisolated func ipcDidLoseConnection(_: IPCClient, reason: DaemonStatus.DisconnectReason) {
         Task { @MainActor in self.appStateAdapter?.applyDisconnect(reason: reason) }
     }
 
-    nonisolated public func ipcDidDiscardInflightOnReconnect(_ client: IPCClient) {
+    public nonisolated func ipcDidDiscardInflightOnReconnect(_: IPCClient) {
         Task { @MainActor in
             self.hipsManager?.closeAllActiveDialogs()
         }
@@ -62,25 +62,25 @@ public final class IPCRouter: IPCDelegate {
     private func recordMonitor(_ incoming: IPCIncoming) {
         let monitor = IPCMonitorRingBuffer.shared
         switch incoming {
-        case .request(let id, let method, let p):
+        case let .request(id, method, p):
             monitor.record(direction: .inbound, method: method, messageId: id, bytes: p.count)
-        case .notification(let method, let p):
+        case let .notification(method, p):
             // heartbeat 不记录（噪音）
             if method != "sieve.heartbeat" {
                 monitor.record(direction: .inbound, method: method, messageId: nil, bytes: p.count)
             }
-        case .response(let id, let r):
+        case let .response(id, r):
             monitor.record(direction: .inbound, method: "response", messageId: id, bytes: r.count)
-        case .errorResponse(let id, _, _, let d):
+        case let .errorResponse(id, _, _, d):
             monitor.record(direction: .inbound, method: "error_response", messageId: id, bytes: d?.count ?? 0)
         }
     }
 
     private func dispatch(_ incoming: IPCIncoming) {
         switch incoming {
-        case .request(let id, let method, let params):
+        case let .request(id, method, params):
             handleDaemonRequest(id: id, method: method, paramsData: params)
-        case .notification(let method, let params):
+        case let .notification(method, params):
             handleDaemonNotification(method: method, paramsData: params)
         case .response, .errorResponse:
             break // 由具体调用方通过 inflight 处理（未来扩展回调）

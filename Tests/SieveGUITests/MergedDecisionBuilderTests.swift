@@ -1,12 +1,11 @@
-import Testing
 import Foundation
+import Testing
 @testable import SieveGUICore
 
 /// SPEC-002 §4.8：多 issue 合并模式下，整体动作（拒绝全部 / 全部允许 / 仅允许非 Critical）
 /// → per-issue 决策的翻译逻辑。纯逻辑核心库类型。
 @Suite("MergedDecisionBuilder — 多 issue 部分允许决策生成")
 struct MergedDecisionBuilderTests {
-
     private func issue(_ id: String, _ severity: Severity, allowRemember: Bool = true) -> HipsIssue {
         HipsIssue(
             id: id, ruleId: "RULE-\(id)", title: id, severity: severity,
@@ -28,6 +27,17 @@ struct MergedDecisionBuilderTests {
         let issues = [issue("a", .high), issue("b", .medium)]
         let r = MergedDecisionBuilder.perIssues(for: issues, action: .allowAll)
         #expect(r.map(\.decision) == [.allow, .allow])
+    }
+
+    @Test("红线：含 Critical 时即便误传 allowAll，也不得允许 Critical")
+    func allow_all_with_critical_degrades_to_partial() {
+        let issues = [issue("a", .critical), issue("b", .high)]
+        let r = MergedDecisionBuilder.perIssues(for: issues, action: .allowAll)
+        #expect(r.first { $0.issueId == "a" }?.decision == .deny)
+        #expect(r.first { $0.issueId == "b" }?.decision == .allow)
+
+        let response = MergedDecisionResponse(id: "merged-critical", perIssue: r, byUser: true)
+        #expect(response.mergedDecisionLabel == "partial")
     }
 
     @Test("allowNonCritical：Critical 拒绝、非 Critical 允许")
@@ -56,7 +66,7 @@ struct MergedDecisionBuilderTests {
         let issues = [
             issue("deny-me", .critical, allowRemember: true),
             issue("no-remember", .high, allowRemember: false),
-            issue("ok", .low, allowRemember: true),
+            issue("ok", .low, allowRemember: true)
         ]
         let r = MergedDecisionBuilder.perIssues(
             for: issues, action: .allowNonCritical,

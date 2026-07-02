@@ -1,5 +1,5 @@
-import Foundation
 import Combine
+import Foundation
 import os.log
 
 /// 全局单一事实来源。MainActor。所有跨模块共享状态都在这里。
@@ -23,7 +23,7 @@ public final class AppState: ObservableObject {
     // MARK: - 命中与事件
 
     @Published public private(set) var recentHits: [HitSummary] = []
-    @Published public private(set) var warningHitCount: Int = 0  // 5 分钟内 AutoRedact/StatusBar 命中数（用于角标）
+    @Published public private(set) var warningHitCount: Int = 0 // 5 分钟内警告命中/Toast 降级数（用于角标）
 
     // MARK: - HIPS
 
@@ -53,7 +53,7 @@ public final class AppState: ObservableObject {
 
     public init(store: UserSettingsStore = UserSettingsStore()) {
         self.store = store
-        self.settings = store.load()
+        settings = store.load()
         // settings 写回 UserDefaults
         $settings
             .dropFirst()
@@ -64,21 +64,27 @@ public final class AppState: ObservableObject {
 
     // MARK: - daemon 状态变更（由 IPCRouter 调用）
 
-    public func updatePreset(_ p: Preset) { preset = p }
+    public func updatePreset(_ p: Preset) {
+        preset = p
+    }
 
     /// 标记引导完成：同步落盘（绕过 `settings` 的 200ms debounce），避免完成/跳过后
     /// 立即退出导致时间戳未持久化、下次启动重复弹引导。
     public func markOnboardingCompleted(at date: Date = Date()) {
-        settings.onboardingCompletedAt = date  // 更新内存 + 触发 @Published（UI 联动）
-        store.setOnboardingCompleted(date)      // 立即同步写 UserDefaults
+        settings.onboardingCompletedAt = date // 更新内存 + 触发 @Published（UI 联动）
+        store.setOnboardingCompleted(date) // 立即同步写 UserDefaults
     }
+
     public func updatePaused(_ paused: Bool, until: Date?) {
         self.paused = paused
-        self.pausedUntil = until
+        pausedUntil = until
         rescheduleStatus()
-        if let until = until, paused {
+        if let until, paused {
             pauseTimer?.invalidate()
-            pauseTimer = Timer.scheduledTimer(withTimeInterval: max(0, until.timeIntervalSinceNow + 0.5), repeats: false) { [weak self] _ in
+            pauseTimer = Timer.scheduledTimer(
+                withTimeInterval: max(0, until.timeIntervalSinceNow + 0.5),
+                repeats: false
+            ) { [weak self] _ in
                 Task { @MainActor in self?.updatePaused(false, until: nil) }
             }
         }
@@ -96,13 +102,15 @@ public final class AppState: ObservableObject {
         rescheduleStatus()
     }
 
-    public func setPendingQueueCount(_ n: Int) { pendingQueueCount = n }
+    public func setPendingQueueCount(_ n: Int) {
+        pendingQueueCount = n
+    }
 
     private func startHoldTimer() {
         holdTimer?.invalidate()
         holdTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             Task { @MainActor in
-                guard let self = self else { return }
+                guard let self else { return }
                 if self.holdRemainingSeconds > 0 { self.holdRemainingSeconds -= 1 }
                 if self.holdRemainingSeconds <= 0 { self.holdTimer?.invalidate() }
             }
@@ -115,6 +123,11 @@ public final class AppState: ObservableObject {
         if hit.action == .redact || hit.action == .marked {
             bumpWarning()
         }
+    }
+
+    /// Toast 栈已满时，没有被 `recordHit` 的 action 语义计入角标的事件走此入口。
+    public func recordToastOverflow() {
+        bumpWarning()
     }
 
     private func bumpWarning() {

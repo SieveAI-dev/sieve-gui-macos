@@ -9,20 +9,17 @@ options:
   generateEmptyDirectories: false
 
 settings:
+  # 仅放真正跨 target 通用的设置。App 专属设置（PRODUCT_NAME / bundle id /
+  # Info.plist / entitlements / hardened runtime）属于 SieveGUI target，下沉到
+  # 该 target 的 settings，保持项目级 base 干净（配置归属正确）。
   base:
     SWIFT_VERSION: "5.9"
     SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
     CLANG_WARN_DOCUMENTATION_COMMENTS: YES
     SWIFT_STRICT_CONCURRENCY: complete
     MACOSX_DEPLOYMENT_TARGET: "13.0"
-    PRODUCT_NAME: "SieveGUI"
-    PRODUCT_BUNDLE_IDENTIFIER: com.sieve.gui
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "1"
-    GENERATE_INFOPLIST_FILE: NO
-    INFOPLIST_FILE: config/Info.plist
-    CODE_SIGN_ENTITLEMENTS: config/SieveGUI.entitlements
-    ENABLE_HARDENED_RUNTIME: YES
     DEAD_CODE_STRIPPING: YES
   configs:
     Debug:
@@ -43,6 +40,14 @@ targets:
   SieveGUI:
     type: application
     platform: macOS
+    settings:
+      base:
+        PRODUCT_NAME: "SieveGUI"
+        PRODUCT_BUNDLE_IDENTIFIER: com.sieve.gui
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: config/Info.plist
+        CODE_SIGN_ENTITLEMENTS: config/SieveGUI.entitlements
+        ENABLE_HARDENED_RUNTIME: YES
     sources:
       - path: Sources
         excludes:
@@ -60,7 +65,6 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSHumanReadableCopyright: "© 2026 Sieve. All rights reserved."
-        NSAppleEventsUsageDescription: "Sieve GUI needs to display HIPS prompts above all windows."
         SUFeedURL: "https://updates.sieveai.dev/appcast.xml"
         # ⚠️ GA 前必须替换：用 sparkle generate_keys 生成 EdDSA 密钥对，公钥填这里。
         # 私钥绝不入 git（落 CI secret）。Pre-GA PLACEHOLDER 公钥会让 Sparkle 拒绝所有更新（设计如此）。
@@ -69,13 +73,16 @@ targets:
         SUEnableInstallerLauncherService: true
         LSMinimumSystemVersion: "13.0"
 
-  SieveGUITests:
-    type: bundle.unit-test
-    platform: macOS
-    sources:
-      - Tests/SieveGUITests
-    dependencies:
-      - target: SieveGUI
-    settings:
-      base:
-        SWIFT_STRICT_CONCURRENCY: complete
+# 刻意不声明 SieveGUITests target——这是 deliberate tradeoff，不是技术不可能。
+# Tests/SieveGUITests/ 的用例统一 `@testable import SieveGUICore`（Package.swift 的 SPM
+# 库名）；本工程当前不为 Core 建独立 framework target，故 Xcode 工程内无 SieveGUICore
+# module，这套测试由 `swift test` 执行（231/231 通过）。
+# 备选方案（评估后排除）：新增 SieveGUICore framework target 对齐 Package.swift 的源清单，
+# 可让同一套测试在 Xcode 内 `@testable import` 解析、并支撑 xcodebuild test——但会引入
+# project.yml 与 Package.swift 两份源清单的同步成本/漂移风险，且对同一批纯逻辑的增量价值
+# 边际很小，故不采纳。
+# Xcode 工程按 CLAUDE.md「单 App target + 命令行可测的 Core 库」双轨分工：`xcodebuild
+# build` 验证 Features/UI 层在 warnings-as-errors 下编译通过，逻辑单测归 `swift test`，
+# 端到端行为靠真机联调。test action 未配置，是因为当前工程内无可在 Xcode 编译的 test
+# target（而非工程禁止 test action）；将来加 XCUITest（bundle.ui-testing，不需 @testable
+# import）时，按需新增 ui-testing target 并恢复 scheme 的 test action 即可。

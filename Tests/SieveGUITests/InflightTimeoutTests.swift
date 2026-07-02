@@ -1,5 +1,5 @@
-import Testing
 import Foundation
+import Testing
 @testable import SieveGUICore
 
 /// InflightQueue 超时清扫（SPEC-008 §6 / OQ-008-02）。
@@ -64,7 +64,13 @@ struct InflightTimeoutTests {
         let q = InflightQueue()
         let base = Date()
         await q.enqueue(.init(id: "old", method: "m", payload: Data(), createdAt: base, isDecisionResponse: false))
-        await q.enqueue(.init(id: "new", method: "m", payload: Data(), createdAt: base.addingTimeInterval(55), isDecisionResponse: false))
+        await q.enqueue(.init(
+            id: "new",
+            method: "m",
+            payload: Data(),
+            createdAt: base.addingTimeInterval(55),
+            isDecisionResponse: false
+        ))
 
         let expired = await q.sweepTimeouts(now: base.addingTimeInterval(61))
         #expect(expired == ["old"])
@@ -76,7 +82,13 @@ struct InflightTimeoutTests {
     @Test func evaluate_method_uses_longer_deadline() async {
         let q = InflightQueue()
         let base = Date()
-        await q.enqueue(.init(id: "ev", method: "sieve.evaluate", payload: Data(), createdAt: base, isDecisionResponse: false))
+        await q.enqueue(.init(
+            id: "ev",
+            method: "sieve.evaluate",
+            payload: Data(),
+            createdAt: base,
+            isDecisionResponse: false
+        ))
 
         // 70s：超过默认 60s 但未到 evaluate 90s
         let none = await q.sweepTimeouts(now: base.addingTimeInterval(70))

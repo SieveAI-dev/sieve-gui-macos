@@ -40,21 +40,21 @@ public final class AuditDBFileWatcher: @unchecked Sendable {
             queue: queue
         )
         src.setEventHandler { [weak self] in
-            guard let self = self else { return }
-            let flags = self.source?.data ?? []
+            guard let self else { return }
+            let flags = source?.data ?? []
             if flags.contains(.delete) || flags.contains(.rename) {
                 // 文件被删除/重命名（daemon 可能重建 audit.db）→ 当前 fd 绑定的旧 inode 失效，
                 // 之后所有写入都监视不到。重启 watcher 重新 open 新文件，并主动触发一次刷新。
-                self.scheduleRestart()
+                scheduleRestart()
             } else {
-                self.scheduleDebounce()
+                scheduleDebounce()
             }
         }
         src.setCancelHandler { [weak self] in
-            guard let self = self else { return }
-            if self.fd >= 0 {
-                close(self.fd)
-                self.fd = -1
+            guard let self else { return }
+            if fd >= 0 {
+                close(fd)
+                fd = -1
             }
         }
         source = src
@@ -81,9 +81,9 @@ public final class AuditDBFileWatcher: @unchecked Sendable {
     private func scheduleRestart() {
         debounceTask?.cancel()
         let task = DispatchWorkItem { [weak self] in
-            guard let self = self else { return }
-            self.start()     // start() 内部先 stop()（cancel 旧 source/fd）再 open 新文件
-            self.onChange()  // 重建后主动刷新，避免漏掉重建瞬间已写入的事件
+            guard let self else { return }
+            start() // start() 内部先 stop()（cancel 旧 source/fd）再 open 新文件
+            onChange() // 重建后主动刷新，避免漏掉重建瞬间已写入的事件
         }
         debounceTask = task
         queue.asyncAfter(deadline: .now() + 0.2, execute: task)

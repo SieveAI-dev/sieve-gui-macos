@@ -32,8 +32,12 @@ public final class WindowManager: NSObject {
         focus(w)
     }
 
-    public func openHistory() {
-        if let w = historyWindow { focus(w); return }
+    public func openHistory(requestId: String? = nil) {
+        if let w = historyWindow {
+            focus(w)
+            if let requestId { historyVM?.selectAndReveal(requestId: requestId) }
+            return
+        }
         let reader = AuditDBReader()
         let vm = HistoryWindowViewModel(reader: reader)
         historyVM = vm
@@ -42,6 +46,10 @@ public final class WindowManager: NSObject {
         let w = makeWindow(title: "Sieve 历史", contentVC: host, size: NSSize(width: 1080, height: 660))
         historyWindow = w
         focus(w)
+        if let requestId {
+            // View.onAppear 会先 open reader；下一轮 RunLoop 再执行精确定位。
+            DispatchQueue.main.async { vm.selectAndReveal(requestId: requestId) }
+        }
     }
 
     public func openDebug() {
@@ -106,12 +114,12 @@ public final class WindowManager: NSObject {
 
     private func scheduleModalPump(session: NSApplication.ModalSession) {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-            guard let self = self, self.onboardingSession != nil else { return }
+            guard let self, onboardingSession != nil else { return }
             let result = NSApp.runModalSession(session)
             if result == .continue {
-                self.scheduleModalPump(session: session)
+                scheduleModalPump(session: session)
             } else {
-                self.cleanupOnboardingSession()
+                cleanupOnboardingSession()
             }
         }
     }
@@ -177,8 +185,11 @@ public final class OnboardingSkipBridge {
 /// Onboarding 窗口的关闭按钮拦截：返回 false 阻止系统直接关窗，转交 onClose 走确认 alert。
 final class OnboardingCloseDelegate: NSObject, NSWindowDelegate {
     private let onClose: () -> Void
-    init(onClose: @escaping () -> Void) { self.onClose = onClose }
-    func windowShouldClose(_ sender: NSWindow) -> Bool {
+    init(onClose: @escaping () -> Void) {
+        self.onClose = onClose
+    }
+
+    func windowShouldClose(_: NSWindow) -> Bool {
         onClose()
         return false
     }

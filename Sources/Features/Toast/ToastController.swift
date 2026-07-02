@@ -1,6 +1,6 @@
 import AppKit
-import SwiftUI
 import Combine
+import SwiftUI
 
 /// 状态栏右上角 Toast 单例。NSPanel 复用，5s 内同 kind 合并，最多 3 条。
 @MainActor
@@ -8,20 +8,19 @@ public final class ToastController: NSObject, IPCToastAdapter {
     public static let shared = ToastController()
 
     private var stack: [ToastEntry] = []
-    private var panels: [String: NSPanel] = [:]   // key = id
+    private var panels: [String: NSPanel] = [:] // key = id
     private let appState = AppState.shared
 
     public func presentReconnect(_ kind: ReconnectKind) {
-        let message: String
-        switch kind {
+        let message = switch kind {
         case .daemonRestarted:
-            message = "Sieve daemon 已重启，状态可能丢失"
+            "Sieve daemon 已重启，状态可能丢失"
         case .reconnected:
-            message = "已重新连接 daemon"
+            "已重新连接 daemon"
         }
         let entry = ToastEntry(
             id: UUID().uuidString,
-            kind: .generic,  // 通用信息 toast（reconnect 通知）
+            kind: .generic, // 通用信息 toast（reconnect 通知）
             ruleId: "reconnect",
             severity: .low,
             direction: .inbound,
@@ -42,7 +41,11 @@ public final class ToastController: NSObject, IPCToastAdapter {
         // StatusBarNotify wire（SPEC-005 §10.1）：title 即展示文案，rule_id 可空。
         let ruleId = params.ruleId ?? params.kind.rawValue
         // 合并：同 kind+rule_id 在 5s 内
-        if let existingIdx = stack.firstIndex(where: { $0.kind == params.kind && $0.ruleId == ruleId && Date().timeIntervalSince($0.firstSeenAt) < 5 }) {
+        if let existingIdx = stack
+            .firstIndex(where: {
+                $0.kind == params.kind && $0.ruleId == ruleId && Date().timeIntervalSince($0.firstSeenAt) < 5
+            })
+        {
             stack[existingIdx].count += 1
             stack[existingIdx].lastUpdatedAt = Date()
             redrawPanel(stack[existingIdx])
@@ -50,18 +53,20 @@ public final class ToastController: NSObject, IPCToastAdapter {
         }
         // 上限 3 条 → 转角标
         if stack.count >= 3 {
-            // appState 已在 IPCAdapter 累计 warningHitCount
+            // outboundRedacted/sequenceHit/loadFailed/reloaded 已由 AppState.recordHit
+            // 按 redact/marked 计数；terminal/generic 不在该 action 子集，需在降级时显式补计。
+            if params.kind == .hookTerminal || params.kind == .generic {
+                appState.recordToastOverflow()
+            }
             return
         }
         // direction/severity wire 不再携带，由 kind 派生展示语义（仅 Toast 图标用）。
         let direction: Direction = (params.kind == .outboundRedacted) ? .outbound : .inbound
-        let severity: Severity = {
-            switch params.kind {
-            case .userRulesLoadFailed: return .high
-            case .outboundRedacted, .hookTerminal, .sequenceHit: return .medium
-            case .userRulesReloaded, .generic: return .low
-            }
-        }()
+        let severity: Severity = switch params.kind {
+        case .userRulesLoadFailed: .high
+        case .outboundRedacted, .hookTerminal, .sequenceHit: .medium
+        case .userRulesReloaded, .generic: .low
+        }
         let entry = ToastEntry(
             id: UUID().uuidString,
             kind: params.kind,
@@ -81,7 +86,11 @@ public final class ToastController: NSObject, IPCToastAdapter {
 
     private func showPanel(for entry: ToastEntry) {
         let panel = ToastPanel.make()
-        let host = NSHostingController(rootView: ToastView(entry: entry, onTap: { [weak self] in self?.handleTap(entry) }, onDismiss: { [weak self] in self?.dismiss(id: entry.id) }))
+        let host = NSHostingController(rootView: ToastView(
+            entry: entry,
+            onTap: { [weak self] in self?.handleTap(entry) },
+            onDismiss: { [weak self] in self?.dismiss(id: entry.id) }
+        ))
         host.view.frame = NSRect(x: 0, y: 0, width: 340, height: 70)
         panel.contentViewController = host
         positionPanel(panel, index: stack.firstIndex(where: { $0.id == entry.id }) ?? 0)
@@ -91,7 +100,11 @@ public final class ToastController: NSObject, IPCToastAdapter {
 
     private func redrawPanel(_ entry: ToastEntry) {
         guard let panel = panels[entry.id] else { return }
-        let host = NSHostingController(rootView: ToastView(entry: entry, onTap: { [weak self] in self?.handleTap(entry) }, onDismiss: { [weak self] in self?.dismiss(id: entry.id) }))
+        let host = NSHostingController(rootView: ToastView(
+            entry: entry,
+            onTap: { [weak self] in self?.handleTap(entry) },
+            onDismiss: { [weak self] in self?.dismiss(id: entry.id) }
+        ))
         panel.contentViewController = host
     }
 
@@ -126,12 +139,12 @@ public final class ToastController: NSObject, IPCToastAdapter {
             }
             return
         }
-        NSAnimationContext.runAnimationGroup({ ctx in
+        NSAnimationContext.runAnimationGroup { ctx in
             ctx.duration = 0.25
             panel.animator().alphaValue = 0
-        }, completionHandler: { [weak self] in
+        } completionHandler: { [weak self] in
             Task { @MainActor in
-                guard let self = self else { return }
+                guard let self else { return }
                 panel.orderOut(nil)
                 self.panels.removeValue(forKey: id)
                 self.stack.removeAll { $0.id == id }
@@ -141,7 +154,7 @@ public final class ToastController: NSObject, IPCToastAdapter {
                     }
                 }
             }
-        })
+        }
     }
 
     private func handleTap(_ entry: ToastEntry) {

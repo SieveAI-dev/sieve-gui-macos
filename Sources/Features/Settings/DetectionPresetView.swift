@@ -4,17 +4,23 @@ public struct DetectionPresetView: View {
     @ObservedObject var appState: AppState
     let ipcClient: IPCClient
 
-    @State private var pendingPreset: Preset?
+    @State private var selectionState: DetectionPresetSelectionState
     @State private var showConfirm: Bool = false
 
-    // Custom 模式规则覆盖：rule_id → 当前编辑中的 override
+    /// Custom 模式规则覆盖：rule_id → 当前编辑中的 override
     @State private var ruleOverrides: [String: RuleOverride] = [:]
 
     // list_rules 状态
     @State private var liveRules: [RuleSummary] = []
     @State private var rulesLoading: Bool = false
     @State private var rulesError: String?
-    @State private var rulesUnavailable: Bool = false   // -32601 降级标记
+    @State private var rulesUnavailable: Bool = false // -32601 降级标记
+
+    public init(appState: AppState, ipcClient: IPCClient) {
+        self.appState = appState
+        self.ipcClient = ipcClient
+        _selectionState = State(initialValue: DetectionPresetSelectionState(current: appState.preset))
+    }
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -35,9 +41,9 @@ public struct DetectionPresetView: View {
         }
         .padding()
         .alert("切换 Preset", isPresented: $showConfirm) {
-            Button("取消", role: .cancel) { pendingPreset = nil }
+            Button("取消", role: .cancel) { selectionState.cancel() }
             Button("确认切换") {
-                guard let p = pendingPreset else { return }
+                guard let p = selectionState.pending else { return }
                 applyPreset(p)
             }
         } message: {
@@ -46,11 +52,14 @@ public struct DetectionPresetView: View {
         .disabled(isDisconnected)
         .onAppear {
             initOverridesIfNeeded()
-            if !rulesUnavailable && liveRules.isEmpty {
+            if !rulesUnavailable, liveRules.isEmpty {
                 Task { await refreshRules() }
             }
         }
-        .onChange(of: appState.preset) { _ in initOverridesIfNeeded() }
+        .onChange(of: appState.preset) { preset in
+            selectionState.syncCurrent(preset)
+            initOverridesIfNeeded()
+        }
     }
 
     // MARK: - Preset Card
@@ -58,8 +67,7 @@ public struct DetectionPresetView: View {
     private func presetCard(_ p: Preset) -> some View {
         let selected = appState.preset == p
         return Button {
-            pendingPreset = p
-            showConfirm = true
+            showConfirm = selectionState.select(p)
         } label: {
             VStack(alignment: .leading, spacing: 4) {
                 Text(p.rawValue).font(.subheadline.weight(.semibold))
@@ -76,10 +84,10 @@ public struct DetectionPresetView: View {
 
     private func presetDescription(_ p: Preset) -> String {
         switch p {
-        case .strict: return "全员严格，最多干预。"
-        case .standard: return "默认推荐，平衡。"
-        case .relaxed: return "宽松，仅 critical 弹窗。"
-        case .custom: return "自定义覆盖。"
+        case .strict: "全员严格，最多干预。"
+        case .standard: "默认推荐，平衡。"
+        case .relaxed: "宽松，仅 critical 弹窗。"
+        case .custom: "自定义覆盖。"
         }
     }
 
@@ -112,7 +120,11 @@ public struct DetectionPresetView: View {
     private func customRuleRow(_ rule: RuleDisplayItem) -> some View {
         let lock = rule.criticalLock
         let override = Binding<RuleOverride>(
-            get: { ruleOverrides[rule.id] ?? RuleOverride(ruleId: rule.id, timeoutSeconds: rule.defaultTimeout, defaultOnTimeout: rule.defaultOnTimeout) },
+            get: { ruleOverrides[rule.id] ?? RuleOverride(
+                ruleId: rule.id,
+                timeoutSeconds: rule.defaultTimeout,
+                defaultOnTimeout: rule.defaultOnTimeout
+            ) },
             set: { newVal in ruleOverrides[rule.id] = newVal }
         )
         HStack {
@@ -186,7 +198,6 @@ public struct DetectionPresetView: View {
         return Picker("", selection: dotBinding) {
             Text("block").tag("block")
             Text("allow").tag("allow")
-            Text("redact").tag("redact")
         }
         .labelsHidden()
         .font(.caption2)
@@ -336,32 +347,74 @@ public struct DetectionPresetView: View {
 
     private func severityColor(_ s: Severity) -> Color {
         switch s {
-        case .critical: return .red
-        case .high: return .orange
-        case .medium: return .yellow
-        case .low: return .blue
+        case .critical: .red
+        case .high: .orange
+        case .medium: .yellow
+        case .low: .blue
         }
     }
 
     // MARK: - 规则数据
 
     struct RuleDisplayItem: Identifiable {
-        let id: String          // rule_id
+        let id: String // rule_id
         let direction: String
         let severity: String
         let criticalLock: Bool
         let defaultTimeout: Int
-        let defaultOnTimeout: String  // block / allow / redact
+        let defaultOnTimeout: String // block / allow
     }
 
     private var knownRules: [RuleDisplayItem] {
         [
-            RuleDisplayItem(id: "IN-CR-01",  direction: "IN",  severity: "critical", criticalLock: true,  defaultTimeout: 30, defaultOnTimeout: "block"),
-            RuleDisplayItem(id: "IN-CR-05",  direction: "IN",  severity: "critical", criticalLock: true,  defaultTimeout: 30, defaultOnTimeout: "block"),
-            RuleDisplayItem(id: "OUT-07",    direction: "OUT", severity: "critical", criticalLock: true,  defaultTimeout: 30, defaultOnTimeout: "block"),
-            RuleDisplayItem(id: "OUT-09",    direction: "OUT", severity: "critical", criticalLock: true,  defaultTimeout: 30, defaultOnTimeout: "block"),
-            RuleDisplayItem(id: "OUT-01",    direction: "OUT", severity: "high",     criticalLock: false, defaultTimeout: 30, defaultOnTimeout: "block"),
-            RuleDisplayItem(id: "OUT-02",    direction: "OUT", severity: "medium",   criticalLock: false, defaultTimeout: 60, defaultOnTimeout: "allow"),
+            RuleDisplayItem(
+                id: "IN-CR-01",
+                direction: "IN",
+                severity: "critical",
+                criticalLock: true,
+                defaultTimeout: 30,
+                defaultOnTimeout: "block"
+            ),
+            RuleDisplayItem(
+                id: "IN-CR-05",
+                direction: "IN",
+                severity: "critical",
+                criticalLock: true,
+                defaultTimeout: 30,
+                defaultOnTimeout: "block"
+            ),
+            RuleDisplayItem(
+                id: "OUT-07",
+                direction: "OUT",
+                severity: "critical",
+                criticalLock: true,
+                defaultTimeout: 30,
+                defaultOnTimeout: "block"
+            ),
+            RuleDisplayItem(
+                id: "OUT-09",
+                direction: "OUT",
+                severity: "critical",
+                criticalLock: true,
+                defaultTimeout: 30,
+                defaultOnTimeout: "block"
+            ),
+            RuleDisplayItem(
+                id: "OUT-01",
+                direction: "OUT",
+                severity: "high",
+                criticalLock: false,
+                defaultTimeout: 30,
+                defaultOnTimeout: "block"
+            ),
+            RuleDisplayItem(
+                id: "OUT-02",
+                direction: "OUT",
+                severity: "medium",
+                criticalLock: false,
+                defaultTimeout: 60,
+                defaultOnTimeout: "allow"
+            )
         ]
     }
 
@@ -388,7 +441,7 @@ public struct DetectionPresetView: View {
         let prevOverride = override
         let requestId = UUID().uuidString
         Task {
-            await ipcClient.registerMutatingRequest(requestId)   // 注册先于发送，避免 echo 漏判
+            await ipcClient.registerMutatingRequest(requestId) // 注册先于发送，避免 echo 漏判
             do {
                 _ = try await ipcClient.sendRequest(
                     id: requestId,
@@ -404,7 +457,7 @@ public struct DetectionPresetView: View {
                 ipcClient.unregisterMutatingRequest(requestId)
                 // 失败回滚：恢复初始默认值
                 await MainActor.run {
-                    ruleOverrides[ruleId] = nil  // 清空 → Binding fallback 到 defaultTimeout
+                    ruleOverrides[ruleId] = nil // 清空 → Binding fallback 到 defaultTimeout
                 }
                 await GUILog.shared.warn("set_preset_overrides failed ruleId=\(ruleId): \(error)", category: "settings")
             }
@@ -440,7 +493,7 @@ public struct DetectionPresetView: View {
             }
         } catch let err as InflightQueue.AwaitError {
             switch err {
-            case .rpcError(let code, let message, _):
+            case let .rpcError(code, message, _):
                 if code == -32006 {
                     // rules_loading：5s 后自动重试
                     await MainActor.run {
@@ -485,12 +538,16 @@ public struct DetectionPresetView: View {
     private func applyPreset(_ p: Preset) {
         let id = UUID().uuidString
         let previousPreset = appState.preset
-        appState.updatePreset(p)         // 乐观更新
-        pendingPreset = nil
+        appState.updatePreset(p) // 乐观更新
+        _ = selectionState.applyPending()
         Task {
-            await ipcClient.registerMutatingRequest(id)   // 注册先于发送，避免 echo 漏判
+            await ipcClient.registerMutatingRequest(id) // 注册先于发送，避免 echo 漏判
             do {
-                _ = try await ipcClient.sendRequest(id: id, method: "sieve.set_preset", params: SetPresetParams(mode: p.rawValue))
+                _ = try await ipcClient.sendRequest(
+                    id: id,
+                    method: "sieve.set_preset",
+                    params: SetPresetParams(mode: p.rawValue)
+                )
                 ipcClient.unregisterMutatingRequest(id)
             } catch {
                 ipcClient.unregisterMutatingRequest(id)

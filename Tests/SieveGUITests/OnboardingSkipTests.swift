@@ -1,5 +1,5 @@
-import Testing
 import Foundation
+import Testing
 @testable import SieveGUICore
 
 /// SPEC-006 §9：Onboarding「跳过引导」写 kOnboardingSkippedSteps + daemon 未安装降级判定。
@@ -13,7 +13,6 @@ import Foundation
 /// 若 OnboardingView 改算法，这里会先红，提示同步。
 @Suite("Onboarding 跳过与降级逻辑")
 struct OnboardingSkipTests {
-
     /// 隔离的 UserDefaults，避免污染 .standard / 跨用例串扰。
     private func freshDefaults(_ name: String = UUID().uuidString) -> UserDefaults {
         let d = UserDefaults(suiteName: name)!

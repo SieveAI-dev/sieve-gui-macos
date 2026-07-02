@@ -1,11 +1,13 @@
-import SwiftUI
+import AppKit
 import ServiceManagement
+import SwiftUI
 
 public struct GeneralSettingsView: View {
     @ObservedObject var appState: AppState
     @State private var loginItemError: String? = nil
     @State private var showLoginItemAlert: Bool = false
     @State private var languageRestartPending: Bool = false
+    @State private var soundPreviewError: String? = nil
 
     public var body: some View {
         Form {
@@ -20,7 +22,8 @@ public struct GeneralSettingsView: View {
                         Text(err).font(.caption).foregroundStyle(.secondary)
                         Spacer()
                         Button("去 System Settings 启用") {
-                            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension")!)
+                            NSWorkspace.shared
+                                .open(URL(string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension")!)
                         }
                         .font(.caption)
                     }
@@ -64,8 +67,23 @@ public struct GeneralSettingsView: View {
                 }
             }
             Section("提示音与 Toast") {
-                Toggle("HIPS 弹窗提示音", isOn: $appState.settings.hipsSoundEnabled)
-                Stepper(value: $appState.settings.toastDurationSeconds, in: 3...10) {
+                HStack {
+                    Toggle("HIPS 弹窗提示音", isOn: $appState.settings.hipsSoundEnabled)
+                    Spacer()
+                    Button("试听") {
+                        previewHipsSound()
+                    }
+                }
+                Text("HIPS 弹窗触发时播放（\(appState.settings.hipsSoundName)）。")
+                    .font(.caption).foregroundStyle(.secondary)
+                if let soundPreviewError {
+                    HStack(spacing: 6) {
+                        Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                        Text(soundPreviewError).font(.caption).foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 2)
+                }
+                Stepper(value: $appState.settings.toastDurationSeconds, in: 3 ... 10) {
                     Text("Toast 时长：\(appState.settings.toastDurationSeconds)s")
                 }
             }
@@ -78,7 +96,8 @@ public struct GeneralSettingsView: View {
         }
         .alert("开机启动注册失败", isPresented: $showLoginItemAlert) {
             Button("去 System Settings 启用") {
-                NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension")!)
+                NSWorkspace.shared
+                    .open(URL(string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension")!)
             }
             Button("知道了", role: .cancel) {}
         } message: {
@@ -86,17 +105,29 @@ public struct GeneralSettingsView: View {
         }
     }
 
+    private func previewHipsSound() {
+        let requestedName = appState.settings.hipsSoundName
+        let sound = NSSound(named: NSSound.Name(requestedName)) ??
+            NSSound(named: NSSound.Name(UserSettings.default.hipsSoundName))
+        guard let sound else {
+            soundPreviewError = "无法播放提示音：\(requestedName)"
+            return
+        }
+        soundPreviewError = nil
+        sound.stop()
+        sound.play()
+    }
+
     /// 应用主题：直接设置 NSApp.appearance，即时生效。
     /// system → nil（跟随系统）/ light → aqua / dark → darkAqua。
     private func applyAppearance(_ value: String) {
-        let appearance: NSAppearance?
-        switch value {
+        let appearance: NSAppearance? = switch value {
         case "light":
-            appearance = NSAppearance(named: .aqua)
+            NSAppearance(named: .aqua)
         case "dark":
-            appearance = NSAppearance(named: .darkAqua)
+            NSAppearance(named: .darkAqua)
         default:
-            appearance = nil
+            nil
         }
         NSApp.appearance = appearance
     }
@@ -133,7 +164,10 @@ public struct GeneralSettingsView: View {
                     appState.settings.loginItemEnabled = !on
                     loginItemError = "开机启动注册失败：\(error.localizedDescription)。请去 System Settings → General → Login Items 手动启用。"
                     showLoginItemAlert = true
-                    await GUILog.shared.warn("SMAppService register/unregister failed: \(error.localizedDescription)", category: "settings")
+                    await GUILog.shared.warn(
+                        "SMAppService register/unregister failed: \(error.localizedDescription)",
+                        category: "settings"
+                    )
                 }
             }
         }

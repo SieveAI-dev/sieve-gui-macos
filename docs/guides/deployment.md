@@ -328,7 +328,7 @@ xattr -d com.apple.quarantine /Applications/SieveGUI.app
 
 ## 9. 发布前自检清单
 
-- [ ] 所有测试通过（`xcodebuild test`）
+- [ ] 所有测试通过（`swift test`）+ App 构建通过（`xcodebuild build`）
 - [ ] `swiftformat --lint` 通过
 - [ ] `Info.plist` 版本号已递增
 - [ ] CHANGELOG.md 已更新

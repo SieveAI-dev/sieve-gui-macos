@@ -1,6 +1,6 @@
 import Foundation
-import UserNotifications
 import os.log
+import UserNotifications
 
 /// macOS 系统通知。失联/重连/auto-deny/前台外即将弹出。
 @MainActor
@@ -10,8 +10,7 @@ public final class NotificationCenterAdapter {
 
     public func requestAuthorization() async -> Bool {
         do {
-            let granted = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])
-            return granted
+            return try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])
         } catch {
             logger.error("notif auth failed: \(String(describing: error), privacy: .public)")
             return false
@@ -50,17 +49,19 @@ public final class NotificationCenterAdapter {
         let req = UNNotificationRequest(identifier: id, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(req) { err in
             if let err { Logger(subsystem: "com.sieve.gui", category: "notifications")
-                .error("post fail: \(String(describing: err), privacy: .public)") }
+                .error("post fail: \(String(describing: err), privacy: .public)")
+            }
         }
     }
 
     private func shortReason(_ r: DaemonStatus.DisconnectReason) -> String {
         switch r {
-        case .socketMissing: return "找不到 daemon socket。"
-        case .heartbeatTimeout: return "30 秒未收到 daemon 消息。"
-        case .versionMismatch: return "协议版本不兼容，请同步升级。"
-        case .daemonShutdown: return "daemon 主动关闭。"
-        case .unknown: return "未知原因。"
+        case .socketMissing: "找不到 daemon socket。"
+        case .connectionRefused: "daemon socket 拒绝连接，请重启 daemon。"
+        case .heartbeatTimeout: "30 秒未收到 daemon 消息。"
+        case .versionMismatch: "协议版本不兼容，请同步升级。"
+        case .daemonShutdown: "daemon 主动关闭。"
+        case .unknown: "未知原因。"
         }
     }
 }

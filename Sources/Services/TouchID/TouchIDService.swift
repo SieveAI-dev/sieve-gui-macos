@@ -1,5 +1,5 @@
-import Foundation
 import AppKit
+import Foundation
 import LocalAuthentication
 import os.log
 
@@ -13,7 +13,7 @@ public final class TouchIDService: NSObject {
     private let appState = AppState.shared
     private var screenLockObserver: NSObjectProtocol?
 
-    public override init() {
+    override public init() {
         super.init()
         observeScreenLock()
     }
@@ -48,7 +48,11 @@ public final class TouchIDService: NSObject {
 
     private func observeScreenLock() {
         let nc = NSWorkspace.shared.notificationCenter
-        screenLockObserver = nc.addObserver(forName: NSWorkspace.screensDidSleepNotification, object: nil, queue: .main) { [weak self] _ in
+        screenLockObserver = nc.addObserver(
+            forName: NSWorkspace.screensDidSleepNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
             Task { @MainActor in self?.clearSession() }
         }
     }

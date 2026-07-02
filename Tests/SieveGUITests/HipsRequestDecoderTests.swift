@@ -1,5 +1,5 @@
-import Testing
 import Foundation
+import Testing
 @testable import SieveGUICore
 
 @Suite("HipsRequestDecoder")
@@ -34,7 +34,7 @@ struct HipsRequestDecoderTests {
         #expect(req.allowRemember == false)
         #expect(req.merged == false)
         #expect(req.recommendation?.confidence == .high)
-        if case .signingToolUse(let s) = req.context {
+        if case let .signingToolUse(s) = req.context {
             #expect(s.toolName == "signTransaction")
             #expect(s.flags?.infiniteAmount == true)
         } else {
@@ -188,7 +188,7 @@ struct HipsRequestDecoderTests {
         #expect(req.recommendation?.decision == .deny)
         #expect(req.recommendation?.confidence == .high)
         #expect(req.recommendation?.reason == "deadline=0 + 无限 amount 是 Permit2 钓鱼经典模式")
-        if case .signingToolUse(let s) = req.context {
+        if case let .signingToolUse(s) = req.context {
             #expect(s.toolName == "signTransaction")
             #expect(s.chain == "Ethereum")
             #expect(s.chainId == 1)
@@ -368,7 +368,7 @@ struct HipsRequestDecoderTests {
         let i1 = req.issues.first { $0.id == "i-1" }
         #expect(i1?.severity == .critical)
         #expect(i1?.allowRemember == false)
-        if case .secretOutbound(let s) = i1?.context {
+        if case let .secretOutbound(s) = i1?.context {
             #expect(s.secretKind == "private_key")
             #expect(s.prefix4 == "0x1a")
             #expect(s.length == 64)
@@ -376,7 +376,7 @@ struct HipsRequestDecoderTests {
             Issue.record("i-1 expected secret_outbound context")
         }
         let i2 = req.issues.first { $0.id == "i-2" }
-        if case .addressCompare(let a) = i2?.context {
+        if case let .addressCompare(a) = i2?.context {
             #expect(a.levenshtein == 1)
             #expect(a.chain == "Ethereum")
         } else {

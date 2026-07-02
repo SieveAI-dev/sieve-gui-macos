@@ -24,8 +24,6 @@
 	<string>13.0</string>
 	<key>LSUIElement</key>
 	<true/>
-	<key>NSAppleEventsUsageDescription</key>
-	<string>Sieve GUI needs to display HIPS prompts above all windows.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>© 2026 Sieve. All rights reserved.</string>
 	<key>SUEnableInstallerLauncherService</key>

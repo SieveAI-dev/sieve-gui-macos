@@ -1,11 +1,10 @@
-import Testing
 import Foundation
+import Testing
 @testable import SieveGUICore
 
 @Suite("LiveEventsRingBuffer — 暂停只影响 UI，ring buffer 继续记录")
 @MainActor
 struct LiveEventsRingBufferTests {
-
     @Test("paused=false：append 正常写入")
     func append_when_not_paused() {
         let buf = LiveEventsRingBuffer()
@@ -36,6 +35,34 @@ struct LiveEventsRingBufferTests {
         #expect(buf.entries.count == 3)
     }
 
+    @Test("paused=true：filter 使用暂停瞬间快照，append 继续写入但 UI 不刷新")
+    func paused_filter_uses_snapshot_while_entries_continue_recording() {
+        let buf = LiveEventsRingBuffer()
+        buf.append(source: .gui, level: .info, category: "c", message: "visible-before-pause")
+        buf.paused = true
+        buf.append(source: .ipc, level: .warn, category: "c", message: "hidden-during-pause")
+
+        #expect(buf.entries.count == 2)
+        let visible = buf.filter(source: "all", level: "all", grep: "")
+        #expect(visible.map(\.message) == ["visible-before-pause"])
+
+        buf.paused = false
+        let resumed = buf.filter(source: "all", level: "all", grep: "")
+        #expect(resumed.map(\.message) == ["visible-before-pause", "hidden-during-pause"])
+    }
+
+    @Test("clear：暂停时同时清空 ring buffer 与可见快照")
+    func clear_when_paused_clears_snapshot_too() {
+        let buf = LiveEventsRingBuffer()
+        buf.append(source: .audit, level: .info, category: "audit", message: "before")
+        buf.paused = true
+        buf.append(source: .audit, level: .info, category: "audit", message: "after")
+        buf.clear()
+
+        #expect(buf.entries.isEmpty)
+        #expect(buf.filter(source: "all", level: "all", grep: "").isEmpty)
+    }
+
     @Test("filter：grep 过滤 case-insensitive")
     func filter_grep_case_insensitive() {
         let buf = LiveEventsRingBuffer()
@@ -54,5 +81,12 @@ struct LiveEventsRingBufferTests {
         let result = buf.filter(source: "gui", level: "all", grep: "")
         #expect(result.count == 1)
         #expect(result[0].message == "gui-msg")
+    }
+
+    @Test("source color tokens：audit=blue，ipc=orange，gui=green")
+    func source_color_tokens_match_spec() {
+        #expect(LiveEventsRingBuffer.sourceColorToken(.audit) == .blue)
+        #expect(LiveEventsRingBuffer.sourceColorToken(.ipc) == .orange)
+        #expect(LiveEventsRingBuffer.sourceColorToken(.gui) == .green)
     }
 }

@@ -10,20 +10,20 @@ public enum HipsRequestDecoder {
 
     public static func decode(id: String, paramsData: Data) throws -> HipsRequest {
         let value = try JSONDecoder().decode(JSONValue.self, from: paramsData)
-        guard case .object(let dict) = value else {
+        guard case let .object(dict) = value else {
             throw DecodeError.typeMismatch("params not object")
         }
 
         let requestId = try dict.requireString("request_id")
         let title = try dict.requireString("title")
-        guard let severity = Severity(rawValue: try dict.requireString("severity")) else {
+        guard let severity = try Severity(rawValue: dict.requireString("severity")) else {
             throw DecodeError.typeMismatch("severity")
         }
-        guard let direction = Direction(rawValue: try dict.requireString("direction")) else {
+        guard let direction = try Direction(rawValue: dict.requireString("direction")) else {
             throw DecodeError.typeMismatch("direction")
         }
         let timeoutSeconds = try dict.requireInt("timeout_seconds")
-        guard let defaultOnTimeout = DefaultOnTimeout(rawValue: try dict.requireString("default_on_timeout")) else {
+        guard let defaultOnTimeout = try DefaultOnTimeout(rawValue: dict.requireString("default_on_timeout")) else {
             throw DecodeError.typeMismatch("default_on_timeout")
         }
         let allowRemember = try dict.requireBool("allow_remember")
@@ -31,8 +31,7 @@ public enum HipsRequestDecoder {
         let receivedAtDaemon = parseDate(dict["received_at_daemon"]?.asString)
 
         if merged {
-            let issuesArray: [JSONValue]
-            if case .array(let arr) = dict["issues"] ?? .null { issuesArray = arr } else { issuesArray = [] }
+            let issuesArray: [JSONValue] = if case let .array(arr) = dict["issues"] ?? .null { arr } else { [] }
             let issues = issuesArray.compactMap(decodeIssue)
 
             return HipsRequest(
@@ -78,7 +77,7 @@ public enum HipsRequestDecoder {
     }
 
     private static func decodeIssue(_ value: JSONValue) -> HipsIssue? {
-        guard case .object(let d) = value else { return nil }
+        guard case let .object(d) = value else { return nil }
         guard let issueId = d["issue_id"]?.asString,
               let ruleId = d["rule_id"]?.asString,
               let title = d["title"]?.asString,
@@ -104,7 +103,7 @@ public enum HipsRequestDecoder {
     }
 
     private static func decodeContext(_ value: JSONValue) -> HipsContext {
-        guard case .object(let dict) = value else {
+        guard case let .object(dict) = value else {
             return .generic(.init(payload: .init(rawData: encode(value))))
         }
         let template = dict["template"]?.asString ?? "generic_json"
@@ -127,7 +126,7 @@ public enum HipsRequestDecoder {
     }
 
     private static func decodeRecommendation(_ value: JSONValue) -> Recommendation? {
-        guard case .object(let d) = value,
+        guard case let .object(d) = value,
               let decRaw = d["decision"]?.asString,
               let decision = Decision(rawValue: decRaw),
               let confRaw = d["confidence"]?.asString,
@@ -153,26 +152,34 @@ public enum HipsRequestDecoder {
 // MARK: - JSONValue helpers
 
 extension JSONValue {
-    var asString: String? { if case .string(let s) = self { return s } else { return nil } }
+    var asString: String? {
+        if case let .string(s) = self { s } else { nil }
+    }
+
     var asInt: Int? {
         switch self {
-        case .int(let v): return v
-        case .double(let v): return Int(v)
-        default: return nil
+        case let .int(v): v
+        case let .double(v): Int(v)
+        default: nil
         }
     }
-    var asBool: Bool? { if case .bool(let v) = self { return v } else { return nil } }
+
+    var asBool: Bool? {
+        if case let .bool(v) = self { v } else { nil }
+    }
 }
 
-extension Dictionary where Key == String, Value == JSONValue {
+extension [String: JSONValue] {
     func requireString(_ key: String) throws -> String {
         guard let v = self[key]?.asString else { throw HipsRequestDecoder.DecodeError.missingField(key) }
         return v
     }
+
     func requireInt(_ key: String) throws -> Int {
         guard let v = self[key]?.asInt else { throw HipsRequestDecoder.DecodeError.missingField(key) }
         return v
     }
+
     func requireBool(_ key: String) throws -> Bool {
         guard let v = self[key]?.asBool else { throw HipsRequestDecoder.DecodeError.missingField(key) }
         return v

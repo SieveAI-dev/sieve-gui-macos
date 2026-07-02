@@ -6,5 +6,6 @@
 --trimwhitespace always
 --ifdef no-indent
 --self remove
+--selfrequired log,trace,debug,info,notice,warning,error,critical,fault
 --importgrouping testable-bottom
 --exclude .build,DerivedData,Sources/Resources

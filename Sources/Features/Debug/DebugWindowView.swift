@@ -1,10 +1,11 @@
-import SwiftUI
 import Combine
+import SwiftUI
 
 public struct DebugWindowView: View {
     @ObservedObject var appState: AppState
     let ipcClient: IPCClient
     @EnvironmentObject private var replayStore: DebugReplayStore
+    @State private var selectedTab: DebugTab = .liveEvents
 
     public init(appState: AppState, ipcClient: IPCClient) {
         self.appState = appState
@@ -12,19 +13,40 @@ public struct DebugWindowView: View {
     }
 
     public var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             LiveEventsTab(appState: appState)
                 .tabItem { Label("实时事件", systemImage: "waveform") }
+                .tag(DebugTab.liveEvents)
             RuleEvaluationTab(ipcClient: ipcClient)
                 .environmentObject(replayStore)
                 .tabItem { Label("规则评估", systemImage: "function") }
+                .tag(DebugTab.ruleEvaluation)
             IPCMonitorTab(ipcClient: ipcClient)
                 .tabItem { Label("IPC 监视", systemImage: "antenna.radiowaves.left.and.right") }
+                .tag(DebugTab.ipcMonitor)
             SystemStatusTab(ipcClient: ipcClient)
                 .tabItem { Label("系统状态", systemImage: "speedometer") }
+                .tag(DebugTab.systemStatus)
         }
         .frame(width: 960, height: 600)
+        .onAppear {
+            if replayStore.prefilledPrompt != nil {
+                selectedTab = .ruleEvaluation
+            }
+        }
+        .onChange(of: replayStore.prefilledPrompt) { prompt in
+            if prompt != nil {
+                selectedTab = .ruleEvaluation
+            }
+        }
     }
+}
+
+private enum DebugTab: Hashable {
+    case liveEvents
+    case ruleEvaluation
+    case ipcMonitor
+    case systemStatus
 }
 
 // MARK: - 实时事件
@@ -49,7 +71,8 @@ public struct LiveEventsTab: View {
                     Text("全部").tag("all"); Text("audit").tag("audit"); Text("ipc").tag("ipc"); Text("gui").tag("gui")
                 }.frame(width: 120)
                 Picker("级别", selection: $levelFilter) {
-                    Text("全部").tag("all"); Text("INFO").tag("info"); Text("WARN").tag("warn"); Text("ERROR").tag("error")
+                    Text("全部").tag("all"); Text("INFO").tag("info"); Text("WARN").tag("warn"); Text("ERROR")
+                        .tag("error")
                 }.frame(width: 120)
                 TextField("grep…", text: $grepInput)
                     .textFieldStyle(.roundedBorder)
@@ -83,7 +106,7 @@ public struct LiveEventsTab: View {
                 }
                 .onChange(of: buffer.entries.count) { _ in
                     // 暂停时不自动滚动（快照视图）
-                    if autoScroll && !buffer.paused, let last = buffer.entries.last {
+                    if autoScroll, !buffer.paused, let last = buffer.entries.last {
                         proxy.scrollTo(last.id, anchor: .bottom)
                     }
                 }
@@ -93,9 +116,12 @@ public struct LiveEventsTab: View {
 
     private func row(_ e: LiveEventsRingBuffer.Entry) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text(timeLabel(e.timestamp)).foregroundStyle(.secondary).frame(width: 80, alignment: .leading)
+            Text(timeLabel(e.timestamp)).foregroundStyle(.secondary).frame(width: 120, alignment: .leading)
             Text(e.source.rawValue).foregroundStyle(sourceColor(e.source)).frame(width: 50, alignment: .leading)
-            Text(e.level.rawValue.uppercased()).foregroundStyle(levelColor(e.level)).frame(width: 50, alignment: .leading)
+            Text(e.level.rawValue.uppercased()).foregroundStyle(levelColor(e.level)).frame(
+                width: 50,
+                alignment: .leading
+            )
             Text(e.category).foregroundStyle(.secondary).frame(width: 90, alignment: .leading)
             Text(e.message)
             Spacer()
@@ -105,11 +131,17 @@ public struct LiveEventsTab: View {
     }
 
     private func sourceColor(_ s: LiveEventsRingBuffer.Entry.Source) -> Color {
-        switch s { case .audit: return .blue; case .ipc: return .purple; case .gui: return .gray }
+        switch LiveEventsRingBuffer.sourceColorToken(s) {
+        case .blue: .blue
+        case .orange: .orange
+        case .green: .green
+        }
     }
+
     private func levelColor(_ l: LiveEventsRingBuffer.Entry.Level) -> Color {
         switch l { case .info: return .secondary; case .warn: return .orange; case .error: return .red }
     }
+
     private func timeLabel(_ d: Date) -> String {
         let f = DateFormatter(); f.dateFormat = "HH:mm:ss.SSS"
         return f.string(from: d)
@@ -160,7 +192,8 @@ public struct RuleEvaluationTab: View {
                     Text("Outbound").tag("outbound"); Text("Inbound").tag("inbound")
                 }.frame(width: 160)
                 Picker("内容类型", selection: $contentKind) {
-                    Text("text").tag("text"); Text("tool_use_input").tag("tool_use_input"); Text("sse_chunk").tag("sse_chunk")
+                    Text("text").tag("text"); Text("tool_use_input").tag("tool_use_input"); Text("sse_chunk")
+                        .tag("sse_chunk")
                 }.frame(width: 200)
             }
             TextEditor(text: $payload)

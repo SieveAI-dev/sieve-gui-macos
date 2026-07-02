@@ -16,15 +16,15 @@ public struct DetailCardView: View {
 
     public var body: some View {
         switch context {
-        case .addressCompare(let v):
+        case let .addressCompare(v):
             AddressCompareCard(value: v, isUnlocked: isUnlocked)
-        case .signingToolUse(let v):
+        case let .signingToolUse(v):
             SigningToolUseCard(value: v, isUnlocked: isUnlocked)
-        case .markdownExfil(let v):
+        case let .markdownExfil(v):
             MarkdownExfilCard(value: v)
-        case .secretOutbound(let v):
+        case let .secretOutbound(v):
             SecretOutboundCard(value: v)
-        case .generic(let v):
+        case let .generic(v):
             GenericPayloadCard(value: v, isUnlocked: isUnlocked)
         }
     }
@@ -47,7 +47,12 @@ public struct IssueCardView: View {
                 }
             }
             Text(issue.title).font(.subheadline.weight(.semibold))
-            DetailCardView(ruleId: issue.ruleId, context: issue.context, recommendation: issue.recommendation, isUnlocked: isUnlocked)
+            DetailCardView(
+                ruleId: issue.ruleId,
+                context: issue.context,
+                recommendation: issue.recommendation,
+                isUnlocked: isUnlocked
+            )
             if let rec = issue.recommendation {
                 RecommendationBarView(recommendation: rec)
             }
@@ -88,7 +93,10 @@ public struct SigningToolUseCard: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack { Text("工具").font(.caption).foregroundStyle(.secondary); Text(value.toolName).font(.callout.weight(.medium)) }
+            HStack {
+                Text("工具").font(.caption).foregroundStyle(.secondary); Text(value.toolName)
+                    .font(.callout.weight(.medium))
+            }
             HStack {
                 Text("链路").font(.caption).foregroundStyle(.secondary)
                 Text(value.chain).font(.callout)
@@ -111,7 +119,10 @@ public struct SigningToolUseCard: View {
     private struct Tag: View {
         let title: String
         let color: Color
-        init(_ t: String, color: Color) { self.title = t; self.color = color }
+        init(_ t: String, color: Color) {
+            title = t; self.color = color
+        }
+
         var body: some View {
             Text(title)
                 .font(.caption2.weight(.semibold))
@@ -130,7 +141,9 @@ public struct EIP712View: View {
     let rawData: Data
     let isUnlocked: Bool
 
-    private var parsed: EIP712Parsed? { EIP712Parser.parse(rawData) }
+    private var parsed: EIP712Parsed? {
+        EIP712Parser.parse(rawData)
+    }
 
     public var body: some View {
         if let p = parsed {
@@ -150,7 +163,6 @@ public struct EIP712View: View {
         }
     }
 
-    @ViewBuilder
     private func domainSection(_ domain: EIP712Parsed.Domain) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("EIP-712 Domain").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
@@ -173,7 +185,6 @@ public struct EIP712View: View {
         .clipShape(RoundedRectangle(cornerRadius: 6))
     }
 
-    @ViewBuilder
     private func messageSection(primaryType: String, message: [String: String]) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("Message (\(primaryType))").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
@@ -204,13 +215,13 @@ public struct EIP712View: View {
     private func isEthAddress(_ s: String) -> Bool {
         guard s.hasPrefix("0x") || s.hasPrefix("0X") else { return false }
         let hex = s.dropFirst(2)
-        return hex.count == 40 && hex.allSatisfy { $0.isHexDigit }
+        return hex.count == 40 && hex.allSatisfy(\.isHexDigit)
     }
 
     /// 判断是否是长 hex 串（私钥、签名等）
     private func isHexSecret(_ s: String) -> Bool {
         let stripped = s.hasPrefix("0x") || s.hasPrefix("0X") ? String(s.dropFirst(2)) : s
-        return stripped.count >= 64 && stripped.allSatisfy { $0.isHexDigit }
+        return stripped.count >= 64 && stripped.allSatisfy(\.isHexDigit)
     }
 }
 
@@ -223,18 +234,18 @@ struct EIP712Parsed {
         let chainId: Int?
         let verifyingContract: String?
     }
+
     let domain: Domain
     let primaryType: String?
-    let message: [String: String]  // 展平为 key: value 字符串（含嵌套）
+    let message: [String: String] // 展平为 key: value 字符串（含嵌套）
 }
 
 enum EIP712Parser {
     static func parse(_ data: Data) -> EIP712Parsed? {
-        guard case .object(let root) = try? JSONDecoder().decode(JSONValue.self, from: data) else { return nil }
+        guard case let .object(root) = try? JSONDecoder().decode(JSONValue.self, from: data) else { return nil }
 
         // domain
-        let domainObj: [String: JSONValue]
-        if case .object(let d) = root["domain"] { domainObj = d } else { domainObj = [:] }
+        let domainObj: [String: JSONValue] = if case let .object(d) = root["domain"] { d } else { [:] }
         let domain = EIP712Parsed.Domain(
             name: domainObj["name"]?.asString,
             version: domainObj["version"]?.asString,
@@ -244,22 +255,21 @@ enum EIP712Parser {
 
         let primaryType = root["primaryType"]?.asString
         // message 展平为字符串映射
-        let messageDict: [String: String]
-        if case .object(let m) = root["message"] {
-            messageDict = flattenJSONObject(m)
+        let messageDict: [String: String] = if case let .object(m) = root["message"] {
+            flattenJSONObject(m)
         } else {
-            messageDict = [:]
+            [:]
         }
 
         return EIP712Parsed(domain: domain, primaryType: primaryType, message: messageDict)
     }
 
     private static func extractChainId(_ v: JSONValue?) -> Int? {
-        guard let v = v else { return nil }
+        guard let v else { return nil }
         switch v {
-        case .int(let i): return i
-        case .double(let d): return Int(d)
-        case .string(let s): return Int(s) ?? (s.hasPrefix("0x") ? Int(s.dropFirst(2), radix: 16) : nil)
+        case let .int(i): return i
+        case let .double(d): return Int(d)
+        case let .string(s): return Int(s) ?? (s.hasPrefix("0x") ? Int(s.dropFirst(2), radix: 16) : nil)
         default: return nil
         }
     }
@@ -270,7 +280,7 @@ enum EIP712Parser {
         for (key, val) in obj {
             let fullKey = prefix.isEmpty ? key : "\(prefix).\(key)"
             switch val {
-            case .object(let nested):
+            case let .object(nested):
                 result.merge(flattenJSONObject(nested, prefix: fullKey)) { _, new in new }
             case .null:
                 result[fullKey] = "null"
@@ -284,12 +294,12 @@ enum EIP712Parser {
     private static func jsonValueToString(_ v: JSONValue) -> String {
         switch v {
         case .null: return "null"
-        case .bool(let b): return b ? "true" : "false"
-        case .int(let i): return "\(i)"
-        case .double(let d): return "\(d)"
-        case .string(let s): return s
-        case .array(let arr): return "[\(arr.map { jsonValueToString($0) }.joined(separator: ", "))]"
-        case .object(let o):
+        case let .bool(b): return b ? "true" : "false"
+        case let .int(i): return "\(i)"
+        case let .double(d): return "\(d)"
+        case let .string(s): return s
+        case let .array(arr): return "[\(arr.map { jsonValueToString($0) }.joined(separator: ", "))]"
+        case let .object(o):
             let pairs = o.sorted { $0.key < $1.key }.map { "\($0.key): \(jsonValueToString($0.value))" }
             return "{\(pairs.joined(separator: ", "))}"
         }
@@ -298,13 +308,33 @@ enum EIP712Parser {
 
 public struct MarkdownExfilCard: View {
     let value: HipsContext.MarkdownExfil
+    private var presentation: MarkdownExfilPresentation {
+        MarkdownExfilPresentation(value: value)
+    }
+
     public var body: some View {
         VStack(alignment: .leading, spacing: 6) {
+            Text("模型回复片段").font(.caption).foregroundStyle(.secondary)
+            Text(presentation.maskedSnippet)
+                .font(.system(.caption, design: .monospaced))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(8)
+                .background(Color.gray.opacity(0.06))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
             Text("外链 URL").font(.caption).foregroundStyle(.secondary)
-            ForEach(value.urls, id: \.self) { url in
+            ForEach(presentation.urlRows) { row in
                 HStack {
                     Image(systemName: "link").foregroundStyle(.secondary)
-                    Text(url).font(.system(.callout, design: .monospaced)).lineLimit(1).truncationMode(.middle)
+                    Text(row.maskedURL).font(.system(.callout, design: .monospaced)).lineLimit(1)
+                        .truncationMode(.middle)
+                    Spacer(minLength: 8)
+                    Text(row.reachabilityLabel)
+                        .font(.caption2.weight(.semibold))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(row.reachable == true ? Color.orange.opacity(0.15) : Color.gray.opacity(0.15))
+                        .foregroundStyle(row.reachable == true ? Color.orange : Color.secondary)
+                        .clipShape(Capsule())
                 }
             }
         }
@@ -344,7 +374,11 @@ public struct GenericPayloadCard: View {
                 }
                 .frame(maxHeight: 120)
             } else {
-                MaskedField(String(data: value.payload.rawData, encoding: .utf8) ?? "", style: .clearWhenUnlocked, isUnlocked: false)
+                MaskedField(
+                    String(data: value.payload.rawData, encoding: .utf8) ?? "",
+                    style: .clearWhenUnlocked,
+                    isUnlocked: false
+                )
             }
         }
     }
