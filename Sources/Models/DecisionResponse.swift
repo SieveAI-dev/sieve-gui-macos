@@ -28,28 +28,28 @@ public struct DecisionResponse: Sendable {
         self.uiPhaseWhenClicked = uiPhaseWhenClicked
     }
 
-    /// 编码为 JSON-RPC response.result 子对象（不含 jsonrpc/id 包装）
-    public func resultJSON(allowRemember: Bool) -> [String: Any] {
-        var dict: [String: Any] = [
-            "request_id": id,
-            "decision": decision.rawValue,
-            "remember": allowRemember ? remember : false, // ← 编码层强制
-            "decided_at": Self.iso8601(decidedAt),
-            "by_user": byUser,
-            "ui_phase_when_clicked": Self.phaseLabel(uiPhaseWhenClicked)
-        ]
+    /// 编码为 JSON-RPC response.result 子对象（不含 jsonrpc/id 包装）。
+    /// P2-1：Codable 结构体（禁 [String:Any] 透传，SPEC-008 §7），wire 字节与旧手拼一致
+    /// （等价测试锚定）。
+    public func wire(allowRemember: Bool) -> DecisionResultWire {
         // SPEC-002 §4.6：context_hint 只属于“允许并记住”路径；未 remember 或 deny 时不外带。
         let maySendContextHint = decision == .allow && allowRemember && remember
         // SPEC-005 §1.3: context_hint ≤ 200 Unicode scalars；编码层按 scalar 计数截断（最终防线）
-        if maySendContextHint, let hint = contextHint, !hint.isEmpty {
-            let trimmed = hint.unicodeScalars.count > 200
-                ? String(String.UnicodeScalarView(hint.unicodeScalars.prefix(200)))
-                : hint
-            dict["context_hint"] = trimmed
-        } else {
-            dict["context_hint"] = NSNull()
+        var hint: String?
+        if maySendContextHint, let raw = contextHint, !raw.isEmpty {
+            hint = raw.unicodeScalars.count > 200
+                ? String(String.UnicodeScalarView(raw.unicodeScalars.prefix(200)))
+                : raw
         }
-        return dict
+        return DecisionResultWire(
+            requestId: id,
+            decision: decision.rawValue,
+            remember: allowRemember ? remember : false, // ← 编码层强制
+            decidedAt: Self.iso8601(decidedAt),
+            byUser: byUser,
+            uiPhaseWhenClicked: Self.phaseLabel(uiPhaseWhenClicked),
+            contextHint: hint
+        )
     }
 
     static func iso8601(_ date: Date) -> String {
@@ -105,31 +105,102 @@ public struct MergedDecisionResponse: Sendable {
         return "partial"
     }
 
-    public func resultJSON() -> [String: Any] {
-        let arr: [[String: Any]] = perIssue.map { p in
-            var d: [String: Any] = [
-                "issue_id": p.issueId,
-                "decision": p.decision.rawValue,
-                "remember": p.allowRemember ? p.remember : false // ← 强制
-            ]
+    /// P2-1：Codable 结构体 wire 编码（禁 [String:Any] 透传，SPEC-008 §7）。
+    public func wire() -> MergedDecisionResultWire {
+        let issues = perIssue.map { p in
             // SPEC-002 §4.6：context_hint 只属于“允许并记住”路径；未 remember 或 deny 时不外带。
             let maySendContextHint = p.decision == .allow && p.allowRemember && p.remember
             // SPEC-005 §1.3: context_hint ≤ 200 Unicode scalars
-            if maySendContextHint, let h = p.contextHint, !h.isEmpty {
-                let trimmed = h.unicodeScalars.count > 200
-                    ? String(String.UnicodeScalarView(h.unicodeScalars.prefix(200)))
-                    : h
-                d["context_hint"] = trimmed
+            var hint: String?
+            if maySendContextHint, let raw = p.contextHint, !raw.isEmpty {
+                hint = raw.unicodeScalars.count > 200
+                    ? String(String.UnicodeScalarView(raw.unicodeScalars.prefix(200)))
+                    : raw
             }
-            return d
+            return MergedDecisionResultWire.PerIssueWire(
+                issueId: p.issueId,
+                decision: p.decision.rawValue,
+                remember: p.allowRemember ? p.remember : false, // ← 强制
+                contextHint: hint
+            )
         }
-        return [
-            "request_id": id,
-            "merged_decision": mergedDecisionLabel,
-            "per_issue": arr,
-            "decided_at": DecisionResponse.iso8601(decidedAt),
-            "by_user": byUser
-        ]
+        return MergedDecisionResultWire(
+            requestId: id,
+            mergedDecision: mergedDecisionLabel,
+            perIssue: issues,
+            decidedAt: DecisionResponse.iso8601(decidedAt),
+            byUser: byUser
+        )
+    }
+}
+
+// MARK: - Wire 编码（P2-1）
+
+/// 单 issue 决策的 result 载荷。字段集与既有 wire 输出严格一致：
+/// `context_hint` 无值时编码为显式 null（键恒在），与旧行为逐字节等价。
+public struct DecisionResultWire: Encodable, Sendable {
+    public let requestId: String
+    public let decision: String
+    public let remember: Bool
+    public let decidedAt: String
+    public let byUser: Bool
+    public let uiPhaseWhenClicked: String
+    public let contextHint: String?
+
+    enum CodingKeys: String, CodingKey {
+        case requestId = "request_id"
+        case decision
+        case remember
+        case decidedAt = "decided_at"
+        case byUser = "by_user"
+        case uiPhaseWhenClicked = "ui_phase_when_clicked"
+        case contextHint = "context_hint"
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(requestId, forKey: .requestId)
+        try c.encode(decision, forKey: .decision)
+        try c.encode(remember, forKey: .remember)
+        try c.encode(decidedAt, forKey: .decidedAt)
+        try c.encode(byUser, forKey: .byUser)
+        try c.encode(uiPhaseWhenClicked, forKey: .uiPhaseWhenClicked)
+        if let contextHint {
+            try c.encode(contextHint, forKey: .contextHint)
+        } else {
+            try c.encodeNil(forKey: .contextHint) // 显式 null，键恒在（与旧手拼一致）
+        }
+    }
+}
+
+/// merged 决策的 result 载荷。per_issue 的 `context_hint` 无值时省略键（与旧行为一致）。
+public struct MergedDecisionResultWire: Encodable, Sendable {
+    public struct PerIssueWire: Encodable, Sendable {
+        public let issueId: String
+        public let decision: String
+        public let remember: Bool
+        public let contextHint: String? // 合成 Encodable：nil → 省略键
+
+        enum CodingKeys: String, CodingKey {
+            case issueId = "issue_id"
+            case decision
+            case remember
+            case contextHint = "context_hint"
+        }
+    }
+
+    public let requestId: String
+    public let mergedDecision: String
+    public let perIssue: [PerIssueWire]
+    public let decidedAt: String
+    public let byUser: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case requestId = "request_id"
+        case mergedDecision = "merged_decision"
+        case perIssue = "per_issue"
+        case decidedAt = "decided_at"
+        case byUser = "by_user"
     }
 }
 

@@ -100,10 +100,10 @@ struct HipsRedLineTests {
             byUser: true,
             uiPhaseWhenClicked: .blue
         )
-        // 编码层强制：使用 allowRemember=false 时 resultJSON 中 remember 必须为 false
-        let result = response.resultJSON(allowRemember: req.allowRemember)
+        // 编码层强制：使用 allowRemember=false 时 wire 中 remember 必须为 false
+        let result = wireJSONObject(response.wire(allowRemember: req.allowRemember))
         #expect(result["remember"] as? Bool == false,
-                "allow_remember=false 时，resultJSON 必须强制 remember=false（第三道防线）")
+                "allow_remember=false 时，wire 必须强制 remember=false（第三道防线）")
     }
 
     @Test("allow_remember=true → checkbox 应渲染（allowRemember=true）")
@@ -112,7 +112,7 @@ struct HipsRedLineTests {
         #expect(req.allowRemember == true)
     }
 
-    @Test("allow_remember=true + user remember=true → resultJSON remember=true")
+    @Test("allow_remember=true + user remember=true → wire remember=true")
     func allow_remember_true_passes_through() {
         let response = DecisionResponse(
             id: "r-1",
@@ -122,7 +122,7 @@ struct HipsRedLineTests {
             byUser: true,
             uiPhaseWhenClicked: .blue
         )
-        let result = response.resultJSON(allowRemember: true)
+        let result = wireJSONObject(response.wire(allowRemember: true))
         #expect(result["remember"] as? Bool == true)
     }
 }

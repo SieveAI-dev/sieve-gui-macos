@@ -62,7 +62,7 @@ struct DisconnectedDecisionCacheTests {
     }
 
     @Test("merged 决策也可缓存并保留 request_id")
-    func merged_payload_cached() {
+    func merged_payload_cached() throws {
         var cache = DisconnectedDecisionCache()
         let merged = MergedDecisionResponse(
             id: "m-1",
@@ -73,6 +73,6 @@ struct DisconnectedDecisionCacheTests {
 
         let drained = cache.drain()
         #expect(drained.first?.requestId == "m-1")
-        #expect(drained.first?.resultJSON()["request_id"] as? String == "m-1")
+        #expect(try wireJSONObject(#require(drained.first?.wire()))["request_id"] as? String == "m-1")
     }
 }

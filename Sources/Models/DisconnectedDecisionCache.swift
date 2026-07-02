@@ -13,11 +13,24 @@ public enum PendingDecisionPayload: Sendable {
         }
     }
 
-    /// 重发时编码为 JSON-RPC response.result 子对象。
-    public func resultJSON() -> [String: Any] {
+    /// 重发时编码为 JSON-RPC response.result 子对象（P2-1：Codable，禁 [String:Any]）。
+    public func wire() -> DecisionWire {
         switch self {
-        case let .single(r, allowRemember): r.resultJSON(allowRemember: allowRemember)
-        case let .merged(m): m.resultJSON()
+        case let .single(r, allowRemember): .single(r.wire(allowRemember: allowRemember))
+        case let .merged(m): .merged(m.wire())
+        }
+    }
+}
+
+/// 决策响应 result 的统一 Encodable 载体（单 issue / merged 两态，直接透传编码）。
+public enum DecisionWire: Encodable, Sendable {
+    case single(DecisionResultWire)
+    case merged(MergedDecisionResultWire)
+
+    public func encode(to encoder: Encoder) throws {
+        switch self {
+        case let .single(w): try w.encode(to: encoder)
+        case let .merged(w): try w.encode(to: encoder)
         }
     }
 }

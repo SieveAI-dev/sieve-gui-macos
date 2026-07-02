@@ -244,7 +244,7 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
             disconnectedCache.store(payload)
         } else {
             Task { [weak self] in
-                await self?.ipcClient?.sendDecisionResponse(id: req.id, result: payload.resultJSON())
+                await self?.ipcClient?.sendDecisionResponse(id: req.id, result: payload.wire())
             }
         }
 
@@ -291,7 +291,7 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
             disconnectedCache.store(payload)
         } else {
             Task { [weak self] in
-                await self?.ipcClient?.sendDecisionResponse(id: req.id, result: payload.resultJSON())
+                await self?.ipcClient?.sendDecisionResponse(id: req.id, result: payload.wire())
             }
         }
 
@@ -326,7 +326,7 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
         guard !pending.isEmpty else { return }
         Task { [weak self] in
             for p in pending {
-                await self?.ipcClient?.sendDecisionResponse(id: p.requestId, result: p.resultJSON())
+                await self?.ipcClient?.sendDecisionResponse(id: p.requestId, result: p.wire())
             }
         }
     }
@@ -352,7 +352,7 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
             disconnectedCache.store(payload)
         } else {
             Task { [weak self] in
-                await self?.ipcClient?.sendDecisionResponse(id: req.id, result: payload.resultJSON())
+                await self?.ipcClient?.sendDecisionResponse(id: req.id, result: payload.wire())
             }
         }
         recordHit(for: req, decision: .deny)

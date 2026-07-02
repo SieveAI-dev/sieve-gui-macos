@@ -214,8 +214,11 @@ public enum IPCOutbound {
         return encodeLine(dict)
     }
 
-    public static func response(id: String, result: [String: Any]) -> Data {
-        let dict: [String: Any] = ["jsonrpc": "2.0", "id": id, "result": result]
+    /// P2-1：result 只接受 Encodable（禁 [String:Any] 透传，SPEC-008 §7）。
+    /// 经 encodeParams 转 JSONSerialization 对象后与既有 sortedKeys 管线一致，wire 字节不变。
+    public static func response(id: String, result: some Encodable) -> Data {
+        var dict: [String: Any] = ["jsonrpc": "2.0", "id": id]
+        dict["result"] = encodeParams(result) ?? [String: Any]()
         return encodeLine(dict)
     }
 

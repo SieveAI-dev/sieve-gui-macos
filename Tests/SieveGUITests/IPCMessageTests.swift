@@ -181,7 +181,7 @@ struct ContextHintTruncationTests {
         let response = DecisionResponse(
             id: "r-1", decision: .allow, remember: false, contextHint: longHint, byUser: true, uiPhaseWhenClicked: .blue
         )
-        let result = response.resultJSON(allowRemember: true)
+        let result = wireJSONObject(response.wire(allowRemember: true))
         #expect(result["context_hint"] is NSNull)
     }
 
@@ -190,7 +190,7 @@ struct ContextHintTruncationTests {
         let response = DecisionResponse(
             id: "r-1", decision: .allow, remember: true, contextHint: longHint, byUser: true, uiPhaseWhenClicked: .blue
         )
-        let result = response.resultJSON(allowRemember: true)
+        let result = wireJSONObject(response.wire(allowRemember: true))
         let hint = result["context_hint"] as? String
         #expect(hint != nil)
         #expect(hint?.unicodeScalars.count == 200)
@@ -201,7 +201,7 @@ struct ContextHintTruncationTests {
         let response = DecisionResponse(
             id: "r-2", decision: .deny, remember: false, contextHint: shortHint, byUser: true, uiPhaseWhenClicked: .blue
         )
-        let result = response.resultJSON(allowRemember: true)
+        let result = wireJSONObject(response.wire(allowRemember: true))
         #expect(result["context_hint"] is NSNull)
     }
 }
