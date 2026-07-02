@@ -189,7 +189,7 @@ sieve doctor
 
 ```bash
 swiftformat Sources Tests
-swiftformat --lint Sources Tests  # CI 强制
+swiftformat Sources Tests --lint  # CI 强制（路径须在选项前，swiftformat 0.61.x 否则会把路径当 --lint 的值）
 ```
 
 ---
