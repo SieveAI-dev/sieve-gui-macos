@@ -564,10 +564,17 @@ struct IPCSchemaV2FixtureTests {
     // ════════════════════════════════════════════════════════════════════════
 
     @Test("无 DTO method：fixture 仍是合法 JSON", arguments: [
+        ("sieve.list_pending", "request.minimal"),
+        ("sieve.list_pending", "response.full"),
+        ("sieve.list_pending", "response.minimal"),
         ("sieve.reload_user_rules", "notification.full"),
         ("sieve.reload_user_rules", "notification.minimal"),
         ("sieve.reload_user_rules", "notification.null_optional"),
         ("sieve.remove_graylist", "response.full"),
+        ("sieve.resolve_decision", "request.full"),
+        ("sieve.resolve_decision", "request.minimal"),
+        ("sieve.resolve_decision", "response.not_found"),
+        ("sieve.resolve_decision", "response.resolved"),
         ("sieve.remove_graylist", "response.minimal"),
         ("sieve.remove_graylist", "response.null_optional"),
         ("sieve.set_preset_overrides", "response.full"),
@@ -585,7 +592,7 @@ struct IPCSchemaV2FixtureTests {
 
     // ════════════════════════════════════════════════════════════════════════
 
-    /// daemon 仓 fixtures/v2 的 19 个 method 目录 → 各自的 fixture 文件名集合。
+    /// daemon 仓 fixtures/v2 的 21 个 method 目录 → 各自的 fixture 文件名集合。
     /// 这是「与 daemon 权威源对齐」的清单快照：daemon 新增/删除 fixture 时，本表必须同步，
     /// 否则 fixtureCount 变红，强制有人来对账（防止 GUI 副本悄悄落后于 daemon）。
     private static let expectedFixtures: [String: [String]] = [
@@ -595,6 +602,7 @@ struct IPCSchemaV2FixtureTests {
         "sieve.health": ["request.minimal", "response.full", "response.minimal", "response.null_optional"],
         "sieve.heartbeat": ["notification.full", "notification.minimal", "notification.null_optional"],
         "sieve.hello": ["full", "minimal", "null_optional"],
+        "sieve.list_pending": ["request.minimal", "response.full", "response.minimal"],
         "sieve.list_graylist": ["request.full", "request.minimal", "request.null_optional",
                                 "response.full", "response.minimal", "response.null_optional"],
         "sieve.list_rules": ["request.minimal", "response.full", "response.minimal", "response.null_optional"],
@@ -607,6 +615,7 @@ struct IPCSchemaV2FixtureTests {
         "sieve.reload_user_rules": ["notification.full", "notification.minimal", "notification.null_optional"],
         "sieve.remove_graylist": ["request.full", "request.minimal", "request.null_optional",
                                   "response.full", "response.minimal", "response.null_optional"],
+        "sieve.resolve_decision": ["request.full", "request.minimal", "response.not_found", "response.resolved"],
         "sieve.request_decision": ["request.merged", "request.single.full", "request.single.minimal"],
         "sieve.request_decision_canceled": ["notification.full", "notification.minimal", "notification.null_optional"],
         "sieve.set_paused": ["request.full", "request.minimal", "request.null_optional",
@@ -617,7 +626,7 @@ struct IPCSchemaV2FixtureTests {
                                        "response.full", "response.minimal", "response.null_optional"]
     ]
 
-    @Test("fixture 副本总数 == 81 且每个文件都打包就位（与 daemon 仓 fixtures/v2 对齐）")
+    @Test("fixture 副本总数 == 88 且每个文件都打包就位（与 daemon 仓 fixtures/v2 对齐）")
     func fixtureCount() {
         var total = 0
         var missing: [String] = []
@@ -632,7 +641,7 @@ struct IPCSchemaV2FixtureTests {
                 }
             }
         }
-        #expect(total == 81, "期望清单应列 81 个 fixture；实际 \(total)")
+        #expect(total == 88, "期望清单应列 88 个 fixture；实际 \(total)")
         #expect(missing.isEmpty, "以下 fixture 副本未打包/缺失：\(missing.joined(separator: ", "))")
     }
 }

@@ -34,6 +34,8 @@ public final class AppState: ObservableObject {
     // MARK: - 解锁会话
 
     @Published public private(set) var unlockSession: UnlockSession? = nil
+    /// P1-1：会话过期的主动清空定时器（重设/清空会话时取消旧任务）。
+    private var unlockExpiryTask: Task<Void, Never>?
 
     // MARK: - 设置
 
@@ -169,7 +171,23 @@ public final class AppState: ObservableObject {
     }
 
     public func setUnlockSession(_ session: UnlockSession?) {
+        unlockExpiryTask?.cancel()
+        unlockExpiryTask = nil
         unlockSession = session
+        guard let session else { return }
+
+        // P1-1：到期主动清空并触发 @Published——已打开的 History Inspector 不能依赖
+        // 惰性重算（isUnlocked 只在读取时求值），否则明文 evidence 可超时仍显示。
+        let interval = session.expiresAt.timeIntervalSinceNow
+        guard interval > 0 else {
+            unlockSession = nil
+            return
+        }
+        unlockExpiryTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
+            guard !Task.isCancelled else { return }
+            self?.setUnlockSession(nil)
+        }
     }
 
     /// 由 History ViewModel 在打开/读取 audit.db 后回写 schema 警告位。

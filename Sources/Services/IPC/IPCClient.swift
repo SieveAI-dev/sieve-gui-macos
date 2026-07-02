@@ -161,7 +161,8 @@ public final class IPCClient: @unchecked Sendable {
     }
 
     /// 发送 decision_response：必须用 result 形式，且 inflight 标记高优先级。
-    public func sendDecisionResponse(id: String, result: [String: Any]) async {
+    /// P2-1：result 为 Codable 载体（DecisionWire），禁 [String:Any] 透传。
+    public func sendDecisionResponse(id: String, result: DecisionWire) async {
         let data = IPCOutbound.response(id: id, result: result)
         await inflight.enqueue(.init(
             id: id, method: "decision_response", payload: data,

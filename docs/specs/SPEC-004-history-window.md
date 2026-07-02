@@ -1,6 +1,6 @@
 # SPEC-004：历史记录窗口
 
-> Version: v1.0 — 2026-05-02
+> Version: v1.1 — 2026-07-02
 > Status: Stable
 > Owner: SieveAI
 
@@ -191,6 +191,12 @@ evidence_meta:
 **"查看完整 evidence_meta"Toggle（顶部右侧）**：
 - 默认关闭（`kHistoryMaskByDefault`）
 - 开启需要 Touch ID（5 分钟解锁会话，复用 `AppState.unlockSession`）
+- ⚠️ 跨窗口共享：该解锁会话同时被 HIPS 弹窗的脱敏字段消费（见 SPEC-002 §4.4
+  「跨窗口解锁会话共享」）——History 解锁后 5 分钟内 HIPS 敏感字段也明文；
+  是否为 HIPS 建独立解锁态为待定决策
+- 会话到期由 `AppState.setUnlockSession` 的过期定时器主动清空（P1-1），
+  不依赖 UI 读取时惰性重算；锁屏（com.apple.screenIsLocked）/ 显示器睡眠 /
+  快速用户切换任一信号即清（P1-2）
 - 开启后 `prefix_hash` 等字段显示完整内容
 - 注：audit.db 本来就不存原始 prompt 字节
 
@@ -302,3 +308,4 @@ timestamp, direction, severity, rule_id, disposition, user_choice, fingerprint, 
 | 版本 | 日期 | 作者 | 变更 |
 |------|------|-----|-----|
 | v1.0 | 2026-05-02 | SieveAI | 首次起草 |
+| v1.1 | 2026-07-02 | SieveAI | 标注解锁会话被 HIPS 跨窗口消费（隔离决策待定）；补记会话过期主动清空（P1-1）与三路锁屏清会话信号（P1-2） |

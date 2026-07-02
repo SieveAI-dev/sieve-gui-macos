@@ -190,6 +190,8 @@ public struct HipsPopupView: View {
                     .help("复制原始请求 JSON（含敏感数据，需确认）")
                 }
                 Spacer()
+                // P0-2/P0-3 红线（HipsFooterPolicy 矩阵测试锚定）：Return（.defaultAction）在
+                // 任何组合下只绑定拒绝侧；允许类按钮永不挂 keyboardShortcut——键盘无法触发允许。
                 // swappedLayout=true 时位置互换：拒绝在左（borderedProminent）+ 允许在右（bordered）
                 // 即使 swapped，mainActionLocked / phaseRequiresCmdClick 等约束依然生效
                 if request.merged {
@@ -208,29 +210,29 @@ public struct HipsPopupView: View {
                     }
                 } else {
                     if !shouldHideAllowAll {
-                        if mainActionLocked || phaseRequiresCmdClick {
+                        if HipsFooterPolicy.allowIsProminent(footerState) {
+                            // 视觉主选可以在允许侧，但 Return 永不在（无 keyboardShortcut）
+                            Button(action: { tryAllow() }) {
+                                Text("允许")
+                            }
+                            .buttonStyle(.borderedProminent)
+                        } else {
                             // 主按钮锁拒绝时，"允许"作为副选；红阶段需 Command-Click
                             Button(action: { tryAllow() }) {
                                 Label(allowLabel, systemImage: "checkmark.circle")
                             }
                             .help(phaseRequiresCmdClick ? "按住 ⌘ 点击允许" : "")
                             .buttonStyle(.bordered)
-                        } else {
-                            Button(action: { tryAllow() }) {
-                                Text("允许")
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .keyboardShortcut(.defaultAction)
                         }
                     }
-                    if mainActionLocked || swappedLayout {
+                    if mainActionLocked {
                         Button(action: { tryDeny() }) { Text("拒绝") }
                             .buttonStyle(.borderedProminent)
                             .keyboardShortcut(.defaultAction)
                     } else {
                         Button(action: { tryDeny() }) { Text("拒绝") }
                             .buttonStyle(.bordered)
-                            .keyboardShortcut("d", modifiers: [])
+                            .keyboardShortcut(.defaultAction)
                     }
                 }
             }
@@ -248,12 +250,13 @@ public struct HipsPopupView: View {
                 Button(action: { tryMerged(.allowAll) }) { Text("全部允许") }
                     .buttonStyle(.bordered)
             } else {
-                // 无 Critical：拒绝全部（副）+ 全部允许（主）
+                // 无 Critical：拒绝全部（副）+ 全部允许（视觉主选）。
+                // P0-2：Return 仍绑拒绝全部，允许类按钮永不挂 keyboardShortcut。
                 Button(action: { tryMerged(.denyAll) }) { Text("拒绝全部") }
                     .buttonStyle(.bordered)
+                    .keyboardShortcut(.defaultAction)
                 Button(action: { tryMerged(.allowAll) }) { Text("全部允许") }
                     .buttonStyle(.borderedProminent)
-                    .keyboardShortcut(.defaultAction)
             }
         } else {
             if swappedLayout {
@@ -288,6 +291,17 @@ public struct HipsPopupView: View {
         Recommendation.mainActionLocksToDeny(request.recommendation)
     }
 
+    /// footer 键盘/布局策略输入（唯一规则见 HipsFooterPolicy，Core 矩阵测试锚定）。
+    private var footerState: HipsFooterPolicy.FooterState {
+        .init(
+            mainActionLocked: mainActionLocked,
+            phaseRequiresCmdClick: phaseRequiresCmdClick,
+            swappedLayout: swappedLayout,
+            merged: request.merged,
+            canAllowAll: request.merged && MergedDecisionBuilder.canAllowAll(request.issues)
+        )
+    }
+
     /// 多 issue 含 critical → 隐藏"全部允许"按钮
     private var shouldHideAllowAll: Bool {
         request.merged && request.hasCriticalIssue
@@ -314,9 +328,15 @@ public struct HipsPopupView: View {
     private func tryAllow() {
         guard !isClickSwallowed() else { return }
         if phaseRequiresCmdClick {
-            // 检查 Command 修饰键
-            let flags = NSApp.currentEvent?.modifierFlags ?? []
-            if !flags.contains(.command) { return }
+            // P0-3：red 阶段允许必须是「带 ⌘ 的鼠标点击」；键盘触发一律不放行（CmdClickGate）
+            let event = NSApp.currentEvent
+            let isMouseClick = event?.type == .leftMouseUp || event?.type == .leftMouseDown
+            let hasCommand = event?.modifierFlags.contains(.command) ?? false
+            guard CmdClickGate.permitsAllow(
+                phaseRequiresCmdClick: true,
+                eventIsMouseClick: isMouseClick,
+                hasCommandModifier: hasCommand
+            ) else { return }
         }
         onDecision(
             .allow,

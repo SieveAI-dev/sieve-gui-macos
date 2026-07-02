@@ -36,5 +36,8 @@
 | sieve.notify_status_bar | `StatusBarNotify`：notify_id/created_at/kind/title/detail?/rule_id?/auto_dismiss_seconds（SPEC §10.1） | `EventNotifyParams` 对齐；severity/direction 由 kind 派生 |
 | sieve.purge_history | `purged_at` 为 ISO8601 串（SPEC §11B） | DTO 按 ISO 串解 |
 | sieve.evaluate | `would_recommendation` 为 Recommendation 对象（SPEC §6.1.4） | `EvaluateResult.Match.wouldRecommendation: Recommendation?` |
+| sieve.request_decision | params 含 optional `provider_id`（CLI spec 新增） | GUI `HipsRequestDecoder` 宽松解码忽略未知字段，不消费语义 |
+| sieve.list_pending | CLI headless 专用（daemon CLI spec 新增） | GUI 不实现 handler，仅维护 fixture 副本护跨仓一致性 |
+| sieve.resolve_decision | CLI headless 专用（daemon CLI spec 新增）；Critical 由 daemon severity 门禁拦截 | GUI 不实现 handler，仅维护 fixture 副本；GUI 侧对应防线 = Critical allow TouchID 门（P0-1） |
 
 验证：DTO + 测试文件 `swiftc -typecheck` 0 错；探针对上述全部 fixture 实跑 `JSONDecoder().decode` 全部通过。

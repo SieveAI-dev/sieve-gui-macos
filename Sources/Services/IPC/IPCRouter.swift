@@ -102,8 +102,12 @@ public final class IPCRouter: IPCDelegate {
         }
     }
 
-    private func handleDaemonNotification(method: String, paramsData: Data) {
+    /// internal（非 private）：单测直接驱动通知路由（P1-4 回归锚定）。
+    func handleDaemonNotification(method: String, paramsData: Data) {
         switch method {
+        case "sieve.reload_user_rules":
+            // P1-4：用户/CLI 经 daemon 改规则 → 通知打开中的规则总览刷新（原先落 default 被丢弃）
+            NotificationCenter.default.post(name: .sieveUserRulesReloaded, object: nil)
         case "sieve.heartbeat":
             return // 已在 IPCClient 层刷新 lastReceivedAt
         case "sieve.hello":
@@ -170,6 +174,11 @@ public protocol IPCHipsAdapter: AnyObject {
     func closeAllActiveDialogs()
     /// SPEC-002 §6：重连握手成功后，重发失联期间缓存的全部决策（daemon 按 request_id 去重）。
     func resendDisconnectedDecisions()
+}
+
+public extension Notification.Name {
+    /// P1-4：daemon 通知用户规则已重载（`sieve.reload_user_rules`）→ 规则总览刷新。
+    static let sieveUserRulesReloaded = Notification.Name("com.sieve.gui.userRulesReloaded")
 }
 
 public enum ReconnectKind: Sendable {

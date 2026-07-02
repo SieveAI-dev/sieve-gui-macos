@@ -64,20 +64,21 @@ Sources/
 │   ├── IPC/         Unix Socket 客户端、JSON-RPC 2.0、InflightQueue、协议版本握手
 │   ├── AuditDB/     SQLite.swift 只读 audit.db
 │   ├── Logger/      GUI 自身日志（不复用 daemon 通道）
-│   ├── Telemetry/   匿名指标
+│   ├── Telemetry/   Debug 用实时事件环形缓冲（RingBuffers）——GUI 无任何遥测上报
 │   ├── Sparkle/     自动更新（决策路径外）
 │   ├── Notifications/ 通知中心封装
 │   ├── TouchID/     LocalAuthentication 包装
 │   └── Diagnostic/  脱敏诊断包导出
 ├── Features/    每个面是一个文件夹：HIPS / MenuBar / History / Settings / Debug / Onboarding / Toast
-│                每个 Feature 内部 = ViewModel（@Observable）+ View + 子组件
+│                History 有独立 ViewModel（HistoryWindowViewModel，ObservableObject）；
+│                其余 Feature 的状态逻辑在 Manager/Controller 或 View 内（无独立 ViewModel）
 ├── UI/          跨 Feature 复用的 SwiftUI 组件（含 MaskedField 等红线组件）
 └── Resources/   xcstrings、图标
 ```
 
-数据流单向：`daemon → IPC → Models → Feature ViewModel → SwiftUI View`；用户答复反向 `View → ViewModel → IPC.send → daemon`。决策路径**不**经过 Services/Sparkle / Notifications。
+数据流单向：`daemon → IPC → Models → Feature 状态层（Manager/ViewModel）→ SwiftUI View`；用户答复反向 `View → 状态层 → IPC.send → daemon`。决策路径**不**经过 Services/Sparkle / Notifications。
 
-理解任何 Feature 时，先读 `Features/<X>/<X>ViewModel.swift` 摸状态机，再读对应 SPEC 对照红线，最后看 View。
+理解任何 Feature 时，先读其状态层（HIPS 是 `HipsPanelManager`、History 是 `HistoryWindowViewModel`、菜单栏是 `MenuBarController`）摸状态机，再读对应 SPEC 对照红线，最后看 View。
 
 ## 文档体系
 
@@ -120,8 +121,9 @@ Sources/
 - 文件顶部不写 `// Created by ...` 自动注释（已在 Xcode 模板里关掉）
 - 所有 IPC 消息走 `Codable` 结构体，禁止 `[String: Any]` 透传
 - 异步：`async/await` 优先，`Task` 取消必须传播
-- UI 状态：`@State` / `@Observable`（macOS 14+）/ `Combine` `@Published`，三选一在每个模块内一致
-- 不在 SwiftUI View 里写业务逻辑；ViewModel 用 `@Observable`
+- UI 状态：`@State` + `Combine` `ObservableObject`/`@Published`（deploymentTarget 为 macOS 13，
+  `@Observable` 是 macOS 14+ API，**不可用**），同一模块内保持一致
+- 不在 SwiftUI View 里写业务逻辑；共享状态放 ObservableObject（AppState/Manager/ViewModel）
 
 ### 字符串
 

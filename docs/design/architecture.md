@@ -299,7 +299,7 @@ IPCClient detect:
 
 架构层面的关键体现：
 
-- **网络隔离**：`com.apple.security.network.client = false`，Sparkle 例外项单独处理
+- **网络隔离**：靠架构约束保证——HIPS/决策链路不引用任何网络客户端，网络出口仅 Sparkle 更新（与决策路径隔离）。entitlements 的 `network.client = false` 在非沙箱（app-sandbox = false）下不被 OS 强制，仅表意图
 - **文件权限**：`~/.sieve/` 必须 0700；GUI 启动时检查，不符合时引导
 - **IPC 鉴权**：依赖 socket 文件 0600，进程内不做密码学认证
 - **敏感字段隔离**：`MaskedField` 组件包住所有可能含原文的字段，禁止直接 `Text(...)`

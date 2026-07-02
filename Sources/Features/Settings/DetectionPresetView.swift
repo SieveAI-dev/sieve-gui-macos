@@ -56,6 +56,10 @@ public struct DetectionPresetView: View {
                 Task { await refreshRules() }
             }
         }
+        // P1-4：daemon 广播规则重载（用户/CLI 用 `sieve rules` 改了规则）→ 打开中的总览即时刷新
+        .onReceive(NotificationCenter.default.publisher(for: .sieveUserRulesReloaded)) { _ in
+            Task { await refreshRules() }
+        }
         .onChange(of: appState.preset) { preset in
             selectionState.syncCurrent(preset)
             initOverridesIfNeeded()

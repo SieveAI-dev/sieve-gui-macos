@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
+<!-- 注意：app-sandbox = false 时，网络类 entitlement 不被 OS 强制（仅 App Sandbox 开启时生效）。
+     此处 network.client/server = false 表达「决策路径不联网」的意图而非运行时强制；
+     真实保证来自架构约束：HIPS/决策链路不引用任何网络客户端，网络出口仅 Sparkle 更新。
+     不要为让 entitlement 生效而开沙箱——会连带破坏 Sparkle 与 UDS socket 权限。 -->
 <dict>
     <key>com.apple.security.app-sandbox</key>
     <false/>

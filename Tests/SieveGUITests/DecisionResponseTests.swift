@@ -14,7 +14,7 @@ struct DecisionResponseTests {
             byUser: true,
             uiPhaseWhenClicked: .blue
         )
-        let result = response.resultJSON(allowRemember: false)
+        let result = wireJSONObject(response.wire(allowRemember: false))
         #expect(result["remember"] as? Bool == false)
         #expect(result["context_hint"] is NSNull)
     }
@@ -29,7 +29,7 @@ struct DecisionResponseTests {
             byUser: true,
             uiPhaseWhenClicked: .orange
         )
-        let result = response.resultJSON(allowRemember: true)
+        let result = wireJSONObject(response.wire(allowRemember: true))
         #expect(result["remember"] as? Bool == true)
     }
 
@@ -43,7 +43,7 @@ struct DecisionResponseTests {
             byUser: true,
             uiPhaseWhenClicked: .blue
         )
-        #expect(denied.resultJSON(allowRemember: true)["context_hint"] is NSNull)
+        #expect(wireJSONObject(denied.wire(allowRemember: true))["context_hint"] is NSNull)
 
         let allowedNotRemembered = DecisionResponse(
             id: "r-allow-no-remember",
@@ -53,7 +53,7 @@ struct DecisionResponseTests {
             byUser: true,
             uiPhaseWhenClicked: .blue
         )
-        #expect(allowedNotRemembered.resultJSON(allowRemember: true)["context_hint"] is NSNull)
+        #expect(wireJSONObject(allowedNotRemembered.wire(allowRemember: true))["context_hint"] is NSNull)
 
         let allowedRemembered = DecisionResponse(
             id: "r-allow-remember",
@@ -63,7 +63,7 @@ struct DecisionResponseTests {
             byUser: true,
             uiPhaseWhenClicked: .blue
         )
-        #expect(allowedRemembered.resultJSON(allowRemember: true)["context_hint"] as? String == "keep")
+        #expect(wireJSONObject(allowedRemembered.wire(allowRemember: true))["context_hint"] as? String == "keep")
     }
 
     @Test("merged 部分允许：每个 issue 独立强制")
@@ -72,7 +72,7 @@ struct DecisionResponseTests {
             .init(issueId: "i-1", decision: .allow, remember: true, contextHint: nil, allowRemember: false),
             .init(issueId: "i-2", decision: .allow, remember: true, contextHint: nil, allowRemember: true)
         ], byUser: true)
-        let result = response.resultJSON()
+        let result = wireJSONObject(response.wire())
         let arr = result["per_issue"] as? [[String: Any]] ?? []
         #expect(arr[0]["remember"] as? Bool == false)
         #expect(arr[1]["remember"] as? Bool == true)
@@ -80,7 +80,7 @@ struct DecisionResponseTests {
 
     // MARK: - SPEC-005 §6.2.1 required 字段覆盖
 
-    @Test("resultJSON 包含 request_id / decided_at / by_user（byUser=true 场景）")
+    @Test("wire 包含 request_id / decided_at / by_user（byUser=true 场景）")
     func result_contains_required_fields_by_user_true() {
         let fixedDate = Date(timeIntervalSince1970: 1_746_000_000)
         let response = DecisionResponse(
@@ -92,7 +92,7 @@ struct DecisionResponseTests {
             byUser: true,
             uiPhaseWhenClicked: .orange
         )
-        let result = response.resultJSON(allowRemember: true)
+        let result = wireJSONObject(response.wire(allowRemember: true))
 
         #expect(result["request_id"] as? String == "req-abc")
         #expect(result["by_user"] as? Bool == true)
@@ -101,7 +101,7 @@ struct DecisionResponseTests {
         #expect(decidedAt?.contains("2025") == true) // 2025-04-30 左右
     }
 
-    @Test("resultJSON 包含 by_user=false（超时回退场景）")
+    @Test("wire 包含 by_user=false（超时回退场景）")
     func result_contains_required_fields_by_user_false() {
         let response = DecisionResponse(
             id: "req-timeout",
@@ -111,14 +111,14 @@ struct DecisionResponseTests {
             byUser: false, // 超时/失联 auto-deny
             uiPhaseWhenClicked: .red
         )
-        let result = response.resultJSON(allowRemember: false)
+        let result = wireJSONObject(response.wire(allowRemember: false))
 
         #expect(result["request_id"] as? String == "req-timeout")
         #expect(result["by_user"] as? Bool == false)
         #expect(result["decided_at"] as? String != nil)
     }
 
-    @Test("resultJSON 不含 responded_at（防 regression）")
+    @Test("wire 不含 responded_at（防 regression）")
     func result_does_not_contain_responded_at() {
         let response = DecisionResponse(
             id: "r-regression",
@@ -128,11 +128,11 @@ struct DecisionResponseTests {
             byUser: true,
             uiPhaseWhenClicked: .blue
         )
-        let result = response.resultJSON(allowRemember: true)
+        let result = wireJSONObject(response.wire(allowRemember: true))
         #expect(result["responded_at"] == nil)
     }
 
-    @Test("MergedDecisionResponse resultJSON 包含 request_id / decided_at / by_user")
+    @Test("MergedDecisionResponse wire 包含 request_id / decided_at / by_user")
     func merged_result_contains_required_fields() {
         let fixedDate = Date(timeIntervalSince1970: 1_746_000_000)
         let response = MergedDecisionResponse(
@@ -143,7 +143,7 @@ struct DecisionResponseTests {
             decidedAt: fixedDate,
             byUser: false // 超时场景
         )
-        let result = response.resultJSON()
+        let result = wireJSONObject(response.wire())
 
         #expect(result["request_id"] as? String == "merged-req-1")
         #expect(result["by_user"] as? Bool == false)
