@@ -42,6 +42,14 @@ struct HipsFooterPolicyTests {
         }
     }
 
+    @Test("按钮角色 → Return 绑定：拒绝类恒绑 defaultAction，允许类恒不绑")
+    func return_binding_by_role_pins_deny_only() {
+        // HipsPopupView 的每个 footer 按钮都用 bindsReturnKey 派生 keyboardShortcut（非手写），
+        // 故此断言直接锚定 View 的 Return 归属：允许类永远拿不到 Return，拒绝类恒持有。
+        #expect(HipsFooterPolicy.bindsReturnKey(role: .deny) == true)
+        #expect(HipsFooterPolicy.bindsReturnKey(role: .allow) == false)
+    }
+
     @Test("视觉主选在允许侧：仅『高置信推荐 + 非 red + 非换位 + 非 merged』")
     func allow_prominence_only_in_safe_state() {
         #expect(HipsFooterPolicy.allowIsProminent(

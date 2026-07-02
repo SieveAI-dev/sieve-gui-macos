@@ -18,9 +18,6 @@ public struct HipsPopupView: View {
     @State private var contextHint: String = ""
     @State private var lastHovered: Bool = false
     @State private var showCopyJSONAlert: Bool = false
-    /// SPEC-002 §4.4：HIPS 敏感字段解锁态——绑定 request_id 仅本弹窗有效，
-    /// 与 History 的 AppState.unlockSession 完全隔离（不读不写）。
-    @State private var fieldUnlock = HipsFieldUnlock()
 
     public init(
         request: HipsRequest,
@@ -42,8 +39,11 @@ public struct HipsPopupView: View {
         self.requestFieldUnlock = requestFieldUnlock
     }
 
+    /// SPEC-002 §4.4/§5.2：解锁态 owner 在 AppState（与 History `unlockSession` 并列隔离），
+    /// 而非 View @State——使锁屏/会话过期/关窗/新弹窗都能实时驱动其失效。绑定 request_id：
+    /// 只有「当前请求 == 解锁时的请求」才显示明文。
     private var fieldsUnlocked: Bool {
-        fieldUnlock.isUnlocked(for: request.id)
+        appState.hipsFieldUnlock.isUnlocked(for: request.id)
     }
 
     /// 当前模板是否存在可解锁的脱敏字段（secret_outbound/markdown_exfil 不推全文，无解锁入口）。
@@ -145,7 +145,8 @@ public struct HipsPopupView: View {
         let requestId = request.id
         Task { @MainActor in
             if await requestFieldUnlock() {
-                fieldUnlock.unlock(requestId: requestId)
+                // 认证成功 → 上收到 AppState 的独立解锁态（不建 History 会话，隔离方向 2）。
+                appState.unlockHipsField(requestId: requestId)
             }
             // 失败/取消：保持脱敏视图，不自动再次弹认证
         }
@@ -255,22 +256,24 @@ public struct HipsPopupView: View {
                     // 互换布局：拒绝首先渲染（视觉靠左），允许靠右（原来主按钮位置）
                     Button(action: { tryDeny() }) { Text("拒绝") }
                         .buttonStyle(.borderedProminent)
-                        .keyboardShortcut(.defaultAction)
+                        .keyboardShortcut(denyReturnShortcut)
                     if !shouldHideAllowAll {
                         Button(action: { tryAllow() }) {
                             Label(allowLabel, systemImage: "checkmark.circle")
                         }
                         .help(phaseRequiresCmdClick ? "按住 ⌘ 点击允许" : "")
                         .buttonStyle(.bordered)
+                        .keyboardShortcut(allowReturnShortcut)
                     }
                 } else {
                     if !shouldHideAllowAll {
                         if HipsFooterPolicy.allowIsProminent(footerState) {
-                            // 视觉主选可以在允许侧，但 Return 永不在（无 keyboardShortcut）
+                            // 视觉主选可以在允许侧，但 Return 永不在（allowReturnShortcut 恒 nil）
                             Button(action: { tryAllow() }) {
                                 Text("允许")
                             }
                             .buttonStyle(.borderedProminent)
+                            .keyboardShortcut(allowReturnShortcut)
                         } else {
                             // 主按钮锁拒绝时，"允许"作为副选；红阶段需 Command-Click
                             Button(action: { tryAllow() }) {
@@ -278,16 +281,17 @@ public struct HipsPopupView: View {
                             }
                             .help(phaseRequiresCmdClick ? "按住 ⌘ 点击允许" : "")
                             .buttonStyle(.bordered)
+                            .keyboardShortcut(allowReturnShortcut)
                         }
                     }
                     if mainActionLocked {
                         Button(action: { tryDeny() }) { Text("拒绝") }
                             .buttonStyle(.borderedProminent)
-                            .keyboardShortcut(.defaultAction)
+                            .keyboardShortcut(denyReturnShortcut)
                     } else {
                         Button(action: { tryDeny() }) { Text("拒绝") }
                             .buttonStyle(.bordered)
-                            .keyboardShortcut(.defaultAction)
+                            .keyboardShortcut(denyReturnShortcut)
                     }
                 }
             }
@@ -301,30 +305,32 @@ public struct HipsPopupView: View {
             if swappedLayout {
                 Button(action: { tryMerged(.denyAll) }) { Text("拒绝全部") }
                     .buttonStyle(.borderedProminent)
-                    .keyboardShortcut(.defaultAction)
+                    .keyboardShortcut(denyReturnShortcut)
                 Button(action: { tryMerged(.allowAll) }) { Text("全部允许") }
                     .buttonStyle(.bordered)
+                    .keyboardShortcut(allowReturnShortcut)
             } else {
                 // 无 Critical：拒绝全部（副）+ 全部允许（视觉主选）。
                 // P0-2：Return 仍绑拒绝全部，允许类按钮永不挂 keyboardShortcut。
                 Button(action: { tryMerged(.denyAll) }) { Text("拒绝全部") }
                     .buttonStyle(.bordered)
-                    .keyboardShortcut(.defaultAction)
+                    .keyboardShortcut(denyReturnShortcut)
                 Button(action: { tryMerged(.allowAll) }) { Text("全部允许") }
                     .buttonStyle(.borderedProminent)
+                    .keyboardShortcut(allowReturnShortcut)
             }
         } else {
             if swappedLayout {
                 Button(action: { tryMerged(.denyAll) }) { Text("拒绝全部") }
                     .buttonStyle(.borderedProminent)
-                    .keyboardShortcut(.defaultAction)
+                    .keyboardShortcut(denyReturnShortcut)
                 allowNonCriticalButton
             } else {
                 // 有 Critical：仅允许非 Critical 项（副）+ 拒绝全部（主，Return 默认拒绝）
                 allowNonCriticalButton
                 Button(action: { tryMerged(.denyAll) }) { Text("拒绝全部") }
                     .buttonStyle(.borderedProminent)
-                    .keyboardShortcut(.defaultAction)
+                    .keyboardShortcut(denyReturnShortcut)
             }
         }
     }
@@ -334,6 +340,7 @@ public struct HipsPopupView: View {
             Text("仅允许非 Critical 项（\(MergedDecisionBuilder.nonCriticalCount(request.issues)) 项）")
         }
         .buttonStyle(.bordered)
+        .keyboardShortcut(allowReturnShortcut)
         .disabled(MergedDecisionBuilder.nonCriticalCount(request.issues) == 0)
     }
 
@@ -344,6 +351,17 @@ public struct HipsPopupView: View {
 
     private var mainActionLocked: Bool {
         Recommendation.mainActionLocksToDeny(request.recommendation)
+    }
+
+    /// P0-2/P0-3：所有 footer 按钮的 Return 绑定都经 HipsFooterPolicy.bindsReturnKey 派生，
+    /// 杜绝手写漂移——允许类恒 nil（键盘无法触发允许），拒绝类恒 .defaultAction（Return 绑拒绝）。
+    /// 新增任何 footer 按钮都必须用这两个属性挂快捷键，不得手写 defaultAction 绑定。
+    private var allowReturnShortcut: KeyboardShortcut? {
+        HipsFooterPolicy.bindsReturnKey(role: .allow) ? .defaultAction : nil
+    }
+
+    private var denyReturnShortcut: KeyboardShortcut? {
+        HipsFooterPolicy.bindsReturnKey(role: .deny) ? .defaultAction : nil
     }
 
     /// footer 键盘/布局策略输入（唯一规则见 HipsFooterPolicy，Core 矩阵测试锚定）。

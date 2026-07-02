@@ -11,6 +11,21 @@ public enum HipsFooterPolicy {
         case deny
     }
 
+    /// footer 按钮的语义角色。允许类含单 issue「允许」/merged「全部允许」/「仅允许非 Critical」；
+    /// 拒绝类含「拒绝」/「拒绝全部」。
+    public enum ButtonRole: Sendable, Equatable {
+        case allow
+        case deny
+    }
+
+    /// 给定按钮角色，它是否应挂 Return（`.defaultAction`）快捷键。
+    /// **View 必须用本函数派生每个 footer 按钮的 keyboardShortcut**，而非手写——
+    /// 使「允许类永不获 Return、Return 恒绑拒绝」从注释约定升级为策略驱动 + 矩阵测试编译期锚定
+    /// （P0-2/P0-3 防回归；此前 View 手写挂接不消费策略，误加快捷键矩阵测试抓不到）。
+    public static func bindsReturnKey(role: ButtonRole) -> Bool {
+        role == .deny
+    }
+
     public struct FooterState: Sendable, Equatable {
         public let mainActionLocked: Bool
         public let phaseRequiresCmdClick: Bool
