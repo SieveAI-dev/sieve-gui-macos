@@ -1,6 +1,6 @@
 # SPEC-002：HIPS 弹窗 GUI 渲染规格
 
-> Version: v1.1 — 2026-07-02
+> Version: v1.2 — 2026-07-02
 > Status: Stable
 > Owner: SieveAI
 > 上游依赖：[上游 SPEC-002 hips-popup-behavior](../external/upstream-references.md#spec-002hips-popup-behavior) · [上游 tri-state-decision-and-graylist 三道防线](../external/upstream-references.md#tri-state-decision-and-graylist)
@@ -268,19 +268,24 @@ length:  71 chars
 
 **[📋 复制原始 JSON] 按钮**：复制 `HipsRequest.rawJSON`，需要二次确认 alert："原始请求 JSON 可能包含敏感数据，确认复制到剪贴板？"。
 
-#### 跨窗口解锁会话共享（现状记录，隔离决策待定）
+#### 字段解锁与 History 会话隔离（已落地）
 
-HIPS 详情卡的脱敏字段（地址等 `MaskedField`）经 `isUnlocked` 读取的是
-`AppState.isUnlocked`——与历史窗口（SPEC-004）**共享同一个 5 分钟解锁会话**
-（`AppState.unlockSession`）。即：用户在 History 里 Touch ID 解锁后 5 分钟内，
-HIPS 弹窗的敏感字段也自动明文。
+HIPS 详情卡的脱敏字段（地址、typed data、generic JSON 等 `MaskedField`）**不再读取**
+`AppState.isUnlocked`——与历史窗口（SPEC-004）的 5 分钟解锁会话**完全隔离**：
+History 解锁不放行 HIPS，HIPS 解锁也不影响 History。
 
-- **已知攻击面**：HIPS 是主动弹出的高危决策场景，其敏感字段被"之前 History 的解锁"
-  顺带放行，未经本场景的独立认证。
-- **待定决策**：建议 HIPS 的解锁态独立于 History（不读 `AppState.isUnlocked`）；
-  隔离实现延后，本节先显式记录该共享语义，避免继续成为无文档行为。
-- 注意与 P0-1 的区分：Critical allow 的 Touch ID 门（人在场认证）**不**建立解锁会话，
-  与本节的字段脱敏解锁互不相干。
+- **解锁入口**：详情卡下方「显示完整字段（Touch ID）」按钮（仅
+  address_compare / signing_tool_use / generic_json 与 merged issue 卡渲染；
+  secret_outbound / markdown_exfil 不推全文，无解锁入口）。
+- **解锁范围**：`HipsFieldUnlock` 绑定 `request_id`，仅当前弹窗有效——关窗/换弹窗
+  自动失效（即使 SwiftUI 状态因 rootView 复用存活也不跨弹窗泄漏，Core 单测锚定）。
+- **认证路径**：`TouchIDService.authenticateForFieldUnlock`，一次性「人在场」认证，
+  **不建立**任何解锁会话；失败/取消保持脱敏、不自动重弹（可手动再点）。
+- 与 P0-1 的区分：Critical allow 的 Touch ID 门是决策放行因子，本节是字段脱敏解锁；
+  两者共用不建会话的认证路径，但互不放行。
+
+> 历史背景：v1.1 之前 HIPS 蹭 `AppState.isUnlocked`（History 解锁 5 分钟内 HIPS
+> 自动明文），该跨窗口共享已按本节方案移除。
 
 ### 4.5 推荐栏渲染规则
 
@@ -466,3 +471,4 @@ GUI 内存域模型 `HipsRequest`：见 [data-model.md §3.1](../design/data-mod
 |------|------|-----|-----|
 | v1.0 | 2026-05-02 | SieveAI | 首次起草，覆盖全部渲染规格 |
 | v1.1 | 2026-07-02 | SieveAI | 模板 4 删除「显示助记词（需 Touch ID）」——wire 不含全文，数据层不可实现；§4.4 补记 HIPS 与 History 跨窗口共享解锁会话（现状 + 隔离决策待定） |
+| v1.2 | 2026-07-02 | SieveAI | §4.4 隔离决策落地：HIPS 字段解锁独立于 History（HipsFieldUnlock 绑定 request_id 单弹窗有效，认证不建会话），新增「显示完整字段」入口 |

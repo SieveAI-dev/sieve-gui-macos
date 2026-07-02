@@ -34,6 +34,13 @@ public final class TouchIDService: NSObject {
         await evaluate(reason: reason)
     }
 
+    /// SPEC-002 §4.4：HIPS 弹窗字段解锁的一次性「人在场」认证——同样**不建立**会话。
+    /// 解锁范围由调用方的 `HipsFieldUnlock`（绑定 request_id）控制，仅当前弹窗有效，
+    /// 与 History 的 5 分钟解锁会话完全隔离。
+    public func authenticateForFieldUnlock(reason: String) async -> Bool {
+        await evaluate(reason: reason)
+    }
+
     private func evaluate(reason: String) async -> Bool {
         let ctx = LAContext()
         ctx.localizedReason = reason

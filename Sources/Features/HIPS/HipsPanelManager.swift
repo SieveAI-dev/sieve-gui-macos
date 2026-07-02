@@ -129,6 +129,10 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
             },
             onMergedDecision: { [weak self] action in
                 self?.handleMergedDecision(action: action)
+            },
+            requestFieldUnlock: {
+                // SPEC-002 §4.4：字段解锁走一次性认证（不建会话），与 History 会话隔离
+                await TouchIDService.shared.authenticateForFieldUnlock(reason: "显示 HIPS 敏感字段需要验证")
             }
         )
         let host = hostingController ?? NSHostingController(rootView: view)
