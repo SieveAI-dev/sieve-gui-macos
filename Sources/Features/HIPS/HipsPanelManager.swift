@@ -27,6 +27,12 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
     private var countdownCancellable: AnyCancellable?
     private var visibleSince: Date?
 
+    /// P0-1：Critical allow 的「人在场」认证器。生产实现 = Touch ID（含系统密码回退），
+    /// 不建立解锁会话。红线：不提供任何跳过认证的开关/环境变量。
+    private let criticalAuthenticator: @Sendable (String) async -> Bool = { reason in
+        await TouchIDService.shared.authenticateForCriticalDecision(reason: reason)
+    }
+
     public func install(ipcClient: IPCClient) {
         self.ipcClient = ipcClient
         if countdownCancellable == nil {
@@ -181,6 +187,40 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
     private func handleDecision(decision: Decision, remember: Bool, hint: String?, phase: HipsPhase) {
         guard let req = activeRequest else { return }
 
+        // P0-1（CLI spec F1-GUI）：Critical 的 allow 必须过「人在场」认证，失败/取消降级 deny。
+        if CriticalAllowGate.requiresAuthentication(decision: decision, severity: req.severity) {
+            Task { [weak self] in
+                guard let self else { return }
+                let final = await CriticalAllowGate.finalDecision(
+                    requested: decision,
+                    severity: req.severity,
+                    authenticate: { await self.criticalAuthenticator("批准 Critical 安全决策需要验证") }
+                )
+                // 认证等待期间弹窗可能已超时/被取消——决策已按 fail-closed 兜底，不再补发
+                guard activeRequest?.id == req.id else { return }
+                if final == .deny {
+                    await GUILog.shared.warn("Critical allow 认证失败/取消，降级为拒绝 [\(req.id)]", category: "hips")
+                }
+                completeDecision(
+                    req: req,
+                    decision: final,
+                    remember: final == .allow ? remember : false,
+                    hint: hint,
+                    phase: phase
+                )
+            }
+            return
+        }
+        completeDecision(req: req, decision: decision, remember: remember, hint: hint, phase: phase)
+    }
+
+    private func completeDecision(
+        req: HipsRequest,
+        decision: Decision,
+        remember: Bool,
+        hint: String?,
+        phase: HipsPhase
+    ) {
         // deny 时记录时间，用于 5s 内同 rule_id 弹窗时互换按钮
         if decision == .deny, let ruleId = req.ruleId {
             denyTracker.recordDeny(ruleId: ruleId)
@@ -216,6 +256,33 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
     private func handleMergedDecision(action: MergedAction) {
         guard let req = activeRequest else { return }
         let perIssue = MergedDecisionBuilder.perIssues(for: req.issues, action: action)
+
+        // P0-1：per-issue 结果若放行任何 Critical 项，同样必须过「人在场」认证；
+        // 失败 → 仅 Critical 的 allow 降级 deny，其余保持。
+        if CriticalAllowGate.requiresAuthentication(perIssue: perIssue, issues: req.issues) {
+            Task { [weak self] in
+                guard let self else { return }
+                let final = await CriticalAllowGate.finalPerIssue(
+                    requested: perIssue,
+                    issues: req.issues,
+                    authenticate: { await self.criticalAuthenticator("批准 Critical 安全决策需要验证") }
+                )
+                guard activeRequest?.id == req.id else { return }
+                if zip(final, perIssue).contains(where: { $0.decision != $1.decision }) {
+                    await GUILog.shared.warn("Critical allow 认证失败/取消，相关项降级为拒绝 [\(req.id)]", category: "hips")
+                }
+                completeMergedDecision(req: req, action: action, perIssue: final)
+            }
+            return
+        }
+        completeMergedDecision(req: req, action: action, perIssue: perIssue)
+    }
+
+    private func completeMergedDecision(
+        req: HipsRequest,
+        action: MergedAction,
+        perIssue: [MergedDecisionResponse.PerIssue]
+    ) {
         let merged = MergedDecisionResponse(id: req.id, perIssue: perIssue, byUser: true)
         let payload = PendingDecisionPayload.merged(merged)
 
@@ -294,9 +361,22 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
 
     private func handleClose() {
         guard let req = activeRequest else { return }
-        // 用户主动关闭 → -32100
-        Task { [weak self] in
-            await self?.ipcClient?.sendErrorResponse(id: req.id, error: .userCanceledViaWindowClose)
+        if isDisconnected {
+            // P0-4：失联时 -32100 无连接可发会被静默丢弃，daemon 只能干等超时。
+            // 取消对 daemon 的安全效果等价 deny → 按 deny 入失联缓存，重连后重发。
+            let phase = HipsPhase.resolve(
+                remaining: Double(appState.holdRemainingSeconds),
+                total: Double(req.timeoutSeconds)
+            )
+            disconnectedCache.store(DisconnectedCloseFallback.payload(for: req, phase: phase))
+            Task {
+                await GUILog.shared.info("失联期间关窗，按拒绝缓存待重连重发 [\(req.id)]", category: "hips")
+            }
+        } else {
+            // 用户主动关闭 → -32100
+            Task { [weak self] in
+                await self?.ipcClient?.sendErrorResponse(id: req.id, error: .userCanceledViaWindowClose)
+            }
         }
         closePanel(notifyDaemon: false)
     }

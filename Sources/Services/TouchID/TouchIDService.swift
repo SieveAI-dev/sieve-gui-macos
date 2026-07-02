@@ -19,6 +19,22 @@ public final class TouchIDService: NSObject {
     }
 
     public func authenticate(reason: String) async -> Bool {
+        let ok = await evaluate(reason: reason)
+        if ok {
+            appState.setUnlockSession(UnlockSession())
+            await GUILog.shared.info("Touch ID 解锁成功，会话有效 5 分钟", category: "touchid")
+        }
+        return ok
+    }
+
+    /// P0-1：Critical 决策批准的「人在场」认证。与 History 解锁不同：成功**不建立**
+    /// 解锁会话、不解锁任何脱敏字段，只作为一次性放行因子。
+    /// deviceOwnerAuthentication 自带系统密码回退，无 Touch ID 的机器不会被锁死。
+    public func authenticateForCriticalDecision(reason: String) async -> Bool {
+        await evaluate(reason: reason)
+    }
+
+    private func evaluate(reason: String) async -> Bool {
         let ctx = LAContext()
         ctx.localizedReason = reason
 
@@ -29,15 +45,10 @@ public final class TouchIDService: NSObject {
         }
 
         do {
-            let ok = try await ctx.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: reason)
-            if ok {
-                appState.setUnlockSession(UnlockSession())
-                await GUILog.shared.info("Touch ID 解锁成功，会话有效 5 分钟", category: "touchid")
-            }
-            return ok
+            return try await ctx.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: reason)
         } catch {
             logger.warning("touchid failed: \(String(describing: error), privacy: .public)")
-            await GUILog.shared.warn("Touch ID 解锁失败：\(error.localizedDescription)", category: "touchid")
+            await GUILog.shared.warn("Touch ID 认证失败：\(error.localizedDescription)", category: "touchid")
             return false
         }
     }
