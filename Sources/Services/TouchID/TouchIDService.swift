@@ -11,7 +11,7 @@ public final class TouchIDService: NSObject {
     private let logger = Logger(subsystem: "com.sieve.gui", category: "touchid")
 
     private let appState = AppState.shared
-    private var screenLockObserver: NSObjectProtocol?
+    private var sessionClearObservers: [NSObjectProtocol] = []
 
     override public init() {
         super.init()
@@ -58,13 +58,31 @@ public final class TouchIDService: NSObject {
     }
 
     private func observeScreenLock() {
-        let nc = NSWorkspace.shared.notificationCenter
-        screenLockObserver = nc.addObserver(
-            forName: NSWorkspace.screensDidSleepNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in self?.clearSession() }
-        }
+        // P1-2：三路信号任一触发都清解锁会话（信号清单与绑定逻辑见 UnlockSessionClearBinding，
+        // Core 单测锚定）。com.apple.screenIsLocked 是真锁屏（Ctrl+Cmd+Q 时屏幕仍亮，
+        // screensDidSleep 不触发）；快速用户切换同样收敛回脱敏。
+        assert(
+            UnlockSessionClearBinding.workspaceSignalNames
+                == [NSWorkspace.screensDidSleepNotification.rawValue,
+                    NSWorkspace.sessionDidResignActiveNotification.rawValue],
+            "UnlockSessionClearBinding 的 workspace 信号名与 AppKit 常量漂移"
+        )
+        UnlockSessionClearBinding.register(
+            subscribe: { [weak self] name, handler in
+                guard let self else { return }
+                let center: NotificationCenter = UnlockSessionClearBinding.distributedSignalNames.contains(name)
+                    ? DistributedNotificationCenter.default()
+                    : NSWorkspace.shared.notificationCenter
+                let observer = center.addObserver(
+                    forName: Notification.Name(name),
+                    object: nil,
+                    queue: .main
+                ) { _ in handler() }
+                sessionClearObservers.append(observer)
+            },
+            clearSession: { [weak self] in
+                Task { @MainActor in self?.clearSession() }
+            }
+        )
     }
 }

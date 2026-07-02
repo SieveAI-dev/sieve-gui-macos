@@ -46,7 +46,7 @@
 
 - 协议版本：`v2`（IPC 客户端协议版本白名单仅 `["v2"]`，不识别即终态 disconnected）
 - macOS 13+，Apple Silicon + Intel 通用，`SWIFT_STRICT_CONCURRENCY=complete`
-- 决策路径不联网（entitlements `com.apple.security.network.client = false`）
+- GUI 决策路径不发起网络请求（架构约束：HIPS/决策链路不引用任何网络客户端，网络出口仅 Sparkle 更新且与决策路径隔离。注：App 未启用 App Sandbox，entitlements 的 `network.client = false` 表意图而非 OS 强制）
 
 ---
 

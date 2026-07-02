@@ -44,6 +44,7 @@
 		76D45BF89E0AF61B3A34F244 /* RingBuffers.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0702305FFF32E170770120 /* RingBuffers.swift */; };
 		78F119B527323F0E49E53C1E /* PrivacyDataSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 083C6BF518C43842F5E74B8D /* PrivacyDataSettingsView.swift */; };
 		799B07561C1AA8799AA0BDBE /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AB51884F8F7E9D3A4F10C0F /* OnboardingView.swift */; };
+		7F5EB7AE057055C8AC419F87 /* UnlockSessionClearBinding.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5A573679618EE709772BBCB /* UnlockSessionClearBinding.swift */; };
 		83503BD2FAE7C8DA9561818E /* SieveGUIApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F082890D86177856371483C /* SieveGUIApp.swift */; };
 		85C48EA6BA7311649FA9BEF2 /* InflightQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9E1CCFFBF0B160B5765B61C /* InflightQueue.swift */; };
 		880A8D1D46F386F53F874650 /* UserSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB42C9746D651AC625BBA231 /* UserSettings.swift */; };
@@ -114,6 +115,7 @@
 		9D645ACACEFD76F06798173F /* HipsFooterPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HipsFooterPolicy.swift; sourceTree = "<group>"; };
 		9F082890D86177856371483C /* SieveGUIApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SieveGUIApp.swift; sourceTree = "<group>"; };
 		A4ED982752CC21C18B769FD1 /* HitSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HitSummary.swift; sourceTree = "<group>"; };
+		A5A573679618EE709772BBCB /* UnlockSessionClearBinding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnlockSessionClearBinding.swift; sourceTree = "<group>"; };
 		AB42C9746D651AC625BBA231 /* UserSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserSettings.swift; sourceTree = "<group>"; };
 		AB77FF22942EFCF0BE6D569B /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
 		AE60C16BCBFE4B2FEB1AD95E /* DisconnectedDecisionCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisconnectedDecisionCache.swift; sourceTree = "<group>"; };
@@ -325,6 +327,7 @@
 				8222305EA8800A0B62857C7C /* MergedDecisionBuilder.swift */,
 				760A46F77640B8230B0051C2 /* Recommendation.swift */,
 				7961C91A2DD72F380A397454 /* RuleOverride.swift */,
+				A5A573679618EE709772BBCB /* UnlockSessionClearBinding.swift */,
 				AB42C9746D651AC625BBA231 /* UserSettings.swift */,
 			);
 			path = Models;
@@ -558,6 +561,7 @@
 				7396D5E0E95A0E49E187BF2F /* StatusBarIcon.swift in Sources */,
 				F4536C0A50C13593183E1AC7 /* ToastController.swift in Sources */,
 				146329A9E7037058B6680A9B /* TouchIDService.swift in Sources */,
+				7F5EB7AE057055C8AC419F87 /* UnlockSessionClearBinding.swift in Sources */,
 				67AF6CE164089375DEB5EE8A /* UpdatesSettingsView.swift in Sources */,
 				880A8D1D46F386F53F874650 /* UserSettings.swift in Sources */,
 				75A4ADBF2434B80575B29594 /* WindowManager.swift in Sources */,

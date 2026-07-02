@@ -125,13 +125,13 @@ codesign -d --entitlements - build/export/SieveGUI.app
 
 ```
 com.apple.security.app-sandbox: false      ← Phase 1 不 sandbox
-com.apple.security.network.client: false   ← 默认禁联网（Sparkle 例外通过 ATS 配置实现）
+com.apple.security.network.client: false   ← 表意图；非沙箱下不被 OS 强制（真实保证是架构约束：决策链路零网络客户端）
 com.apple.security.cs.allow-jit: false
 com.apple.security.cs.disable-library-validation: false
 com.apple.security.files.user-selected.read-write: true
 ```
 
-`network.client = false` 但 Sparkle 例外的实现：在 `Info.plist` 里配置 `NSAppTransportSecurity` 的 `NSExceptionDomains` 只允许 appcast host。
+注意：app-sandbox = false 时网络 entitlement 没有运行时效果（网络类 entitlement 仅在 App Sandbox 开启时由 OS 强制）。「决策路径不联网」的真实保证是架构约束（HIPS/决策链路不引用任何网络客户端，网络出口仅 Sparkle）；Sparkle 的 appcast host 白名单经 `Info.plist` 的 `NSAppTransportSecurity` `NSExceptionDomains` 收敛。
 
 ---
 
