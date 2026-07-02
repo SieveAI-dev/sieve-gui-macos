@@ -1,10 +1,9 @@
-import Testing
 import Foundation
+import Testing
 @testable import SieveGUICore
 
 @Suite("sieve.purge_history 解码 + 参数编码（SPEC-005 §11B）")
 struct PurgeHistoryTests {
-
     // MARK: - PurgeHistoryResult 解码
 
     @Test("标准响应解码：purged_at + rows_deleted")
@@ -57,7 +56,7 @@ struct PurgeHistoryTests {
     @Test("PurgeHistoryParams 编码为 confirmed_at ISO8601 snake_case")
     func encode_params_snake_case() throws {
         // 固定时间戳
-        let date = Date(timeIntervalSince1970: 1_746_259_200)  // 2026-05-03T08:00:00Z
+        let date = Date(timeIntervalSince1970: 1_746_259_200) // 2026-05-03T08:00:00Z
         let params = PurgeHistoryParams(confirmedAt: date)
         let data = try JSONEncoder().encode(params)
         let dict = try JSONSerialization.jsonObject(with: data) as? [String: Any]

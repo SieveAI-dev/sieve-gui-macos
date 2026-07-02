@@ -8,16 +8,16 @@ public enum PendingDecisionPayload: Sendable {
     /// 对应的 request_id（= JSON-RPC id），用于去重与重发寻址。
     public var requestId: String {
         switch self {
-        case let .single(r, _): return r.id
-        case let .merged(m): return m.id
+        case let .single(r, _): r.id
+        case let .merged(m): m.id
         }
     }
 
     /// 重发时编码为 JSON-RPC response.result 子对象。
     public func resultJSON() -> [String: Any] {
         switch self {
-        case let .single(r, allowRemember): return r.resultJSON(allowRemember: allowRemember)
-        case let .merged(m): return m.resultJSON()
+        case let .single(r, allowRemember): r.resultJSON(allowRemember: allowRemember)
+        case let .merged(m): m.resultJSON()
         }
     }
 }
@@ -36,8 +36,13 @@ public struct DisconnectedDecisionCache: Sendable {
 
     public init() {}
 
-    public var count: Int { order.count }
-    public var isEmpty: Bool { order.isEmpty }
+    public var count: Int {
+        order.count
+    }
+
+    public var isEmpty: Bool {
+        order.isEmpty
+    }
 
     /// 缓存一条失联期间的决策。按 `request_id` 去重：后者覆盖，保留首次入队顺序。
     public mutating func store(_ payload: PendingDecisionPayload) {

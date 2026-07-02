@@ -1,5 +1,5 @@
-import Testing
 import Foundation
+import Testing
 @testable import SieveGUICore
 
 /// HIPS 三条红线行为测试（SPEC-002）
@@ -7,7 +7,6 @@ import Foundation
 /// 这里测试驱动视图逻辑的 Model 层属性，覆盖等价行为断言。
 @Suite("HIPS 红线：Phase3 swallow / 锁拒绝 / Remember 不渲染")
 struct HipsRedLineTests {
-
     // MARK: - 辅助
 
     private func makeRequest(
@@ -96,7 +95,7 @@ struct HipsRedLineTests {
         let response = DecisionResponse(
             id: req.id,
             decision: .allow,
-            remember: true,   // UI 端即便传 true
+            remember: true, // UI 端即便传 true
             contextHint: nil,
             byUser: true,
             uiPhaseWhenClicked: .blue

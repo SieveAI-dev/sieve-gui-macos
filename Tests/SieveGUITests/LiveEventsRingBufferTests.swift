@@ -1,11 +1,10 @@
-import Testing
 import Foundation
+import Testing
 @testable import SieveGUICore
 
 @Suite("LiveEventsRingBuffer — 暂停只影响 UI，ring buffer 继续记录")
 @MainActor
 struct LiveEventsRingBufferTests {
-
     @Test("paused=false：append 正常写入")
     func append_when_not_paused() {
         let buf = LiveEventsRingBuffer()

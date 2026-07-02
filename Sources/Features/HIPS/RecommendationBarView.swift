@@ -35,30 +35,30 @@ public struct RecommendationBarView: View {
 
     private var icon: String {
         switch recommendation.decision {
-        case .deny: return "shield.lefthalf.filled.badge.checkmark"
-        case .allow: return "checkmark.shield"
+        case .deny: "shield.lefthalf.filled.badge.checkmark"
+        case .allow: "checkmark.shield"
         }
     }
 
     private var color: Color {
         switch recommendation.decision {
-        case .deny: return .red
-        case .allow: return .green
+        case .deny: .red
+        case .allow: .green
         }
     }
 
     private var label: String {
         switch recommendation.decision {
-        case .deny: return "建议拒绝"
-        case .allow: return "建议允许"
+        case .deny: "建议拒绝"
+        case .allow: "建议允许"
         }
     }
 
     private var confidenceLabel: String {
         switch recommendation.confidence {
-        case .high: return "高"
-        case .medium: return "中"
-        case .low: return "低"
+        case .high: "高"
+        case .medium: "中"
+        case .low: "低"
         }
     }
 }

@@ -11,7 +11,7 @@ public struct SettingsWindowView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            if case .disconnected(let reason) = appState.daemonStatus {
+            if case let .disconnected(reason) = appState.daemonStatus {
                 DisconnectedBanner(reason: reason, onAction: nil)
             }
             TabView {

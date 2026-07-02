@@ -4,10 +4,10 @@ import SwiftUI
 /// 红线：禁止用 `Text(secret)` 直接渲染。所有 evidence 类字段都应包到 `MaskedField` 中。
 public struct MaskedField: View {
     public enum Style {
-        case fullMask           // 全部 ••••••••
-        case prefix4Suffix4     // abcd••••wxyz
-        case sessionTrunc       // 取前 8 字符 + …
-        case clearWhenUnlocked  // 解锁后才显示原文
+        case fullMask // 全部 ••••••••
+        case prefix4Suffix4 // abcd••••wxyz
+        case sessionTrunc // 取前 8 字符 + …
+        case clearWhenUnlocked // 解锁后才显示原文
     }
 
     let value: String

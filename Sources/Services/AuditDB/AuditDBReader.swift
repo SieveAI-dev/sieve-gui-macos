@@ -1,6 +1,6 @@
 import Foundation
-import SQLite
 import os.log
+import SQLite
 
 /// 只读访问 ~/.sieve/audit.db。当前 daemon 表名是 audit_events；旧 GUI fixture 仍兼容 events。
 /// 关键约束：
@@ -15,8 +15,10 @@ public final class AuditDBReader: @unchecked Sendable {
     private let queue = DispatchQueue(label: "com.sieve.gui.audit-db", qos: .userInitiated)
     private var db: Connection?
     private var watcher: AuditDBFileWatcher?
-    private(set) public var schemaVersion: Int = 0
-    public var schemaWarning: Bool { !AuditDBReader.knownUserVersions.contains(schemaVersion) }
+    public private(set) var schemaVersion: Int = 0
+    public var schemaWarning: Bool {
+        !AuditDBReader.knownUserVersions.contains(schemaVersion)
+    }
 
     private var events = Table("events")
     private let id = SQLite.Expression<Int64>("id")
@@ -59,7 +61,7 @@ public final class AuditDBReader: @unchecked Sendable {
     /// 增量查询：返回 id > sinceId 的新行（按 id ASC）。limit 上限 200。
     public func incrementalEvents(sinceId: Int64, limit: Int = 50) -> [AuditEventRow] {
         queue.sync {
-            guard let db = db else { return [] }
+            guard let db else { return [] }
             let q = events.filter(id > sinceId).order(id.asc).limit(min(limit, 200))
             return rows(from: db, query: q)
         }
@@ -68,7 +70,7 @@ public final class AuditDBReader: @unchecked Sendable {
     /// 分页查询（历史窗口列表使用）。
     public func recentEvents(limit: Int = 50, offset: Int = 0, filter: AuditFilter = .init()) -> [AuditEventRow] {
         queue.sync {
-            guard let db = db else { return [] }
+            guard let db else { return [] }
             var q = events.order(id.desc)
             if let dir = filter.direction { q = q.filter(direction == dir.rawValue) }
             if let sev = filter.severity { q = q.filter(severity == sev.rawValue) }
@@ -83,7 +85,7 @@ public final class AuditDBReader: @unchecked Sendable {
                 if hasFingerprintColumn {
                     q = q.filter(
                         ruleId.like(pattern, escape: "\\") ||
-                        fingerprint.like(pattern, escape: "\\") == true
+                            fingerprint.like(pattern, escape: "\\") == true
                     )
                 } else {
                     q = q.filter(ruleId.like(pattern, escape: "\\"))
@@ -97,7 +99,7 @@ public final class AuditDBReader: @unchecked Sendable {
     /// 按 request_id 精确定位历史记录。QuickMenu 最近命中跳转使用；最多返回一行。
     public func event(requestId value: String) -> AuditEventRow? {
         queue.sync {
-            guard let db = db else { return nil }
+            guard let db else { return nil }
             let q = events.filter(requestId == value).order(id.desc).limit(1)
             return rows(from: db, query: q).first
         }
@@ -105,7 +107,7 @@ public final class AuditDBReader: @unchecked Sendable {
 
     public func maxId() -> Int64 {
         queue.sync {
-            guard let db = db else { return 0 }
+            guard let db else { return 0 }
             return (try? db.scalar(events.select(id.max))) ?? 0
         }
     }
@@ -157,7 +159,7 @@ public final class AuditDBReader: @unchecked Sendable {
     }
 
     private func configureSchema(_ db: Connection?) throws {
-        guard let db = db else { return }
+        guard let db else { return }
         if try tableExists(db, name: "audit_events") {
             let columns = try tableColumns(db, table: "audit_events")
             events = Table("audit_events")
@@ -217,9 +219,9 @@ public final class AuditDBReader: @unchecked Sendable {
 
     private func normalizeDecision(_ value: String) -> String {
         switch value.lowercased() {
-        case "allow": return "allow"
-        case "block", "deny": return "deny"
-        default: return value
+        case "allow": "allow"
+        case "block", "deny": "deny"
+        default: value
         }
     }
 
@@ -245,7 +247,8 @@ public struct AuditFilter: Sendable, Equatable {
     public var keyword: String?
 
     public init(direction: Direction? = nil, severity: Severity? = nil,
-                fromDate: Date? = nil, toDate: Date? = nil, keyword: String? = nil) {
+                fromDate: Date? = nil, toDate: Date? = nil, keyword: String? = nil)
+    {
         self.direction = direction
         self.severity = severity
         self.fromDate = fromDate

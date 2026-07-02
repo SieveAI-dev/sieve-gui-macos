@@ -1,6 +1,6 @@
 import Foundation
 
-/// IPC 响应体的 Codable 结构。命名对照 docs/api/ipc-protocol.md。
+// IPC 响应体的 Codable 结构。命名对照 docs/api/ipc-protocol.md。
 
 public struct SetPausedResult: Decodable, Sendable {
     public let paused: Bool
@@ -81,7 +81,10 @@ public struct EvaluateResult: Decodable, Sendable {
     }
 
     public struct Match: Decodable, Sendable, Identifiable {
-        public var id: String { ruleId }
+        public var id: String {
+            ruleId
+        }
+
         public let ruleId: String
         /// 可选：daemon evaluate 对非 critical_lock 命中可能回 `severity:"unknown"`（SPEC-005
         /// 枚举外取值，见 handle_evaluate），GUI `Severity` 无该 case → 容错为 nil（展示「未知」），
@@ -112,7 +115,7 @@ public struct EvaluateResult: Decodable, Sendable {
             let c = try decoder.container(keyedBy: CodingKeys.self)
             ruleId = try c.decode(String.self, forKey: .ruleId)
             // 容错：未知 severity 字符串（如 daemon 的 "unknown"）→ nil，不丢整个结果。
-            severity = (try c.decodeIfPresent(String.self, forKey: .severity)).flatMap(Severity.init(rawValue:))
+            severity = try (c.decodeIfPresent(String.self, forKey: .severity)).flatMap(Severity.init(rawValue:))
             disposition = try c.decode(String.self, forKey: .disposition)
             matchedPatternSummary = try c.decodeIfPresent(String.self, forKey: .matchedPatternSummary)
             fieldsTriggered = try c.decodeIfPresent([String].self, forKey: .fieldsTriggered)
@@ -137,7 +140,9 @@ public struct ListRulesResult: Decodable, Sendable {
 
 /// 规则快照（11 字段）。对照 SPEC-005 §11A RuleSummary 字段表。
 public struct RuleSummary: Decodable, Sendable, Identifiable {
-    public var id: String { ruleId }
+    public var id: String {
+        ruleId
+    }
 
     public let ruleId: String
     public let title: String
@@ -200,7 +205,8 @@ public struct PurgeHistoryResult: Decodable, Sendable {
             guard let d = f.date(from: s) else {
                 throw DecodingError.dataCorruptedError(
                     forKey: .purgedAt, in: c,
-                    debugDescription: "purged_at is not a valid ISO8601 date: \(s)")
+                    debugDescription: "purged_at is not a valid ISO8601 date: \(s)"
+                )
             }
             purgedAt = d
         }
@@ -278,7 +284,10 @@ public struct HealthResultDTO: Decodable, Sendable {
 
     /// 单 listener 完整快照。
     public struct ListenerSnapshot: Decodable, Sendable, Identifiable {
-        public var id: String { "\(addr):\(port)" }
+        public var id: String {
+            "\(addr):\(port)"
+        }
+
         public let addr: String
         public let port: UInt16
         public let providerId: String
@@ -367,7 +376,8 @@ public struct HealthResultDTO: Decodable, Sendable {
         guard let startedAtDate = Self.parseISO8601(startedAtStr) else {
             throw DecodingError.dataCorruptedError(
                 forKey: .startedAt, in: c,
-                debugDescription: "started_at is not a valid ISO8601 date: \(startedAtStr)")
+                debugDescription: "started_at is not a valid ISO8601 date: \(startedAtStr)"
+            )
         }
         startedAt = startedAtDate
 
@@ -392,7 +402,7 @@ public struct HealthResultDTO: Decodable, Sendable {
         if !listeners.isEmpty { return listeners }
         return [ListenerSnapshot(
             addr: listen.addr, port: listen.port,
-            providerId: "(legacy)", protocol: "(legacy)")]
+            providerId: "(legacy)", protocol: "(legacy)"
+        )]
     }
 }
-

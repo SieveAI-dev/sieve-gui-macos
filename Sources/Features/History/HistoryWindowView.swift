@@ -19,7 +19,11 @@ public struct HistoryWindowView: View {
                 schemaBanner
             }
             HStack {
-                HistoryFilterBar(filter: $viewModel.filter, keyword: $viewModel.keywordInput, onApply: { viewModel.reload() })
+                HistoryFilterBar(
+                    filter: $viewModel.filter,
+                    keyword: $viewModel.keywordInput,
+                    onApply: { viewModel.reload() }
+                )
                 exportButton
             }
             exportProgressBar
@@ -73,7 +77,7 @@ public struct HistoryWindowView: View {
 
     @ViewBuilder
     private var exportProgressBar: some View {
-        if case .running(let p) = exportState {
+        if case let .running(p) = exportState {
             VStack(spacing: 0) {
                 ProgressView(value: p)
                     .progressViewStyle(.linear)
@@ -81,7 +85,7 @@ public struct HistoryWindowView: View {
                     .padding(.vertical, 4)
             }
             .background(Color.accentColor.opacity(0.06))
-        } else if case .done(let url) = exportState {
+        } else if case let .done(url) = exportState {
             HStack {
                 Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
                 Text("已导出：\(url.lastPathComponent)")
@@ -96,7 +100,7 @@ public struct HistoryWindowView: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(Color.green.opacity(0.06))
-        } else if case .failed(let msg) = exportState {
+        } else if case let .failed(msg) = exportState {
             HStack {
                 Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
                 Text(msg).font(.caption)

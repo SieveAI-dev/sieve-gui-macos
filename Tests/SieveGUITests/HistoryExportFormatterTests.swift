@@ -1,10 +1,9 @@
-import Testing
 import Foundation
+import Testing
 @testable import SieveGUICore
 
 @Suite("HistoryExportFormatter — CSV/NDJSON 格式 + 脱敏正确性")
 struct HistoryExportFormatterTests {
-
     private func makeRow(
         id: Int64 = 1,
         ruleId: String = "OUT-07",
@@ -94,7 +93,7 @@ struct HistoryExportFormatterTests {
     func ndjson_valid_json_object() throws {
         let formatter = HistoryExportFormatter(format: .ndjson)
         let line = formatter.formatLine(row: makeRow())
-        let data = line.data(using: .utf8)!
+        let data = try #require(line.data(using: .utf8))
         let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any]
         #expect(obj != nil)
         #expect(obj?["rule_id"] as? String == "OUT-07")
@@ -112,8 +111,9 @@ struct HistoryExportFormatterTests {
         let formatter = HistoryExportFormatter(format: .csv)
         let output = formatter.generate(rows: [makeRow()])
         let lines = output.components(separatedBy: "\n").filter { !$0.isEmpty }
-        #expect(lines.first == "timestamp,direction,severity,rule_id,disposition,user_choice,fingerprint,caller_exe_basename")
-        #expect(lines.count == 2)  // header + 1 row
+        #expect(lines
+            .first == "timestamp,direction,severity,rule_id,disposition,user_choice,fingerprint,caller_exe_basename")
+        #expect(lines.count == 2) // header + 1 row
     }
 
     @Test("NDJSON 生成无 header 行（纯数据行）")
@@ -139,7 +139,7 @@ struct HistoryExportFormatterTests {
         let formatter = HistoryExportFormatter(format: .ndjson)
         let row = makeRow(ruleId: "rule\"with\\quote\nnewline", disposition: "x", requestId: "r\"id")
         let line = formatter.formatLine(row: row)
-        let data = line.data(using: .utf8)!
+        let data = try #require(line.data(using: .utf8))
         let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any]
         #expect(obj?["rule_id"] as? String == "rule\"with\\quote\nnewline")
         #expect(obj?["request_id"] == nil)
@@ -149,7 +149,7 @@ struct HistoryExportFormatterTests {
     func long_fingerprint_is_shortened() throws {
         let formatter = HistoryExportFormatter(format: .ndjson)
         let line = formatter.formatLine(row: makeRow(fingerprint: "sha256:abcdef1234567890"))
-        let data = line.data(using: .utf8)!
+        let data = try #require(line.data(using: .utf8))
         let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any]
         #expect(obj?["fingerprint"] as? String == "sha2...7890")
         #expect(!line.contains("abcdef123456"))

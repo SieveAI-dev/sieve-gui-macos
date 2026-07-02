@@ -80,7 +80,7 @@ public actor GUILog {
         let parent = (path as NSString).deletingLastPathComponent
         if !FileManager.default.fileExists(atPath: parent) {
             try? FileManager.default.createDirectory(atPath: parent, withIntermediateDirectories: true,
-                                                    attributes: [.posixPermissions: 0o700])
+                                                     attributes: [.posixPermissions: 0o700])
         }
     }
 

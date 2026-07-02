@@ -37,7 +37,7 @@ public struct QuickMenuView: View {
             header
             Divider()
 
-            if case .disconnected(let reason) = appState.daemonStatus {
+            if case let .disconnected(reason) = appState.daemonStatus {
                 disconnectedSection(reason: reason)
             } else {
                 statusSection
@@ -185,11 +185,11 @@ public struct QuickMenuView: View {
 
     private var footerSection: some View {
         VStack(spacing: 0) {
-            menuRow(symbol: "clock.arrow.circlepath", title: "历史…",  shortcut: "L", action: { onOpenHistory(nil) })
-            menuRow(symbol: "gearshape", title: "设置…",  shortcut: ",", action: onOpenSettings)
-            menuRow(symbol: "ant.circle", title: "调试…",  shortcut: "D", action: onOpenDebug)
+            menuRow(symbol: "clock.arrow.circlepath", title: "历史…", shortcut: "L", action: { onOpenHistory(nil) })
+            menuRow(symbol: "gearshape", title: "设置…", shortcut: ",", action: onOpenSettings)
+            menuRow(symbol: "ant.circle", title: "调试…", shortcut: "D", action: onOpenDebug)
             Divider()
-            menuRow(symbol: "power", title: "退出 Sieve GUI",  shortcut: "Q", action: onQuit)
+            menuRow(symbol: "power", title: "退出 Sieve GUI", shortcut: "Q", action: onQuit)
         }
     }
 
@@ -214,40 +214,40 @@ public struct QuickMenuView: View {
 
     private var statusDotColor: Color {
         switch appState.daemonStatus {
-        case .normal: return .green
-        case .warning: return .yellow
-        case .hold: return .orange
-        case .paused: return .gray
-        case .disconnected: return .red
+        case .normal: .green
+        case .warning: .yellow
+        case .hold: .orange
+        case .paused: .gray
+        case .disconnected: .red
         }
     }
 
     private var statusLabel: String {
         switch appState.daemonStatus {
-        case .normal: return "正常"
-        case .warning: return "有警告"
-        case .hold: return "等待用户决策"
-        case .paused: return "已暂停"
-        case .disconnected: return "失联"
+        case .normal: "正常"
+        case .warning: "有警告"
+        case .hold: "等待用户决策"
+        case .paused: "已暂停"
+        case .disconnected: "失联"
         }
     }
 
     private func actionColor(_ a: HitSummary.Action) -> Color {
         switch a {
-        case .deny, .terminal: return .red
-        case .redact, .marked: return .orange
-        case .allow: return .secondary
+        case .deny, .terminal: .red
+        case .redact, .marked: .orange
+        case .allow: .secondary
         }
     }
 
     private func disconnectReasonText(_ r: DaemonStatus.DisconnectReason) -> String {
         switch r {
-        case .socketMissing: return "找不到 ~/.sieve/ipc.sock。daemon 可能未启动。"
-        case .connectionRefused: return "~/.sieve/ipc.sock 存在，但 daemon 拒绝连接。请重启 daemon。"
-        case .heartbeatTimeout: return "30 秒未收到 daemon 消息。"
-        case .versionMismatch: return "协议版本不兼容。请同步升级 daemon 与 GUI。"
-        case .daemonShutdown: return "daemon 主动关闭了连接。"
-        case .unknown: return "未知原因。"
+        case .socketMissing: "找不到 ~/.sieve/ipc.sock。daemon 可能未启动。"
+        case .connectionRefused: "~/.sieve/ipc.sock 存在，但 daemon 拒绝连接。请重启 daemon。"
+        case .heartbeatTimeout: "30 秒未收到 daemon 消息。"
+        case .versionMismatch: "协议版本不兼容。请同步升级 daemon 与 GUI。"
+        case .daemonShutdown: "daemon 主动关闭了连接。"
+        case .unknown: "未知原因。"
         }
     }
 

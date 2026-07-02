@@ -5,8 +5,8 @@ import os.log
 public enum IPCState: Equatable, Sendable {
     case idle
     case connecting
-    case connected            // 已建立 socket，未握手
-    case active               // 收到 sieve.hello，可正常通信
+    case connected // 已建立 socket，未握手
+    case active // 收到 sieve.hello，可正常通信
     case retrying(after: TimeInterval, attempt: Int)
     case versionMismatch(received: String)
 }
@@ -26,7 +26,10 @@ public protocol IPCDelegate: AnyObject, Sendable {
 public final class IPCClient: @unchecked Sendable {
     public static let defaultSocketPath: String = NSHomeDirectory() + "/.sieve/ipc.sock"
     /// 向后兼容别名，指向 defaultSocketPath。
-    public static var socketPath: String { defaultSocketPath }
+    public static var socketPath: String {
+        defaultSocketPath
+    }
+
     public static let supportedProtocolVersions: Set<String> = ["v2"]
 
     private static let backoff: [TimeInterval] = [1, 2, 5, 10, 30]
@@ -49,6 +52,7 @@ public final class IPCClient: @unchecked Sendable {
     private var state: IPCState = .idle {
         didSet { notifyState(state) }
     }
+
     private let inflightTimeoutPolicy = InflightQueue.TimeoutPolicy.default
     private var attempt: Int = 0
     private var heartbeatTask: DispatchWorkItem?
@@ -59,26 +63,26 @@ public final class IPCClient: @unchecked Sendable {
 
     public init(delegate: IPCDelegate? = nil, socketPath: String? = nil) {
         self.delegate = delegate
-        self.instanceSocketPath = socketPath ?? IPCClient.defaultSocketPath
+        instanceSocketPath = socketPath ?? IPCClient.defaultSocketPath
     }
 
     // MARK: - Public API
 
     public func connect() {
         ipcQueue.async { [weak self] in
-            guard let self = self else { return }
-            guard self.connection == nil else { return }
-            self.shouldReconnect = true
-            self.openConnection()
+            guard let self else { return }
+            guard connection == nil else { return }
+            shouldReconnect = true
+            openConnection()
         }
     }
 
     public func disconnect() {
         ipcQueue.async { [weak self] in
-            guard let self = self else { return }
-            self.shouldReconnect = false
-            self.tearDown()
-            self.state = .idle
+            guard let self else { return }
+            shouldReconnect = false
+            tearDown()
+            state = .idle
         }
     }
 
@@ -91,13 +95,13 @@ public final class IPCClient: @unchecked Sendable {
     }
 
     /// 发送一条请求并 await daemon 响应（带 Encodable 参数版本）。
-    public func sendRequest<P: Encodable & Sendable>(id: String, method: String, params: P) async throws -> Data {
+    public func sendRequest(id: String, method: String, params: some Encodable & Sendable) async throws -> Data {
         let data = IPCOutbound.request(id: id, method: method, params: params)
         return try await _enqueueAndAwait(id: id, method: method, payload: data)
     }
 
     private func _enqueueAndAwait(id: String, method: String, payload: Data) async throws -> Data {
-        return try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Data, Error>) in
+        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Data, Error>) in
             Task {
                 guard await self.hasConnectionForSending() else {
                     cont.resume(throwing: IPCError.socketUnavailable)
@@ -121,11 +125,11 @@ public final class IPCClient: @unchecked Sendable {
     private func hasConnectionForSending() async -> Bool {
         await withCheckedContinuation { cont in
             ipcQueue.async { [weak self] in
-                guard let self = self else {
+                guard let self else {
                     cont.resume(returning: false)
                     return
                 }
-                cont.resume(returning: self.connection != nil)
+                cont.resume(returning: connection != nil)
             }
         }
     }
@@ -137,7 +141,7 @@ public final class IPCClient: @unchecked Sendable {
     }
 
     /// fire-and-forget 版本（带 Encodable 参数）。
-    public func sendRequestAndForget<P: Encodable & Sendable>(id: String, method: String, params: P) {
+    public func sendRequestAndForget(id: String, method: String, params: some Encodable & Sendable) {
         let data = IPCOutbound.request(id: id, method: method, params: params)
         _sendRequestAndForget(id: id, method: method, payload: data)
     }
@@ -150,7 +154,8 @@ public final class IPCClient: @unchecked Sendable {
             }
             await self.inflight.enqueue(.init(
                 id: id, method: method, payload: payload,
-                createdAt: Date(), isDecisionResponse: false))
+                createdAt: Date(), isDecisionResponse: false
+            ))
             self.sendRaw(payload)
         }
     }
@@ -181,7 +186,7 @@ public final class IPCClient: @unchecked Sendable {
         sendRaw(data)
     }
 
-    public func sendNotification<P: Encodable & Sendable>(method: String, params: P) {
+    public func sendNotification(method: String, params: some Encodable & Sendable) {
         let data = IPCOutbound.notification(method: method, params: params)
         sendRaw(data)
     }
@@ -233,7 +238,7 @@ public final class IPCClient: @unchecked Sendable {
             self?.handleNWState(newState)
         }
         state = .connecting
-        lastReceivedAt = Date()   // 心跳基准：.waiting 不立即 teardown，靠 heartbeat 给自愈窗口后兜底
+        lastReceivedAt = Date() // 心跳基准：.waiting 不立即 teardown，靠 heartbeat 给自愈窗口后兜底
         conn.start(queue: ipcQueue)
         startHeartbeatTimer()
         startInflightSweepTimer()
@@ -246,11 +251,11 @@ public final class IPCClient: @unchecked Sendable {
             attempt = 0
             state = .connected
             lastReceivedAt = Date()
-        case .failed(let err):
+        case let .failed(err):
             logger.warning("nw state failed: \(String(describing: err), privacy: .public)")
             tearDown()
             scheduleRetry(reason: Self.disconnectReason(for: err))
-        case .waiting(let err):
+        case let .waiting(err):
             if Self.isConnectionRefused(err) {
                 logger.notice("nw state waiting with ECONNREFUSED; retrying immediately")
                 tearDown()
@@ -292,17 +297,17 @@ public final class IPCClient: @unchecked Sendable {
             notifyDisconnect(reason: reason)
         }
         ipcQueue.asyncAfter(deadline: .now() + delay) { [weak self] in
-            guard let self = self, self.shouldReconnect else { return }
-            self.openConnection()
+            guard let self, shouldReconnect else { return }
+            openConnection()
         }
     }
 
-    internal static func disconnectReason(for error: NWError) -> DaemonStatus.DisconnectReason {
+    static func disconnectReason(for error: NWError) -> DaemonStatus.DisconnectReason {
         isConnectionRefused(error) ? .connectionRefused : .socketMissing
     }
 
     private static func isConnectionRefused(_ error: NWError) -> Bool {
-        if case .posix(let code) = error {
+        if case let .posix(code) = error {
             return code == .ECONNREFUSED
         }
         return false
@@ -313,31 +318,31 @@ public final class IPCClient: @unchecked Sendable {
     private func receiveLoop() {
         guard let conn = connection else { return }
         conn.receive(minimumIncompleteLength: 1, maximumLength: 64 * 1024) { [weak self] data, _, isComplete, error in
-            guard let self = self else { return }
-            if let error = error {
-                self.logger.error("ipc receive error: \(String(describing: error), privacy: .public)")
-                self.tearDown()
-                self.scheduleRetry(reason: .heartbeatTimeout)
+            guard let self else { return }
+            if let error {
+                logger.error("ipc receive error: \(String(describing: error), privacy: .public)")
+                tearDown()
+                scheduleRetry(reason: .heartbeatTimeout)
                 return
             }
-            if let data = data, !data.isEmpty {
-                self.lastReceivedAt = Date()
-                self.receiveBuffer.append(data)
-                self.drainBuffer()
+            if let data, !data.isEmpty {
+                lastReceivedAt = Date()
+                receiveBuffer.append(data)
+                drainBuffer()
             }
             if isComplete {
-                self.tearDown()
-                self.scheduleRetry(reason: .daemonShutdown)
+                tearDown()
+                scheduleRetry(reason: .daemonShutdown)
                 return
             }
-            self.receiveLoop()
+            receiveLoop()
         }
     }
 
     private func drainBuffer() {
         while let nl = receiveBuffer.firstIndex(of: 0x0A) {
-            let line = receiveBuffer.subdata(in: receiveBuffer.startIndex..<nl)
-            receiveBuffer.removeSubrange(receiveBuffer.startIndex...nl)
+            let line = receiveBuffer.subdata(in: receiveBuffer.startIndex ..< nl)
+            receiveBuffer.removeSubrange(receiveBuffer.startIndex ... nl)
             if line.isEmpty { continue }
             if line.count > IPCClient.maxMessageBytes {
                 logger.error("ipc message too large: \(line.count, privacy: .public) bytes")
@@ -349,7 +354,10 @@ public final class IPCClient: @unchecked Sendable {
                 let incoming = try IPCIncoming.decode(line: line)
                 handleIncoming(incoming)
             } catch {
-                logger.warning("ipc decode error: \(String(describing: error), privacy: .public) — line dropped, connection kept")
+                logger
+                    .warning(
+                        "ipc decode error: \(String(describing: error), privacy: .public) — line dropped, connection kept"
+                    )
             }
         }
         // 缓冲区单条消息也限制大小（防御性）
@@ -362,19 +370,19 @@ public final class IPCClient: @unchecked Sendable {
 
     private func handleIncoming(_ incoming: IPCIncoming) {
         // 优先处理握手与 inflight
-        if case .notification(let method, let params) = incoming, method == "sieve.hello" {
+        if case let .notification(method, params) = incoming, method == "sieve.hello" {
             handleHello(params: params)
         }
-        if case .response(let id, let result) = incoming {
+        if case let .response(id, result) = incoming {
             Task { await inflight.fulfill(id: id, resultData: result) }
         }
-        if case .errorResponse(let id, let code, let msg, let edata) = incoming {
+        if case let .errorResponse(id, code, msg, edata) = incoming {
             Task { await inflight.reject(id: id, code: code, message: msg, data: edata) }
         }
         // 投递主线程
         Task { @MainActor [weak self] in
-            guard let self = self else { return }
-            self.delegate?.ipc(self, didReceive: incoming)
+            guard let self else { return }
+            delegate?.ipc(self, didReceive: incoming)
         }
     }
 
@@ -393,18 +401,18 @@ public final class IPCClient: @unchecked Sendable {
             state = .active
             // 重连后丢弃 inflight（SPEC-005 §3.4）：旧 oneshot channel 已失效，不重发
             Task { [weak self] in
-                guard let self = self else { return }
-                await self.inflight.clearAndDiscard()
+                guard let self else { return }
+                await inflight.clearAndDiscard()
                 // 清空 mutating request id 集合（旧连接的 id 已失效）
-                await self.inflightMutatingIds.clear()
+                await inflightMutatingIds.clear()
                 // 通知 UI 层关闭所有 stale 弹窗
                 Task { @MainActor in
                     self.delegate?.ipcDidDiscardInflightOnReconnect(self)
                 }
             }
             Task { @MainActor [weak self] in
-                guard let self = self else { return }
-                self.delegate?.ipcDidHandshake(self, params: hello)
+                guard let self else { return }
+                delegate?.ipcDidHandshake(self, params: hello)
             }
         } catch {
             logger.error("ipc hello decode failed: \(String(describing: error), privacy: .public)")
@@ -417,9 +425,9 @@ public final class IPCClient: @unchecked Sendable {
 
     private func sendRaw(_ data: Data) {
         ipcQueue.async { [weak self] in
-            guard let self = self, let conn = self.connection else { return }
+            guard let self, let conn = connection else { return }
             conn.send(content: data, completion: .contentProcessed { [weak self] err in
-                if let err = err {
+                if let err {
                     self?.logger.warning("ipc send error: \(String(describing: err), privacy: .public)")
                 }
             })
@@ -460,11 +468,11 @@ public final class IPCClient: @unchecked Sendable {
     private func sweepInflightTimeouts() {
         let policy = inflightTimeoutPolicy
         Task { [weak self] in
-            guard let self = self else { return }
-            let expired = await self.inflight.sweepTimeouts(policy: policy)
+            guard let self else { return }
+            let expired = await inflight.sweepTimeouts(policy: policy)
             // 超时的 mutating request id 也要清掉，避免回声判定残留
             for id in expired {
-                await self.inflightMutatingIds.remove(id)
+                await inflightMutatingIds.remove(id)
             }
         }
         // 重新排程下一轮（连接存活期间持续）
@@ -475,15 +483,15 @@ public final class IPCClient: @unchecked Sendable {
 
     private func notifyState(_ state: IPCState) {
         Task { @MainActor [weak self] in
-            guard let self = self else { return }
-            self.delegate?.ipc(self, didChangeState: state)
+            guard let self else { return }
+            delegate?.ipc(self, didChangeState: state)
         }
     }
 
     private func notifyDisconnect(reason: DaemonStatus.DisconnectReason) {
         Task { @MainActor [weak self] in
-            guard let self = self else { return }
-            self.delegate?.ipcDidLoseConnection(self, reason: reason)
+            guard let self else { return }
+            delegate?.ipcDidLoseConnection(self, reason: reason)
         }
     }
 }

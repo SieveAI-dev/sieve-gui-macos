@@ -1,5 +1,5 @@
-import Testing
 import Foundation
+import Testing
 @testable import SieveGUICore
 
 @Suite("DecisionResponse encoding-layer guard")
@@ -9,7 +9,7 @@ struct DecisionResponseTests {
         let response = DecisionResponse(
             id: "r-1",
             decision: .allow,
-            remember: true,                 // UI 端传 true
+            remember: true, // UI 端传 true
             contextHint: "test",
             byUser: true,
             uiPhaseWhenClicked: .blue
@@ -70,7 +70,7 @@ struct DecisionResponseTests {
     func merged_per_issue_force() {
         let response = MergedDecisionResponse(id: "m-1", perIssue: [
             .init(issueId: "i-1", decision: .allow, remember: true, contextHint: nil, allowRemember: false),
-            .init(issueId: "i-2", decision: .allow, remember: true, contextHint: nil, allowRemember: true),
+            .init(issueId: "i-2", decision: .allow, remember: true, contextHint: nil, allowRemember: true)
         ], byUser: true)
         let result = response.resultJSON()
         let arr = result["per_issue"] as? [[String: Any]] ?? []
@@ -98,7 +98,7 @@ struct DecisionResponseTests {
         #expect(result["by_user"] as? Bool == true)
         let decidedAt = result["decided_at"] as? String
         #expect(decidedAt != nil)
-        #expect(decidedAt?.contains("2025") == true)  // 2025-04-30 左右
+        #expect(decidedAt?.contains("2025") == true) // 2025-04-30 左右
     }
 
     @Test("resultJSON 包含 by_user=false（超时回退场景）")
@@ -108,7 +108,7 @@ struct DecisionResponseTests {
             decision: .deny,
             remember: false,
             contextHint: nil,
-            byUser: false,   // 超时/失联 auto-deny
+            byUser: false, // 超时/失联 auto-deny
             uiPhaseWhenClicked: .red
         )
         let result = response.resultJSON(allowRemember: false)
@@ -141,7 +141,7 @@ struct DecisionResponseTests {
                 .init(issueId: "i-1", decision: .deny, remember: false, contextHint: nil, allowRemember: false)
             ],
             decidedAt: fixedDate,
-            byUser: false   // 超时场景
+            byUser: false // 超时场景
         )
         let result = response.resultJSON()
 

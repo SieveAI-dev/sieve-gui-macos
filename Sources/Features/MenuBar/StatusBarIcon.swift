@@ -28,13 +28,13 @@ public enum StatusBarIcon {
     private static func paletteColor(for tint: StatusBarIconTint) -> NSColor? {
         switch tint {
         case .template:
-            return nil
+            nil
         case .warning:
-            return .systemYellow
+            .systemYellow
         case .danger:
-            return .systemRed
+            .systemRed
         case .disabled:
-            return .systemGray
+            .systemGray
         }
     }
 }

@@ -1,10 +1,9 @@
-import Testing
 import Foundation
+import Testing
 @testable import SieveGUICore
 
 @Suite("sieve.health 解码（SPEC-005 §9.5，listeners[]）")
 struct HealthResultDTOTests {
-
     // MARK: - 完整 SPEC-005 §9.5 响应
 
     @Test("完整字段（新 daemon）：listen + listeners 同时存在，listeners 权威")
@@ -71,7 +70,7 @@ struct HealthResultDTOTests {
         // 子结构
         #expect(dto.auditDb.schemaVersion == 2)
         #expect(dto.auditDb.eventsTotal == 12453)
-        #expect(dto.auditDb.sizeBytes == 2048576)
+        #expect(dto.auditDb.sizeBytes == 2_048_576)
         #expect(dto.rules.systemCount == 47)
         #expect(dto.rules.userCount == 3)
         #expect(dto.rules.lastReload != nil)

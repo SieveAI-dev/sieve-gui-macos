@@ -1,6 +1,6 @@
-import Testing
 import Foundation
 import Network
+import Testing
 @testable import SieveGUICore
 
 // MARK: - 测试 Delegate
@@ -15,16 +15,35 @@ final class TestIPCDelegate: IPCDelegate, @unchecked Sendable {
     private var _disconnectReasons: [DaemonStatus.DisconnectReason] = []
     private var _discardedCount: Int = 0
 
-    var states: [IPCState] { lock.withLock { _states } }
-    var handshakeParams: [HelloParams] { lock.withLock { _handshakeParams } }
-    var incomings: [IPCIncoming] { lock.withLock { _incomings } }
-    var disconnectReasons: [DaemonStatus.DisconnectReason] { lock.withLock { _disconnectReasons } }
-    var discardedCount: Int { lock.withLock { _discardedCount } }
+    var states: [IPCState] {
+        lock.withLock { _states }
+    }
 
-    var latestState: IPCState? { lock.withLock { _states.last } }
-    var latestHandshake: HelloParams? { lock.withLock { _handshakeParams.last } }
+    var handshakeParams: [HelloParams] {
+        lock.withLock { _handshakeParams }
+    }
 
-    // 等待特定状态的续延
+    var incomings: [IPCIncoming] {
+        lock.withLock { _incomings }
+    }
+
+    var disconnectReasons: [DaemonStatus.DisconnectReason] {
+        lock.withLock { _disconnectReasons }
+    }
+
+    var discardedCount: Int {
+        lock.withLock { _discardedCount }
+    }
+
+    var latestState: IPCState? {
+        lock.withLock { _states.last }
+    }
+
+    var latestHandshake: HelloParams? {
+        lock.withLock { _handshakeParams.last }
+    }
+
+    /// 等待特定状态的续延
     private var stateWaiters: [(IPCState, CheckedContinuation<Void, Never>)] = []
 
     func waitForState(_ target: IPCState, timeout: TimeInterval = 5.0) async -> Bool {
@@ -40,7 +59,7 @@ final class TestIPCDelegate: IPCDelegate, @unchecked Sendable {
                         cont.resume(returning: true)
                         return
                     }
-                    try? await Task.sleep(nanoseconds: 50_000_000)  // 50ms
+                    try? await Task.sleep(nanoseconds: 50_000_000) // 50ms
                 }
                 cont.resume(returning: false)
             }
@@ -69,23 +88,23 @@ final class TestIPCDelegate: IPCDelegate, @unchecked Sendable {
 
     // MARK: - IPCDelegate
 
-    nonisolated func ipc(_ client: IPCClient, didChangeState state: IPCState) {
+    nonisolated func ipc(_: IPCClient, didChangeState state: IPCState) {
         lock.withLock { _states.append(state) }
     }
 
-    nonisolated func ipc(_ client: IPCClient, didReceive incoming: IPCIncoming) {
+    nonisolated func ipc(_: IPCClient, didReceive incoming: IPCIncoming) {
         lock.withLock { _incomings.append(incoming) }
     }
 
-    nonisolated func ipcDidHandshake(_ client: IPCClient, params: HelloParams) {
+    nonisolated func ipcDidHandshake(_: IPCClient, params: HelloParams) {
         lock.withLock { _handshakeParams.append(params) }
     }
 
-    nonisolated func ipcDidLoseConnection(_ client: IPCClient, reason: DaemonStatus.DisconnectReason) {
+    nonisolated func ipcDidLoseConnection(_: IPCClient, reason: DaemonStatus.DisconnectReason) {
         lock.withLock { _disconnectReasons.append(reason) }
     }
 
-    nonisolated func ipcDidDiscardInflightOnReconnect(_ client: IPCClient) {
+    nonisolated func ipcDidDiscardInflightOnReconnect(_: IPCClient) {
         lock.withLock { _discardedCount += 1 }
     }
 }
@@ -94,7 +113,6 @@ final class TestIPCDelegate: IPCDelegate, @unchecked Sendable {
 
 @Suite("IPCClient 集成测试（mock daemon harness）")
 struct IPCClientIntegrationTests {
-
     @Test("ECONNREFUSED 分类为 connectionRefused，不误报 socketMissing")
     func refused_socket_classifies_distinct_reason() {
         #expect(IPCClient.disconnectReason(for: .posix(.ECONNREFUSED)) == .connectionRefused)
@@ -121,7 +139,11 @@ struct IPCClientIntegrationTests {
         let delegate = TestIPCDelegate()
         let client = IPCClient(delegate: delegate, socketPath: "/tmp/sieve-gui-test-missing.sock")
 
-        client.sendRequestAndForget(id: "req-forget-no-conn", method: "sieve.set_paused", params: SetPausedParams(minutes: 0))
+        client.sendRequestAndForget(
+            id: "req-forget-no-conn",
+            method: "sieve.set_paused",
+            params: SetPausedParams(minutes: 0)
+        )
         try await Task.sleep(nanoseconds: 100_000_000)
 
         #expect(await client.inflightCount == 0)
@@ -202,7 +224,7 @@ struct IPCClientIntegrationTests {
         // inflight 请求应收到 versionMismatch 错误
         let result = await requestTask.value
         switch result {
-        case .failure(let err):
+        case let .failure(err):
             if let awaitErr = err as? InflightQueue.AwaitError {
                 #expect(awaitErr == .versionMismatch, "inflight 应收到 .versionMismatch 错误")
             } else {
@@ -255,7 +277,7 @@ struct IPCClientIntegrationTests {
                 return .failure(error)
             }
         }
-        try await Task.sleep(nanoseconds: 150_000_000)  // 让请求入队
+        try await Task.sleep(nanoseconds: 150_000_000) // 让请求入队
 
         // 断开连接（模拟 daemon 重启）
         let connBefore = daemon.connectionCount
@@ -273,11 +295,11 @@ struct IPCClientIntegrationTests {
         // inflight 请求应收到 reconnectedDiscarded 错误
         let result = await requestTask.value
         switch result {
-        case .failure(let err):
+        case let .failure(err):
             if let awaitErr = err as? InflightQueue.AwaitError {
                 #expect(awaitErr == .reconnectedDiscarded, "应收到 .reconnectedDiscarded 错误")
             }
-            // 也可能是 .canceled（连接关闭），视为通过
+        // 也可能是 .canceled（连接关闭），视为通过
         case .success:
             Issue.record("断连重连后 inflight 应失败，不应成功")
         }
@@ -312,7 +334,7 @@ struct IPCClientIntegrationTests {
         // 等 IPCClient 退避重连成功（退避 1/2/5/10/30s，首次 1s+ 即可）
         let reconnected2 = await daemon.waitForNewConnection(after: conn1, timeout: 8.0)
         #expect(reconnected2, "路径 2：IPCClient 应在 8s 内重连成功")
-        let bootId2 = UUID().uuidString  // 新 boot_id
+        let bootId2 = UUID().uuidString // 新 boot_id
         daemon.sendHello(daemonBootId: bootId2)
         let h2 = await delegate.waitForHandshake(after: handshakeCount1, timeout: 5.0)
         #expect(h2 != nil, "路径 2：重启后应再次收到 handshake")
@@ -324,7 +346,7 @@ struct IPCClientIntegrationTests {
         daemon.disconnectClient()
         let reconnected3 = await daemon.waitForNewConnection(after: conn2, timeout: 8.0)
         #expect(reconnected3, "路径 3：IPCClient 应在 8s 内重连成功")
-        daemon.sendHello(daemonBootId: bootId2)  // 相同 boot_id
+        daemon.sendHello(daemonBootId: bootId2) // 相同 boot_id
         let h3 = await delegate.waitForHandshake(after: handshakeCount2, timeout: 5.0)
         #expect(h3 != nil, "路径 3：仅断连重连也应收到 handshake")
         #expect(h3?.daemonBootId == bootId2, "路径 3：boot_id 应保持不变")
@@ -373,14 +395,14 @@ struct IPCClientIntegrationTests {
         let deadline1 = Date().addingTimeInterval(3.0)
         while Date() < deadline1 {
             if delegate.incomings.contains(where: {
-                if case .request(_, let method, _) = $0, method == "sieve.request_decision" { return true }
+                if case let .request(_, method, _) = $0, method == "sieve.request_decision" { return true }
                 return false
             }) { break }
             try await Task.sleep(nanoseconds: 50_000_000)
         }
 
         let singleReceived = delegate.incomings.contains {
-            if case .request(_, let method, _) = $0, method == "sieve.request_decision" { return true }
+            if case let .request(_, method, _) = $0, method == "sieve.request_decision" { return true }
             return false
         }
         #expect(singleReceived, "应收到单 issue request_decision")
@@ -423,7 +445,7 @@ struct IPCClientIntegrationTests {
         let deadline2 = Date().addingTimeInterval(3.0)
         while Date() < deadline2 {
             let count = delegate.incomings.filter {
-                if case .request(_, let m, _) = $0, m == "sieve.request_decision" { return true }
+                if case let .request(_, m, _) = $0, m == "sieve.request_decision" { return true }
                 return false
             }.count
             if count >= 2 { break }
@@ -431,19 +453,19 @@ struct IPCClientIntegrationTests {
         }
 
         let requestDecisionCount = delegate.incomings.filter {
-            if case .request(_, let m, _) = $0, m == "sieve.request_decision" { return true }
+            if case let .request(_, m, _) = $0, m == "sieve.request_decision" { return true }
             return false
         }.count
         #expect(requestDecisionCount >= 2, "应收到两条 request_decision（单 + merged）")
 
         // 验证 merged 格式可被 HipsRequestDecoder 解析
         let mergedIncoming = delegate.incomings.first {
-            if case .request(let id, _, _) = $0, id == "req-merged-1" { return true }
+            if case let .request(id, _, _) = $0, id == "req-merged-1" { return true }
             return false
         }
         #expect(mergedIncoming != nil, "merged request 应被收到")
 
-        if case .request(_, _, let paramsData) = mergedIncoming! {
+        if case let .request(_, _, paramsData) = try #require(mergedIncoming) {
             let decoded = try? HipsRequestDecoder.decode(id: "req-merged-1", paramsData: paramsData)
             #expect(decoded != nil, "merged request_decision 应可被 HipsRequestDecoder 解码")
             #expect(decoded?.merged == true, "解码后 merged 字段应为 true")

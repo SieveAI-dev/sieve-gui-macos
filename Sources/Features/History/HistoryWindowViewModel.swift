@@ -1,5 +1,5 @@
-import Foundation
 import Combine
+import Foundation
 
 // MARK: - Notification 名称
 
@@ -76,7 +76,7 @@ public final class HistoryWindowViewModel: ObservableObject {
         loading = true
         reachedEnd = false
         let f = filter
-        let reader = self.reader
+        let reader = reader
         Task.detached {
             let result = reader.recentEvents(limit: 50, offset: 0, filter: f)
             await Self.applyReload(result, viewModel: self)
@@ -99,7 +99,7 @@ public final class HistoryWindowViewModel: ObservableObject {
         loading = true
         let offset = nextPageOffset
         let f = filter
-        let reader = self.reader
+        let reader = reader
         Task.detached {
             let more = reader.recentEvents(limit: 50, offset: offset, filter: f)
             await Self.applyAppend(more, viewModel: self)
@@ -112,7 +112,7 @@ public final class HistoryWindowViewModel: ObservableObject {
             pendingRequestId = requestId
             return
         }
-        let reader = self.reader
+        let reader = reader
         Task.detached {
             let target = reader.event(requestId: requestId)
             await MainActor.run {
@@ -142,7 +142,7 @@ public final class HistoryWindowViewModel: ObservableObject {
     /// 否则用户拿到的是残缺且不可预测的子集。在后台 reader queue 分页，避免阻塞主线程。
     public func fetchAllForExport() async -> [AuditEventRow] {
         let f = filter
-        let reader = self.reader
+        let reader = reader
         return await Task.detached {
             var all: [AuditEventRow] = []
             let page = 200
@@ -160,8 +160,8 @@ public final class HistoryWindowViewModel: ObservableObject {
 
     private func appendIncremental() {
         let from = lastSeenId
-        let reader = self.reader
-        let maxKept = self.maxKept
+        let reader = reader
+        let maxKept = maxKept
         Task.detached {
             let added = reader.incrementalEvents(sinceId: from, limit: 50)
             guard !added.isEmpty else { return }
@@ -170,7 +170,12 @@ public final class HistoryWindowViewModel: ObservableObject {
     }
 
     @MainActor
-    private static func applyIncremental(_ added: [AuditEventRow], fromId: Int64, maxKept: Int, viewModel: HistoryWindowViewModel?) {
+    private static func applyIncremental(
+        _ added: [AuditEventRow],
+        fromId: Int64,
+        maxKept: Int,
+        viewModel: HistoryWindowViewModel?
+    ) {
         guard let vm = viewModel else { return }
         vm.rows.insert(contentsOf: added.reversed(), at: 0)
         vm.lastSeenId = added.last?.id ?? fromId

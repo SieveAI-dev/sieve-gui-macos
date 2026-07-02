@@ -3,7 +3,6 @@ import Testing
 
 @Suite("SieveBinaryLocator — daemon 可执行路径解析")
 struct SieveBinaryLocatorTests {
-
     @Test("候选路径优先于 PATH lookup")
     func candidate_path_wins_before_path_lookup() {
         let resolved = SieveBinaryLocator.resolve(

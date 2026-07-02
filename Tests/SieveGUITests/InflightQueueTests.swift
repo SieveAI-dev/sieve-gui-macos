@@ -1,5 +1,5 @@
-import Testing
 import Foundation
+import Testing
 @testable import SieveGUICore
 
 @Suite("InflightQueue")
@@ -39,8 +39,20 @@ struct InflightQueueTests {
 
     @Test func decision_responses_are_first() async {
         let q = InflightQueue()
-        await q.enqueue(.init(id: "1", method: "regular", payload: Data(), createdAt: Date(), isDecisionResponse: false))
-        await q.enqueue(.init(id: "2", method: "decision_response", payload: Data(), createdAt: Date(), isDecisionResponse: true))
+        await q.enqueue(.init(
+            id: "1",
+            method: "regular",
+            payload: Data(),
+            createdAt: Date(),
+            isDecisionResponse: false
+        ))
+        await q.enqueue(.init(
+            id: "2",
+            method: "decision_response",
+            payload: Data(),
+            createdAt: Date(),
+            isDecisionResponse: true
+        ))
         let pending = await q.allPending()
         #expect(pending.first?.id == "2")
     }
@@ -50,7 +62,13 @@ struct InflightQueueTests {
 struct InflightQueueClearTests {
     @Test func reconnect_clears_entries_and_wakes_waiter_with_error() async {
         let q = InflightQueue()
-        await q.enqueue(.init(id: "req-1", method: "sieve.set_preset", payload: Data(), createdAt: Date(), isDecisionResponse: false))
+        await q.enqueue(.init(
+            id: "req-1",
+            method: "sieve.set_preset",
+            payload: Data(),
+            createdAt: Date(),
+            isDecisionResponse: false
+        ))
 
         // 注册 waiter
         async let result: Data = withCheckedThrowingContinuation { (cont: CheckedContinuation<Data, Error>) in
@@ -85,8 +103,8 @@ struct InflightQueueClearTests {
 
 @Suite("UserSettings persistence")
 struct UserSettingsTests {
-    @Test func clamps_toast_duration() {
-        let d = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+    @Test func clamps_toast_duration() throws {
+        let d = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let store = UserSettingsStore(defaults: d)
         var s = UserSettings.default
         s.toastDurationSeconds = 100
@@ -95,16 +113,16 @@ struct UserSettingsTests {
         #expect(loaded.toastDurationSeconds == 10)
     }
 
-    @Test func lastSeenDaemonBootId_roundtrip() {
-        let d = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+    @Test func lastSeenDaemonBootId_roundtrip() throws {
+        let d = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let store = UserSettingsStore(defaults: d)
         #expect(store.lastSeenDaemonBootId() == nil)
         store.setLastSeenDaemonBootId("boot-abc")
         #expect(store.lastSeenDaemonBootId() == "boot-abc")
     }
 
-    @Test func autoCheckUpdates_roundtrip() {
-        let d = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+    @Test func autoCheckUpdates_roundtrip() throws {
+        let d = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let store = UserSettingsStore(defaults: d)
         var s = UserSettings.default
         s.autoCheckUpdates = false
@@ -117,8 +135,8 @@ struct UserSettingsTests {
         #expect(store.load().autoCheckUpdates == true)
     }
 
-    @Test func hips_sound_preferences_roundtrip() {
-        let d = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+    @Test func hips_sound_preferences_roundtrip() throws {
+        let d = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let store = UserSettingsStore(defaults: d)
         var s = UserSettings.default
         s.hipsSoundEnabled = false
@@ -167,31 +185,31 @@ struct DaemonBootIdTests {
         return last != newBootId ? .daemonRestarted : .reconnected
     }
 
-    @Test func first_connection_returns_nil() {
-        let d = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+    @Test func first_connection_returns_nil() throws {
+        let d = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let store = UserSettingsStore(defaults: d)
         let kind = checkAndUpdate(store: store, newBootId: "boot-new")
-        #expect(kind == nil)  // 首次连接：无 toast
+        #expect(kind == nil) // 首次连接：无 toast
     }
 
-    @Test func same_boot_id_returns_reconnected() {
-        let d = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+    @Test func same_boot_id_returns_reconnected() throws {
+        let d = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let store = UserSettingsStore(defaults: d)
         store.setLastSeenDaemonBootId("boot-123")
         let kind = checkAndUpdate(store: store, newBootId: "boot-123")
-        #expect(kind == .reconnected)  // 连接中断重连
+        #expect(kind == .reconnected) // 连接中断重连
     }
 
-    @Test func different_boot_id_returns_daemon_restarted() {
-        let d = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+    @Test func different_boot_id_returns_daemon_restarted() throws {
+        let d = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let store = UserSettingsStore(defaults: d)
         store.setLastSeenDaemonBootId("boot-old")
         let kind = checkAndUpdate(store: store, newBootId: "boot-new")
-        #expect(kind == .daemonRestarted)  // daemon 重启
+        #expect(kind == .daemonRestarted) // daemon 重启
     }
 
-    @Test func boot_id_persisted_after_check() {
-        let d = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+    @Test func boot_id_persisted_after_check() throws {
+        let d = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let store = UserSettingsStore(defaults: d)
         _ = checkAndUpdate(store: store, newBootId: "boot-xyz")
         #expect(store.lastSeenDaemonBootId() == "boot-xyz")

@@ -1,10 +1,9 @@
-import Testing
 import Foundation
+import Testing
 @testable import SieveGUICore
 
 @Suite("DetectionPreset Custom 模式内联编辑 + sieve.set_preset_overrides")
 struct DetectionPresetOverrideTests {
-
     // MARK: - RuleOverride clamp
 
     @Test("timeout_seconds 低于 30 被 clamp 到 30")

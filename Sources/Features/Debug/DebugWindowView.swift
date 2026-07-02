@@ -1,5 +1,5 @@
-import SwiftUI
 import Combine
+import SwiftUI
 
 public struct DebugWindowView: View {
     @ObservedObject var appState: AppState
@@ -71,7 +71,8 @@ public struct LiveEventsTab: View {
                     Text("全部").tag("all"); Text("audit").tag("audit"); Text("ipc").tag("ipc"); Text("gui").tag("gui")
                 }.frame(width: 120)
                 Picker("级别", selection: $levelFilter) {
-                    Text("全部").tag("all"); Text("INFO").tag("info"); Text("WARN").tag("warn"); Text("ERROR").tag("error")
+                    Text("全部").tag("all"); Text("INFO").tag("info"); Text("WARN").tag("warn"); Text("ERROR")
+                        .tag("error")
                 }.frame(width: 120)
                 TextField("grep…", text: $grepInput)
                     .textFieldStyle(.roundedBorder)
@@ -105,7 +106,7 @@ public struct LiveEventsTab: View {
                 }
                 .onChange(of: buffer.entries.count) { _ in
                     // 暂停时不自动滚动（快照视图）
-                    if autoScroll && !buffer.paused, let last = buffer.entries.last {
+                    if autoScroll, !buffer.paused, let last = buffer.entries.last {
                         proxy.scrollTo(last.id, anchor: .bottom)
                     }
                 }
@@ -117,7 +118,10 @@ public struct LiveEventsTab: View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             Text(timeLabel(e.timestamp)).foregroundStyle(.secondary).frame(width: 120, alignment: .leading)
             Text(e.source.rawValue).foregroundStyle(sourceColor(e.source)).frame(width: 50, alignment: .leading)
-            Text(e.level.rawValue.uppercased()).foregroundStyle(levelColor(e.level)).frame(width: 50, alignment: .leading)
+            Text(e.level.rawValue.uppercased()).foregroundStyle(levelColor(e.level)).frame(
+                width: 50,
+                alignment: .leading
+            )
             Text(e.category).foregroundStyle(.secondary).frame(width: 90, alignment: .leading)
             Text(e.message)
             Spacer()
@@ -128,14 +132,16 @@ public struct LiveEventsTab: View {
 
     private func sourceColor(_ s: LiveEventsRingBuffer.Entry.Source) -> Color {
         switch LiveEventsRingBuffer.sourceColorToken(s) {
-        case .blue: return .blue
-        case .orange: return .orange
-        case .green: return .green
+        case .blue: .blue
+        case .orange: .orange
+        case .green: .green
         }
     }
+
     private func levelColor(_ l: LiveEventsRingBuffer.Entry.Level) -> Color {
         switch l { case .info: return .secondary; case .warn: return .orange; case .error: return .red }
     }
+
     private func timeLabel(_ d: Date) -> String {
         let f = DateFormatter(); f.dateFormat = "HH:mm:ss.SSS"
         return f.string(from: d)
@@ -186,7 +192,8 @@ public struct RuleEvaluationTab: View {
                     Text("Outbound").tag("outbound"); Text("Inbound").tag("inbound")
                 }.frame(width: 160)
                 Picker("内容类型", selection: $contentKind) {
-                    Text("text").tag("text"); Text("tool_use_input").tag("tool_use_input"); Text("sse_chunk").tag("sse_chunk")
+                    Text("text").tag("text"); Text("tool_use_input").tag("tool_use_input"); Text("sse_chunk")
+                        .tag("sse_chunk")
                 }.frame(width: 200)
             }
             TextEditor(text: $payload)

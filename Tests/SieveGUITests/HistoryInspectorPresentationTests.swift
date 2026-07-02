@@ -1,5 +1,5 @@
-import Testing
 import Foundation
+import Testing
 @testable import SieveGUICore
 
 @Suite("HistoryInspectorPresentation — Inspector 脱敏与字段展示")

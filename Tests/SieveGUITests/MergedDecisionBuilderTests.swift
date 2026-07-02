@@ -1,12 +1,11 @@
-import Testing
 import Foundation
+import Testing
 @testable import SieveGUICore
 
 /// SPEC-002 §4.8：多 issue 合并模式下，整体动作（拒绝全部 / 全部允许 / 仅允许非 Critical）
 /// → per-issue 决策的翻译逻辑。纯逻辑核心库类型。
 @Suite("MergedDecisionBuilder — 多 issue 部分允许决策生成")
 struct MergedDecisionBuilderTests {
-
     private func issue(_ id: String, _ severity: Severity, allowRemember: Bool = true) -> HipsIssue {
         HipsIssue(
             id: id, ruleId: "RULE-\(id)", title: id, severity: severity,
@@ -67,7 +66,7 @@ struct MergedDecisionBuilderTests {
         let issues = [
             issue("deny-me", .critical, allowRemember: true),
             issue("no-remember", .high, allowRemember: false),
-            issue("ok", .low, allowRemember: true),
+            issue("ok", .low, allowRemember: true)
         ]
         let r = MergedDecisionBuilder.perIssues(
             for: issues, action: .allowNonCritical,

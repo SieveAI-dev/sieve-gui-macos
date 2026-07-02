@@ -19,7 +19,10 @@ public struct InspectorPanelView: View {
                 fieldRow("rule_id", row.ruleId, mono: true)
                 fieldRow("disposition", row.disposition)
                 if let uc = row.userChoice { fieldRow("user_choice", uc) }
-                fieldRow("created_at", DateFormatter.localizedString(from: row.createdAt, dateStyle: .short, timeStyle: .medium))
+                fieldRow(
+                    "created_at",
+                    DateFormatter.localizedString(from: row.createdAt, dateStyle: .short, timeStyle: .medium)
+                )
                 fieldRow("fingerprint", presentation.fingerprintText, mono: true)
                 fieldRow("session_id", presentation.sessionIdText, mono: true)
                 fieldRow("caller_pid", presentation.callerPidText, mono: true)
@@ -99,7 +102,7 @@ public struct InspectorPanelView: View {
         var lines: [String] = [
             "# 重放来源：历史记录 #\(row.id)",
             "# rule_id: \(row.ruleId)",
-            "# disposition: \(row.disposition)",
+            "# disposition: \(row.disposition)"
         ]
         if let reqId = row.requestId { lines.append("# request_id: \(reqId)") }
         lines.append("")

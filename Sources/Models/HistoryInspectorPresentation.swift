@@ -49,7 +49,10 @@ public struct HistoryInspectorPresentation: Sendable, Equatable {
         }
         let redacted = redactEvidenceObject(object)
         guard JSONSerialization.isValidJSONObject(redacted),
-              let output = try? JSONSerialization.data(withJSONObject: redacted, options: [.prettyPrinted, .sortedKeys]),
+              let output = try? JSONSerialization.data(
+                  withJSONObject: redacted,
+                  options: [.prettyPrinted, .sortedKeys]
+              ),
               let text = String(data: output, encoding: .utf8)
         else {
             return String(repeating: "•", count: 8)

@@ -4,7 +4,6 @@ import Foundation
 /// Mock daemon — 监听 Unix Domain Socket（POSIX），按 IPC 协议握手，
 /// 供 IPCClient 集成测试使用。每次测试独立创建实例，socket 路径 tempfile 隔离。
 final class MockDaemonHarness: @unchecked Sendable {
-
     // MARK: - 公开
 
     let socketPath: String
@@ -13,7 +12,7 @@ final class MockDaemonHarness: @unchecked Sendable {
 
     private var serverFd: Int32 = -1
     private var clientFd: Int32 = -1
-    private var acceptedCount: Int = 0  // 历史 accept 总数，用于 waitForNewConnection
+    private var acceptedCount: Int = 0 // 历史 accept 总数，用于 waitForNewConnection
     private let lock = NSLock()
     private var receivedLines: [Data] = []
 
@@ -22,6 +21,7 @@ final class MockDaemonHarness: @unchecked Sendable {
         let cont: CheckedContinuation<Data, Error>
         let workItem: DispatchWorkItem
     }
+
     private var waiters: [Waiter] = []
     private var waiterSeq: Int = 0
 
@@ -32,7 +32,7 @@ final class MockDaemonHarness: @unchecked Sendable {
     init() {
         let tmp = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString + ".sock")
-        self.socketPath = tmp.path
+        socketPath = tmp.path
     }
 
     deinit { stop() }
@@ -52,7 +52,7 @@ final class MockDaemonHarness: @unchecked Sendable {
         addr.sun_family = sa_family_t(AF_UNIX)
         let pathBytes = Array(socketPath.utf8CString)
         withUnsafeMutableBytes(of: &addr.sun_path) { dest in
-            for i in 0..<min(pathBytes.count, dest.count) {
+            for i in 0 ..< min(pathBytes.count, dest.count) {
                 dest[i] = UInt8(bitPattern: pathBytes[i])
             }
         }
@@ -162,8 +162,13 @@ final class MockDaemonHarness: @unchecked Sendable {
         }
     }
 
-    func clearReceived() { lock.withLock { receivedLines.removeAll() } }
-    func receivedCount() -> Int { lock.withLock { receivedLines.count } }
+    func clearReceived() {
+        lock.withLock { receivedLines.removeAll() }
+    }
+
+    func receivedCount() -> Int {
+        lock.withLock { receivedLines.count }
+    }
 
     // MARK: - 私有
 
@@ -194,7 +199,9 @@ final class MockDaemonHarness: @unchecked Sendable {
         return false
     }
 
-    var connectionCount: Int { lock.withLock { acceptedCount } }
+    var connectionCount: Int {
+        lock.withLock { acceptedCount }
+    }
 
     private func readLoop(fd: Int32) {
         var lineBuf = Data()
@@ -202,10 +209,10 @@ final class MockDaemonHarness: @unchecked Sendable {
         while true {
             let n = read(fd, &chunk, chunk.count)
             if n <= 0 { break }
-            lineBuf.append(contentsOf: chunk[0..<n])
+            lineBuf.append(contentsOf: chunk[0 ..< n])
             while let nl = lineBuf.firstIndex(of: 0x0A) {
-                let line = lineBuf.subdata(in: lineBuf.startIndex..<nl)
-                lineBuf.removeSubrange(lineBuf.startIndex...nl)
+                let line = lineBuf.subdata(in: lineBuf.startIndex ..< nl)
+                lineBuf.removeSubrange(lineBuf.startIndex ... nl)
                 if !line.isEmpty { deliverLine(line) }
             }
         }

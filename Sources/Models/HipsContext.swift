@@ -10,11 +10,11 @@ public enum HipsContext: Sendable, Equatable {
 
     public var templateName: String {
         switch self {
-        case .addressCompare: return "address_compare"
-        case .signingToolUse: return "signing_tool_use"
-        case .markdownExfil: return "markdown_exfil"
-        case .secretOutbound: return "secret_outbound"
-        case .generic: return "generic_json"
+        case .addressCompare: "address_compare"
+        case .signingToolUse: "signing_tool_use"
+        case .markdownExfil: "markdown_exfil"
+        case .secretOutbound: "secret_outbound"
+        case .generic: "generic_json"
         }
     }
 
@@ -97,14 +97,16 @@ public enum HipsContext: Sendable, Equatable {
 public struct AnyCodable: Codable, Sendable, Equatable {
     public let rawData: Data
 
-    public init(rawData: Data) { self.rawData = rawData }
+    public init(rawData: Data) {
+        self.rawData = rawData
+    }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         if let value = try? container.decode(JSONValue.self) {
-            self.rawData = (try? JSONEncoder().encode(value)) ?? Data()
+            rawData = (try? JSONEncoder().encode(value)) ?? Data()
         } else {
-            self.rawData = Data()
+            rawData = Data()
         }
     }
 
@@ -112,10 +114,6 @@ public struct AnyCodable: Codable, Sendable, Equatable {
         var container = encoder.singleValueContainer()
         let value = (try? JSONDecoder().decode(JSONValue.self, from: rawData)) ?? .null
         try container.encode(value)
-    }
-
-    public static func == (lhs: AnyCodable, rhs: AnyCodable) -> Bool {
-        lhs.rawData == rhs.rawData
     }
 }
 
@@ -126,11 +124,8 @@ public struct MarkdownExfilPresentation: Sendable, Equatable {
         public let reachable: Bool?
 
         public var reachabilityLabel: String {
-            switch reachable {
-            case true: return "reachable"
-            case false: return "unreachable"
-            case nil: return "unknown"
-            }
+            guard let reachable else { return "unknown" }
+            return reachable ? "reachable" : "unreachable"
         }
     }
 
@@ -142,9 +137,9 @@ public struct MarkdownExfilPresentation: Sendable, Equatable {
         for url in value.urls {
             snippet = snippet.replacingOccurrences(of: url, with: Self.maskURLQuery(url))
         }
-        self.maskedSnippet = snippet
+        maskedSnippet = snippet
         let reachable = value.reachable
-        self.urlRows = value.urls.enumerated().map { index, url in
+        urlRows = value.urls.enumerated().map { index, url in
             URLRow(
                 id: index,
                 maskedURL: Self.maskURLQuery(url),
@@ -190,12 +185,12 @@ public indirect enum JSONValue: Codable, Sendable, Equatable {
         var container = encoder.singleValueContainer()
         switch self {
         case .null: try container.encodeNil()
-        case .bool(let v): try container.encode(v)
-        case .int(let v): try container.encode(v)
-        case .double(let v): try container.encode(v)
-        case .string(let v): try container.encode(v)
-        case .array(let v): try container.encode(v)
-        case .object(let v): try container.encode(v)
+        case let .bool(v): try container.encode(v)
+        case let .int(v): try container.encode(v)
+        case let .double(v): try container.encode(v)
+        case let .string(v): try container.encode(v)
+        case let .array(v): try container.encode(v)
+        case let .object(v): try container.encode(v)
         }
     }
 }

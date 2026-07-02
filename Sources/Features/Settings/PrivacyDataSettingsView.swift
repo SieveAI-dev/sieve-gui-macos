@@ -11,7 +11,7 @@ public struct PrivacyDataSettingsView: View {
     @State private var showPurgeResult: Bool = false
     @State private var purgeErrorMessage: String?
     @State private var showPurgeError: Bool = false
-    @State private var purgeUnavailable: Bool = false   // -32601 降级标记
+    @State private var purgeUnavailable: Bool = false // -32601 降级标记
 
     public var body: some View {
         Form {
@@ -87,7 +87,7 @@ public struct PrivacyDataSettingsView: View {
             // Touch ID 失败 → 不调 IPC
             await GUILog.shared.warn("Touch ID 失败，清空历史已取消", category: "privacy")
             return
-        case .blocked(let message):
+        case let .blocked(message):
             await MainActor.run {
                 purgeErrorMessage = message
                 showPurgeError = true
@@ -117,7 +117,7 @@ public struct PrivacyDataSettingsView: View {
         } catch let err as InflightQueue.AwaitError {
             await MainActor.run { purging = false }
             switch err {
-            case .rpcError(let code, let message, _):
+            case let .rpcError(code, message, _):
                 if code == -32007 {
                     // purge_in_progress：提示正在进行
                     await MainActor.run {

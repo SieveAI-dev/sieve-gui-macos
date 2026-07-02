@@ -32,12 +32,12 @@ public enum SettingsKey {
 }
 
 public struct UserSettings: Sendable, Equatable {
-    public var appearance: String           // "system" | "light" | "dark"
-    public var language: String             // "system" | "zh-Hans" | "en"
+    public var appearance: String // "system" | "light" | "dark"
+    public var language: String // "system" | "zh-Hans" | "en"
     public var hipsSoundEnabled: Bool
     public var hipsSoundName: String
     public var reduceMotionOverride: String // "system" | "always" | "never"
-    public var toastDurationSeconds: Int    // 3...10
+    public var toastDurationSeconds: Int // 3...10
     public var historyMaskByDefault: Bool
     public var autoCheckUpdates: Bool
     public var loginItemEnabled: Bool
@@ -63,9 +63,9 @@ public struct UserSettings: Sendable, Equatable {
     /// - Parameter systemReduceMotion: 系统 `accessibilityDisplayShouldReduceMotion` 的当前值
     public func reduceMotionEnabled(systemReduceMotion: Bool) -> Bool {
         switch reduceMotionOverride {
-        case "always": return true
-        case "never": return false
-        default: return systemReduceMotion
+        case "always": true
+        case "never": false
+        default: systemReduceMotion
         }
     }
 }
@@ -113,8 +113,10 @@ public final class UserSettingsStore: @unchecked Sendable {
             hipsSoundEnabled: defaults.object(forKey: SettingsKey.hipsSoundEnabled) as? Bool ?? s.hipsSoundEnabled,
             hipsSoundName: defaults.string(forKey: SettingsKey.hipsSoundName) ?? s.hipsSoundName,
             reduceMotionOverride: defaults.string(forKey: SettingsKey.reduceMotionOverride) ?? s.reduceMotionOverride,
-            toastDurationSeconds: clampToast(defaults.object(forKey: SettingsKey.toastDurationSeconds) as? Int ?? s.toastDurationSeconds),
-            historyMaskByDefault: defaults.object(forKey: SettingsKey.historyMaskByDefault) as? Bool ?? s.historyMaskByDefault,
+            toastDurationSeconds: clampToast(defaults.object(forKey: SettingsKey.toastDurationSeconds) as? Int ?? s
+                .toastDurationSeconds),
+            historyMaskByDefault: defaults.object(forKey: SettingsKey.historyMaskByDefault) as? Bool ?? s
+                .historyMaskByDefault,
             autoCheckUpdates: defaults.object(forKey: SettingsKey.autoCheckUpdates) as? Bool ?? s.autoCheckUpdates,
             loginItemEnabled: defaults.object(forKey: SettingsKey.loginItemEnabled) as? Bool ?? s.loginItemEnabled,
             onboardingCompletedAt: defaults.object(forKey: SettingsKey.onboardingCompletedAt) as? Date
@@ -150,7 +152,9 @@ public final class UserSettingsStore: @unchecked Sendable {
         defaults.set(bootId, forKey: SettingsKey.lastSeenDaemonBootId)
     }
 
-    private func clampToast(_ v: Int) -> Int { max(3, min(10, v)) }
+    private func clampToast(_ v: Int) -> Int {
+        max(3, min(10, v))
+    }
 
     private func bootstrapSchema() {
         let stored = defaults.integer(forKey: SettingsKey.prefsSchemaVersion)

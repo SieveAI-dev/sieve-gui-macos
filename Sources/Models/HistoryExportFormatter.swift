@@ -7,8 +7,8 @@ public enum ExportFormat: String, CaseIterable, Sendable {
 
     public var fileExtension: String {
         switch self {
-        case .csv: return "csv"
-        case .ndjson: return "ndjson"
+        case .csv: "csv"
+        case .ndjson: "ndjson"
         }
     }
 }
@@ -78,7 +78,8 @@ public struct HistoryExportFormatter: Sendable {
             // 转义；手工拼字符串会在 value 含特殊字符时产出非法 JSON 甚至被注入伪造字段。
             // .sortedKeys 保持 key 顺序确定（与旧版按 key 排序一致）。
             if let data = try? JSONSerialization.data(withJSONObject: dict, options: [.sortedKeys]),
-               let json = String(data: data, encoding: .utf8) {
+               let json = String(data: data, encoding: .utf8)
+            {
                 return json
             }
             return "{}"

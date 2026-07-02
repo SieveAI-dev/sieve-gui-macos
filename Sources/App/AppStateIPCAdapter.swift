@@ -14,7 +14,8 @@ public final class AppStateIPCAdapter: IPCAppStateAdapter {
 
     public init(appState: AppState,
                 store: UserSettingsStore = UserSettingsStore(),
-                notifier: NotificationCenterAdapter = .shared) {
+                notifier: NotificationCenterAdapter = .shared)
+    {
         self.appState = appState
         self.store = store
         self.notifier = notifier
@@ -54,24 +55,20 @@ public final class AppStateIPCAdapter: IPCAppStateAdapter {
     }
 
     public func applyEventNotify(_ params: EventNotifyParams) {
-        let action: HitSummary.Action = {
-            switch params.kind {
-            case .outboundRedacted: return .redact
-            case .hookTerminal: return .terminal
-            case .sequenceHit, .userRulesLoadFailed, .userRulesReloaded: return .marked
-            case .generic: return .allow
-            }
-        }()
+        let action: HitSummary.Action = switch params.kind {
+        case .outboundRedacted: .redact
+        case .hookTerminal: .terminal
+        case .sequenceHit, .userRulesLoadFailed, .userRulesReloaded: .marked
+        case .generic: .allow
+        }
         // StatusBarNotify wire（SPEC-005 §10.1）不含 direction/severity；
         // 由 kind 派生展示语义（仅菜单栏命中摘要用，非决策路径）。
         let direction: Direction = (params.kind == .outboundRedacted) ? .outbound : .inbound
-        let severity: Severity = {
-            switch params.kind {
-            case .userRulesLoadFailed: return .high
-            case .outboundRedacted, .hookTerminal, .sequenceHit: return .medium
-            case .userRulesReloaded, .generic: return .low
-            }
-        }()
+        let severity: Severity = switch params.kind {
+        case .userRulesLoadFailed: .high
+        case .outboundRedacted, .hookTerminal, .sequenceHit: .medium
+        case .userRulesReloaded, .generic: .low
+        }
         let hit = HitSummary(
             ruleId: params.ruleId ?? params.kind.rawValue,
             action: action,

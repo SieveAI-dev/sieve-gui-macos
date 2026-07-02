@@ -1,6 +1,6 @@
-import Testing
 import Foundation
 import SQLite3
+import Testing
 @testable import SieveGUICore
 
 /// 直接驱动真实 AuditDBReader（非复现逻辑）覆盖：
@@ -13,7 +13,6 @@ import SQLite3
 /// 注入，不依赖 dbPath/HOME，永不触碰用户真实 ~/.sieve/audit.db。
 @Suite("AuditDBReader — 真实只读 reader 覆盖", .serialized)
 struct AuditDBReaderTests {
-
     // MARK: - 临时 db 路径（经 open(path:) 注入）
 
     /// 每次调用返回独立临时 db 路径。测试经 `reader.open(path:)` 注入，不依赖
@@ -237,7 +236,9 @@ struct AuditDBReaderTests {
     func event_by_request_id() throws {
         let path = resolvedDBPath()
         try createV2Schema(at: path)
-        for i in 1...5 { try insertV2Row(at: path, id: i) }
+        for i in 1 ... 5 {
+            try insertV2Row(at: path, id: i)
+        }
 
         let reader = AuditDBReader()
         try reader.open(path: path)
@@ -285,7 +286,9 @@ struct AuditDBReaderTests {
     func incremental_returns_only_new_rows() throws {
         let path = resolvedDBPath()
         try createV2Schema(at: path)
-        for i in 1...5 { try insertV2Row(at: path, id: i) }
+        for i in 1 ... 5 {
+            try insertV2Row(at: path, id: i)
+        }
 
         let reader = AuditDBReader()
         try reader.open(path: path)
@@ -309,7 +312,9 @@ struct AuditDBReaderTests {
     func incremental_respects_limit() throws {
         let path = resolvedDBPath()
         try createV2Schema(at: path)
-        for i in 1...10 { try insertV2Row(at: path, id: i) }
+        for i in 1 ... 10 {
+            try insertV2Row(at: path, id: i)
+        }
 
         let reader = AuditDBReader()
         try reader.open(path: path)

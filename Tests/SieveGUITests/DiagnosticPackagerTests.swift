@@ -1,13 +1,12 @@
-import Testing
 import Foundation
 import SQLite3
+import Testing
 @testable import SieveGUICore
 
 /// DiagnosticPackager audit.db 脱敏拷贝逻辑验证
 /// 直接调用真实 DiagnosticPackager.copyAuditDBRedacted，避免测试逻辑和实现漂移。
 @Suite("DiagnosticPackager — audit.db 脱敏拷贝")
 struct DiagnosticPackagerTests {
-
     /// 创建含 evidence_meta 等敏感列的临时 audit.db
     private func makeTempAuditDB() throws -> URL {
         let tmp = FileManager.default.temporaryDirectory
@@ -101,7 +100,13 @@ struct DiagnosticPackagerTests {
 
         // 验证敏感列已清空
         var stmt: OpaquePointer?
-        #expect(sqlite3_prepare_v2(db, "SELECT evidence_meta, fingerprint, session_id, caller_exe FROM events", -1, &stmt, nil) == SQLITE_OK)
+        #expect(sqlite3_prepare_v2(
+            db,
+            "SELECT evidence_meta, fingerprint, session_id, caller_exe FROM events",
+            -1,
+            &stmt,
+            nil
+        ) == SQLITE_OK)
         defer { sqlite3_finalize(stmt) }
         while sqlite3_step(stmt) == SQLITE_ROW {
             let evidenceMeta = sqlite3_column_text(stmt, 0).map(String.init(cString:)) ?? ""
@@ -167,7 +172,13 @@ struct DiagnosticPackagerTests {
         defer { sqlite3_close(db) }
 
         var stmt: OpaquePointer?
-        #expect(sqlite3_prepare_v2(db, "SELECT rule_id, raw_json, fingerprint, session_id, caller_pid, caller_exe FROM audit_events", -1, &stmt, nil) == SQLITE_OK)
+        #expect(sqlite3_prepare_v2(
+            db,
+            "SELECT rule_id, raw_json, fingerprint, session_id, caller_pid, caller_exe FROM audit_events",
+            -1,
+            &stmt,
+            nil
+        ) == SQLITE_OK)
         defer { sqlite3_finalize(stmt) }
         #expect(sqlite3_step(stmt) == SQLITE_ROW, "audit_events 表应保留原行")
 

@@ -1,6 +1,5 @@
 import Foundation
 import Testing
-
 @testable import SieveGUICore
 
 /// SPEC-005 §14.2：消费 daemon 权威 fixture 副本（`Tests/SieveGUITests/Fixtures/v2/`），
@@ -22,7 +21,6 @@ import Testing
 /// 权威产物的一致性」，前者测「解码逻辑的完整性」。
 @Suite("SPEC-005 §14.2 daemon fixture 副本一致性")
 struct IPCSchemaV2FixtureTests {
-
     // MARK: - fixture 加载辅助
 
     /// 读取某 method 目录下的 fixture 文件原始 Data。
@@ -49,10 +47,13 @@ struct IPCSchemaV2FixtureTests {
         return try JSONSerialization.data(withJSONObject: sub)
     }
 
-    private static func decoder() -> JSONDecoder { JSONDecoder() }
+    private static func decoder() -> JSONDecoder {
+        JSONDecoder()
+    }
 
     // ════════════════════════════════════════════════════════════════════════
     // MARK: - 健康的 method（解码成功 + enum 字段值正确）
+
     // ════════════════════════════════════════════════════════════════════════
 
     // ── sieve.health（已有 listeners[] 深度断言）──────────────────────────────
@@ -60,7 +61,8 @@ struct IPCSchemaV2FixtureTests {
     @Test("sieve.health response.full：listeners[] 完整 + enum 值正确")
     func health_full() throws {
         let dto = try Self.decoder().decode(
-            HealthResultDTO.self, from: Self.extract("sieve.health", "response.full", field: "result"))
+            HealthResultDTO.self, from: Self.extract("sieve.health", "response.full", field: "result")
+        )
         #expect(dto.protocolVersion == "v2")
         #expect(dto.preset.mode == .custom)
         #expect(dto.listeners.count == 2)
@@ -77,8 +79,9 @@ struct IPCSchemaV2FixtureTests {
     @Test("sieve.health response.minimal：省略 listeners → effectiveListeners 回落 listen，mode=standard")
     func health_minimal() throws {
         let dto = try Self.decoder().decode(
-            HealthResultDTO.self, from: Self.extract("sieve.health", "response.minimal", field: "result"))
-        #expect(dto.preset.mode == .standard)   // ✅ health 已是 v2 标准值（ae20fd3 已修）
+            HealthResultDTO.self, from: Self.extract("sieve.health", "response.minimal", field: "result")
+        )
+        #expect(dto.preset.mode == .standard) // ✅ health 已是 v2 标准值（ae20fd3 已修）
         #expect(dto.listeners.isEmpty)
         #expect(dto.effectiveListeners.count == 1)
         #expect(dto.effectiveListeners[0].port == 11453)
@@ -88,7 +91,8 @@ struct IPCSchemaV2FixtureTests {
     @Test("sieve.health response.null_optional：listeners 显式空数组 + 可选字段 null")
     func health_nullOptional() throws {
         let dto = try Self.decoder().decode(
-            HealthResultDTO.self, from: Self.extract("sieve.health", "response.null_optional", field: "result"))
+            HealthResultDTO.self, from: Self.extract("sieve.health", "response.null_optional", field: "result")
+        )
         #expect(dto.preset.mode == .standard)
         #expect(dto.listeners.isEmpty)
         #expect(dto.pausedUntil == nil)
@@ -100,7 +104,8 @@ struct IPCSchemaV2FixtureTests {
     @Test("sieve.set_paused response.full：paused=true + paused_until 解析")
     func setPaused_full() throws {
         let dto = try Self.decoder().decode(
-            SetPausedResult.self, from: Self.extract("sieve.set_paused", "response.full", field: "result"))
+            SetPausedResult.self, from: Self.extract("sieve.set_paused", "response.full", field: "result")
+        )
         #expect(dto.paused == true)
         #expect(dto.pausedUntil != nil)
         #expect(dto.appliesTo.count == 3)
@@ -109,7 +114,8 @@ struct IPCSchemaV2FixtureTests {
     @Test("sieve.set_paused response.minimal：paused=false + applies_to=[]")
     func setPaused_minimal() throws {
         let dto = try Self.decoder().decode(
-            SetPausedResult.self, from: Self.extract("sieve.set_paused", "response.minimal", field: "result"))
+            SetPausedResult.self, from: Self.extract("sieve.set_paused", "response.minimal", field: "result")
+        )
         #expect(dto.paused == false)
         #expect(dto.appliesTo.isEmpty)
     }
@@ -117,7 +123,8 @@ struct IPCSchemaV2FixtureTests {
     @Test("sieve.set_paused response.null_optional：paused_until=null → nil")
     func setPaused_nullOptional() throws {
         let dto = try Self.decoder().decode(
-            SetPausedResult.self, from: Self.extract("sieve.set_paused", "response.null_optional", field: "result"))
+            SetPausedResult.self, from: Self.extract("sieve.set_paused", "response.null_optional", field: "result")
+        )
         #expect(dto.paused == false)
         #expect(dto.pausedUntil == nil)
     }
@@ -127,7 +134,8 @@ struct IPCSchemaV2FixtureTests {
     @Test("sieve.reload_config response.full：计数 + 无错误")
     func reloadConfig_full() throws {
         let dto = try Self.decoder().decode(
-            ReloadConfigResult.self, from: Self.extract("sieve.reload_config", "response.full", field: "result"))
+            ReloadConfigResult.self, from: Self.extract("sieve.reload_config", "response.full", field: "result")
+        )
         #expect(dto.systemRulesCount == 15)
         #expect(dto.userRulesCount == 3)
         #expect(dto.userRulesErrors.isEmpty)
@@ -137,7 +145,8 @@ struct IPCSchemaV2FixtureTests {
     @Test("sieve.reload_config response.minimal：默认计数")
     func reloadConfig_minimal() throws {
         let dto = try Self.decoder().decode(
-            ReloadConfigResult.self, from: Self.extract("sieve.reload_config", "response.minimal", field: "result"))
+            ReloadConfigResult.self, from: Self.extract("sieve.reload_config", "response.minimal", field: "result")
+        )
         #expect(dto.systemRulesCount == 12)
         #expect(dto.userRulesCount == 0)
     }
@@ -145,7 +154,12 @@ struct IPCSchemaV2FixtureTests {
     @Test("sieve.reload_config response.null_optional：user_rules_errors 非空")
     func reloadConfig_nullOptional() throws {
         let dto = try Self.decoder().decode(
-            ReloadConfigResult.self, from: Self.extract("sieve.reload_config", "response.null_optional", field: "result"))
+            ReloadConfigResult.self, from: Self.extract(
+                "sieve.reload_config",
+                "response.null_optional",
+                field: "result"
+            )
+        )
         #expect(dto.userRulesErrors.count == 1)
     }
 
@@ -154,7 +168,8 @@ struct IPCSchemaV2FixtureTests {
     @Test("sieve.list_rules response.full：3 条规则 + enum 字段值正确")
     func listRules_full() throws {
         let dto = try Self.decoder().decode(
-            ListRulesResult.self, from: Self.extract("sieve.list_rules", "response.full", field: "result"))
+            ListRulesResult.self, from: Self.extract("sieve.list_rules", "response.full", field: "result")
+        )
         #expect(dto.rules.count == 3)
         // IN-CR-01：critical / inbound / gui_popup / block / system
         let r0 = dto.rules[0]
@@ -181,14 +196,16 @@ struct IPCSchemaV2FixtureTests {
     @Test("sieve.list_rules response.minimal：空数组")
     func listRules_minimal() throws {
         let dto = try Self.decoder().decode(
-            ListRulesResult.self, from: Self.extract("sieve.list_rules", "response.minimal", field: "result"))
+            ListRulesResult.self, from: Self.extract("sieve.list_rules", "response.minimal", field: "result")
+        )
         #expect(dto.rules.isEmpty)
     }
 
     @Test("sieve.list_rules response.null_optional：severity=low + description=null")
     func listRules_nullOptional() throws {
         let dto = try Self.decoder().decode(
-            ListRulesResult.self, from: Self.extract("sieve.list_rules", "response.null_optional", field: "result"))
+            ListRulesResult.self, from: Self.extract("sieve.list_rules", "response.null_optional", field: "result")
+        )
         #expect(dto.rules.count == 1)
         #expect(dto.rules[0].severity == .low)
         #expect(dto.rules[0].description == nil)
@@ -199,7 +216,8 @@ struct IPCSchemaV2FixtureTests {
     @Test("sieve.list_graylist response.full：1 条 entry + 字段正确")
     func listGraylist_full() throws {
         let dto = try Self.decoder().decode(
-            GraylistResponse.self, from: Self.extract("sieve.list_graylist", "response.full", field: "result"))
+            GraylistResponse.self, from: Self.extract("sieve.list_graylist", "response.full", field: "result")
+        )
         #expect(dto.entries.count == 1)
         let e = dto.entries[0]
         #expect(e.ruleId == "IN-GEN-04")
@@ -212,14 +230,16 @@ struct IPCSchemaV2FixtureTests {
     @Test("sieve.list_graylist response.minimal：空数组")
     func listGraylist_minimal() throws {
         let dto = try Self.decoder().decode(
-            GraylistResponse.self, from: Self.extract("sieve.list_graylist", "response.minimal", field: "result"))
+            GraylistResponse.self, from: Self.extract("sieve.list_graylist", "response.minimal", field: "result")
+        )
         #expect(dto.entries.isEmpty)
     }
 
     @Test("sieve.list_graylist response.null_optional：context_hint=null → nil")
     func listGraylist_nullOptional() throws {
         let dto = try Self.decoder().decode(
-            GraylistResponse.self, from: Self.extract("sieve.list_graylist", "response.null_optional", field: "result"))
+            GraylistResponse.self, from: Self.extract("sieve.list_graylist", "response.null_optional", field: "result")
+        )
         #expect(dto.entries.count == 1)
         #expect(dto.entries[0].contextHint == nil)
         #expect(dto.entries[0].ruleKind == "user")
@@ -230,14 +250,16 @@ struct IPCSchemaV2FixtureTests {
     @Test("sieve.evaluate response.minimal：空 matches")
     func evaluate_minimal() throws {
         let dto = try Self.decoder().decode(
-            EvaluateResult.self, from: Self.extract("sieve.evaluate", "response.minimal", field: "result"))
+            EvaluateResult.self, from: Self.extract("sieve.evaluate", "response.minimal", field: "result")
+        )
         #expect(dto.matches.isEmpty)
     }
 
     @Test("sieve.evaluate response.null_optional：1 match + severity=medium + would_recommendation=null")
     func evaluate_nullOptional() throws {
         let dto = try Self.decoder().decode(
-            EvaluateResult.self, from: Self.extract("sieve.evaluate", "response.null_optional", field: "result"))
+            EvaluateResult.self, from: Self.extract("sieve.evaluate", "response.null_optional", field: "result")
+        )
         #expect(dto.matches.count == 1)
         #expect(dto.matches[0].ruleId == "IN-GEN-04")
         #expect(dto.matches[0].severity == .medium)
@@ -251,7 +273,8 @@ struct IPCSchemaV2FixtureTests {
     @Test("decision_response response.full：decision=allow + ui_phase=blue")
     func decisionResponse_full() throws {
         let dto = try Self.decoder().decode(
-            DecisionResponseProbe.self, from: Self.extract("decision_response", "response.full", field: "result"))
+            DecisionResponseProbe.self, from: Self.extract("decision_response", "response.full", field: "result")
+        )
         #expect(dto.decision == .allow)
         #expect(dto.remember == true)
         #expect(dto.byUser == true)
@@ -261,7 +284,8 @@ struct IPCSchemaV2FixtureTests {
     @Test("decision_response response.minimal：decision=deny + ui_phase 省略")
     func decisionResponse_minimal() throws {
         let dto = try Self.decoder().decode(
-            DecisionResponseProbe.self, from: Self.extract("decision_response", "response.minimal", field: "result"))
+            DecisionResponseProbe.self, from: Self.extract("decision_response", "response.minimal", field: "result")
+        )
         #expect(dto.decision == .deny)
         #expect(dto.remember == false)
         #expect(dto.uiPhaseWhenClicked == nil)
@@ -270,7 +294,12 @@ struct IPCSchemaV2FixtureTests {
     @Test("decision_response response.null_optional：ui_phase=null → nil")
     func decisionResponse_nullOptional() throws {
         let dto = try Self.decoder().decode(
-            DecisionResponseProbe.self, from: Self.extract("decision_response", "response.null_optional", field: "result"))
+            DecisionResponseProbe.self, from: Self.extract(
+                "decision_response",
+                "response.null_optional",
+                field: "result"
+            )
+        )
         #expect(dto.decision == .deny)
         #expect(dto.byUser == false)
         #expect(dto.uiPhaseWhenClicked == nil)
@@ -322,7 +351,8 @@ struct IPCSchemaV2FixtureTests {
     func canceled_minimal() throws {
         let dto = try Self.decoder().decode(
             RequestCanceledParams.self,
-            from: Self.extract("sieve.request_decision_canceled", "notification.minimal", field: "params"))
+            from: Self.extract("sieve.request_decision_canceled", "notification.minimal", field: "params")
+        )
         #expect(dto.reason == "timeout")
     }
 
@@ -330,7 +360,8 @@ struct IPCSchemaV2FixtureTests {
     func canceled_full() throws {
         let dto = try Self.decoder().decode(
             RequestCanceledParams.self,
-            from: Self.extract("sieve.request_decision_canceled", "notification.full", field: "params"))
+            from: Self.extract("sieve.request_decision_canceled", "notification.full", field: "params")
+        )
         #expect(dto.reason == "upstream_disconnected")
     }
 
@@ -338,14 +369,15 @@ struct IPCSchemaV2FixtureTests {
     func canceled_nullOptional() throws {
         let dto = try Self.decoder().decode(
             RequestCanceledParams.self,
-            from: Self.extract("sieve.request_decision_canceled", "notification.null_optional", field: "params"))
+            from: Self.extract("sieve.request_decision_canceled", "notification.null_optional", field: "params")
+        )
         #expect(dto.reason == "timeout")
     }
 
     // ── sieve.heartbeat（无 params，只验证 method 字段）─────────────────────────
 
     @Test("sieve.heartbeat：三档均为 {jsonrpc, method}，无 params", arguments: [
-        "notification.full", "notification.minimal", "notification.null_optional",
+        "notification.full", "notification.minimal", "notification.null_optional"
     ])
     func heartbeat(_ name: String) throws {
         let data = try Self.loadFixture("sieve.heartbeat", name)
@@ -356,6 +388,7 @@ struct IPCSchemaV2FixtureTests {
 
     // ════════════════════════════════════════════════════════════════════════
     // MARK: - 跨仓漂移已修复（断言已从 #expect(throws:) 翻转为「解码成功 + 字段正确」）
+
     //
     // 2026-06-18：daemon 侧按 SPEC-005 修正 D1-D7 全部 7 类漂移后，本段断言从「钉死解码失败」
     // 翻转为正向校验。fixture 副本已与 daemon 权威源逐字节对齐（见 _PIN.md）。
@@ -367,7 +400,7 @@ struct IPCSchemaV2FixtureTests {
     // daemon 已统一发 "standard"，GUI Preset enum 含 .standard，解码成功。
 
     @Test("【D1 已修复】sieve.hello：preset=\"standard\" 解码成功", arguments: [
-        "full", "minimal", "null_optional",
+        "full", "minimal", "null_optional"
     ])
     func fixed_hello_presetStandard(_ name: String) throws {
         let params = try Self.extract("sieve.hello", name, field: "params")
@@ -410,7 +443,7 @@ struct IPCSchemaV2FixtureTests {
     @Test("【D3 已修复】sieve.preset_changed：仅 mode 字段，解码成功", arguments: [
         ("notification.full", "custom", "gui"),
         ("notification.minimal", "standard", "gui"),
-        ("notification.null_optional", "strict", "config_reload"),
+        ("notification.null_optional", "strict", "config_reload")
     ])
     func fixed_presetChanged_modeOnly(_ name: String, _ expectedMode: String, _ expectedSource: String) throws {
         let params = try Self.extract("sieve.preset_changed", name, field: "params")
@@ -431,7 +464,7 @@ struct IPCSchemaV2FixtureTests {
     // daemon 现发 source(required) + reason。GUI PausedChangedParams.source 必填，解码成功。
 
     @Test("【D4 已修复】sieve.paused_changed：含 source 字段，解码成功", arguments: [
-        ("notification.full", true), ("notification.minimal", true), ("notification.null_optional", false),
+        ("notification.full", true), ("notification.minimal", true), ("notification.null_optional", false)
     ])
     func fixed_pausedChanged_withSource(_ name: String, _ expectedPaused: Bool) throws {
         let params = try Self.extract("sieve.paused_changed", name, field: "params")
@@ -492,7 +525,7 @@ struct IPCSchemaV2FixtureTests {
     // 本就当 ISO 串解，解码成功。
 
     @Test("【D6 已修复】sieve.purge_history：purged_at ISO8601 串解码成功", arguments: [
-        ("response.full", UInt64(4721)), ("response.minimal", UInt64(0)), ("response.null_optional", UInt64(0)),
+        ("response.full", UInt64(4721)), ("response.minimal", UInt64(0)), ("response.null_optional", UInt64(0))
     ])
     func fixed_purgeHistory_purgedAtISO(_ name: String, _ expectedRows: UInt64) throws {
         let result = try Self.extract("sieve.purge_history", name, field: "result")
@@ -523,6 +556,7 @@ struct IPCSchemaV2FixtureTests {
 
     // ════════════════════════════════════════════════════════════════════════
     // MARK: - 无 GUI DTO 的 method（仅校验 fixture 是合法 JSON，记录覆盖缺口）
+
     //
     // 以下 method 在 GUI 端无消费 DTO（fire-and-forget 或未实现 handler），
     // 仅断言副本是合法 JSON，保证它们随 daemon fixture 一起被纳入复制+校验范围。
@@ -538,7 +572,7 @@ struct IPCSchemaV2FixtureTests {
         ("sieve.remove_graylist", "response.null_optional"),
         ("sieve.set_preset_overrides", "response.full"),
         ("sieve.set_preset_overrides", "response.minimal"),
-        ("sieve.set_preset_overrides", "response.null_optional"),
+        ("sieve.set_preset_overrides", "response.null_optional")
     ])
     func noDTOMethod_validJSON(_ method: String, _ name: String) throws {
         let data = try Self.loadFixture(method, name)
@@ -548,6 +582,7 @@ struct IPCSchemaV2FixtureTests {
 
     // ════════════════════════════════════════════════════════════════════════
     // MARK: - 生成式守门：fixture 副本总数与 daemon 权威源对齐
+
     // ════════════════════════════════════════════════════════════════════════
 
     /// daemon 仓 fixtures/v2 的 19 个 method 目录 → 各自的 fixture 文件名集合。
@@ -561,29 +596,29 @@ struct IPCSchemaV2FixtureTests {
         "sieve.heartbeat": ["notification.full", "notification.minimal", "notification.null_optional"],
         "sieve.hello": ["full", "minimal", "null_optional"],
         "sieve.list_graylist": ["request.full", "request.minimal", "request.null_optional",
-                               "response.full", "response.minimal", "response.null_optional"],
+                                "response.full", "response.minimal", "response.null_optional"],
         "sieve.list_rules": ["request.minimal", "response.full", "response.minimal", "response.null_optional"],
         "sieve.notify_status_bar": ["notification.full", "notification.minimal", "notification.null_optional"],
         "sieve.paused_changed": ["notification.full", "notification.minimal", "notification.null_optional"],
         "sieve.preset_changed": ["notification.full", "notification.minimal", "notification.null_optional"],
         "sieve.purge_history": ["request.minimal", "response.full", "response.minimal", "response.null_optional"],
         "sieve.reload_config": ["request.full", "request.minimal", "request.null_optional",
-                               "response.full", "response.minimal", "response.null_optional"],
+                                "response.full", "response.minimal", "response.null_optional"],
         "sieve.reload_user_rules": ["notification.full", "notification.minimal", "notification.null_optional"],
         "sieve.remove_graylist": ["request.full", "request.minimal", "request.null_optional",
-                                 "response.full", "response.minimal", "response.null_optional"],
+                                  "response.full", "response.minimal", "response.null_optional"],
         "sieve.request_decision": ["request.merged", "request.single.full", "request.single.minimal"],
         "sieve.request_decision_canceled": ["notification.full", "notification.minimal", "notification.null_optional"],
         "sieve.set_paused": ["request.full", "request.minimal", "request.null_optional",
-                            "response.full", "response.minimal", "response.null_optional"],
+                             "response.full", "response.minimal", "response.null_optional"],
         "sieve.set_preset": ["request.full", "request.minimal", "request.null_optional",
-                            "response.full", "response.minimal", "response.null_optional"],
+                             "response.full", "response.minimal", "response.null_optional"],
         "sieve.set_preset_overrides": ["request.full", "request.minimal", "request.null_optional",
-                                      "response.full", "response.minimal", "response.null_optional"],
+                                       "response.full", "response.minimal", "response.null_optional"]
     ]
 
     @Test("fixture 副本总数 == 81 且每个文件都打包就位（与 daemon 仓 fixtures/v2 对齐）")
-    func fixtureCount() throws {
+    func fixtureCount() {
         var total = 0
         var missing: [String] = []
         for (method, names) in Self.expectedFixtures {
@@ -591,7 +626,8 @@ struct IPCSchemaV2FixtureTests {
                 total += 1
                 if Bundle.module.url(
                     forResource: name, withExtension: "json",
-                    subdirectory: "Fixtures/v2/\(method)") == nil {
+                    subdirectory: "Fixtures/v2/\(method)"
+                ) == nil {
                     missing.append("\(method)/\(name).json")
                 }
             }

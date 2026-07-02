@@ -1,6 +1,6 @@
-import SwiftUI
-import ServiceManagement
 import AppKit
+import ServiceManagement
+import SwiftUI
 
 public struct GeneralSettingsView: View {
     @ObservedObject var appState: AppState
@@ -22,7 +22,8 @@ public struct GeneralSettingsView: View {
                         Text(err).font(.caption).foregroundStyle(.secondary)
                         Spacer()
                         Button("去 System Settings 启用") {
-                            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension")!)
+                            NSWorkspace.shared
+                                .open(URL(string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension")!)
                         }
                         .font(.caption)
                     }
@@ -82,7 +83,7 @@ public struct GeneralSettingsView: View {
                     }
                     .padding(.vertical, 2)
                 }
-                Stepper(value: $appState.settings.toastDurationSeconds, in: 3...10) {
+                Stepper(value: $appState.settings.toastDurationSeconds, in: 3 ... 10) {
                     Text("Toast 时长：\(appState.settings.toastDurationSeconds)s")
                 }
             }
@@ -95,7 +96,8 @@ public struct GeneralSettingsView: View {
         }
         .alert("开机启动注册失败", isPresented: $showLoginItemAlert) {
             Button("去 System Settings 启用") {
-                NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension")!)
+                NSWorkspace.shared
+                    .open(URL(string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension")!)
             }
             Button("知道了", role: .cancel) {}
         } message: {
@@ -105,7 +107,8 @@ public struct GeneralSettingsView: View {
 
     private func previewHipsSound() {
         let requestedName = appState.settings.hipsSoundName
-        let sound = NSSound(named: NSSound.Name(requestedName)) ?? NSSound(named: NSSound.Name(UserSettings.default.hipsSoundName))
+        let sound = NSSound(named: NSSound.Name(requestedName)) ??
+            NSSound(named: NSSound.Name(UserSettings.default.hipsSoundName))
         guard let sound else {
             soundPreviewError = "无法播放提示音：\(requestedName)"
             return
@@ -118,14 +121,13 @@ public struct GeneralSettingsView: View {
     /// 应用主题：直接设置 NSApp.appearance，即时生效。
     /// system → nil（跟随系统）/ light → aqua / dark → darkAqua。
     private func applyAppearance(_ value: String) {
-        let appearance: NSAppearance?
-        switch value {
+        let appearance: NSAppearance? = switch value {
         case "light":
-            appearance = NSAppearance(named: .aqua)
+            NSAppearance(named: .aqua)
         case "dark":
-            appearance = NSAppearance(named: .darkAqua)
+            NSAppearance(named: .darkAqua)
         default:
-            appearance = nil
+            nil
         }
         NSApp.appearance = appearance
     }
@@ -162,7 +164,10 @@ public struct GeneralSettingsView: View {
                     appState.settings.loginItemEnabled = !on
                     loginItemError = "开机启动注册失败：\(error.localizedDescription)。请去 System Settings → General → Login Items 手动启用。"
                     showLoginItemAlert = true
-                    await GUILog.shared.warn("SMAppService register/unregister failed: \(error.localizedDescription)", category: "settings")
+                    await GUILog.shared.warn(
+                        "SMAppService register/unregister failed: \(error.localizedDescription)",
+                        category: "settings"
+                    )
                 }
             }
         }

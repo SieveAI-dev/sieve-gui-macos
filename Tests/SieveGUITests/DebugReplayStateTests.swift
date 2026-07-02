@@ -1,10 +1,9 @@
-import Testing
 import Foundation
+import Testing
 @testable import SieveGUICore
 
 @Suite("DebugReplayState — replayInDebug 跨 Tab 状态流转")
 struct DebugReplayStateTests {
-
     @Test("初始状态 prefilledPrompt 为 nil")
     func initial_state_is_nil() {
         let state = DebugReplayState()

@@ -1,6 +1,6 @@
 import AppKit
-import SwiftUI
 import Combine
+import SwiftUI
 
 /// HIPS 浮窗单例管理器。
 /// - 复用一个 NSPanel（隐藏态常驻，弹出时只切内容不重建）
@@ -33,8 +33,8 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
             countdownCancellable = appState.$holdRemainingSeconds
                 .removeDuplicates()
                 .sink { [weak self] remaining in
-                    guard let self, remaining <= 0, self.activeRequest != nil else { return }
-                    self.handleCountdownTimeout()
+                    guard let self, remaining <= 0, activeRequest != nil else { return }
+                    handleCountdownTimeout()
                 }
         }
     }
@@ -47,7 +47,7 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
         scheduleNext()
     }
 
-    public func cancelRequest(id: String, reason: String) {
+    public func cancelRequest(id: String, reason _: String) {
         // 移除 pending
         pendingQueue.removeAll { $0.id == id }
         appState.setPendingQueueCount(pendingQueue.count)
@@ -100,13 +100,12 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
 
         let panel = ensurePanel()
         // 5s 内同 rule_id 再次弹窗 → 互换按钮位置（让肌肉记忆失效）
-        let swapped: Bool
-        if let ruleId = req.ruleId {
-            swapped = denyTracker.shouldSwapLayout(ruleId: ruleId)
+        let swapped: Bool = if let ruleId = req.ruleId {
+            denyTracker.shouldSwapLayout(ruleId: ruleId)
         } else if req.merged {
-            swapped = req.issues.contains { denyTracker.shouldSwapLayout(ruleId: $0.ruleId) }
+            req.issues.contains { denyTracker.shouldSwapLayout(ruleId: $0.ruleId) }
         } else {
-            swapped = false
+            false
         }
 
         let view = HipsPopupView(
@@ -134,7 +133,6 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
         centerOnActiveScreen(panel)
         panel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-
     }
 
     /// 渲染失败兜底：系统通知 + IPC error -32101（gui_render_failed） + 关闭弹窗
@@ -196,7 +194,7 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
             decision: decision,
             remember: safeRemember,
             contextHint: hint,
-            byUser: true,   // 用户主动点按钮触发
+            byUser: true, // 用户主动点按钮触发
             uiPhaseWhenClicked: phase
         )
         let payload = PendingDecisionPayload.single(response, allowRemember: req.allowRemember)
@@ -303,7 +301,7 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
         closePanel(notifyDaemon: false)
     }
 
-    private func closePanel(notifyDaemon: Bool) {
+    private func closePanel(notifyDaemon _: Bool) {
         visibleSince = nil
 
         // 红线：清空 rawJSON
@@ -322,7 +320,7 @@ public final class HipsPanelManager: NSObject, IPCHipsAdapter {
 
     /// 弹窗弹出后 400ms 内所有按钮 swallow（防误触）。
     public func isClickSwallowed() -> Bool {
-        guard let visibleSince = visibleSince else { return false }
+        guard let visibleSince else { return false }
         return Date().timeIntervalSince(visibleSince) < 0.4
     }
 }
@@ -347,6 +345,11 @@ public final class HipsPanel: NSPanel {
         return p
     }
 
-    public override var canBecomeKey: Bool { true }
-    public override var canBecomeMain: Bool { false }
+    override public var canBecomeKey: Bool {
+        true
+    }
+
+    override public var canBecomeMain: Bool {
+        false
+    }
 }

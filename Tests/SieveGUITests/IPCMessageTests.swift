@@ -1,5 +1,5 @@
-import Testing
 import Foundation
+import Testing
 @testable import SieveGUICore
 
 @Suite("IPC message decode")
@@ -7,7 +7,7 @@ struct IPCMessageTests {
     @Test func decodes_request() throws {
         let line = #"{"jsonrpc":"2.0","method":"sieve.request_decision","id":"1","params":{"a":1}}"#
         let m = try IPCIncoming.decode(line: Data(line.utf8))
-        if case .request(let id, let method, _) = m {
+        if case let .request(id, method, _) = m {
             #expect(id == "1")
             #expect(method == "sieve.request_decision")
         } else {
@@ -18,7 +18,7 @@ struct IPCMessageTests {
     @Test func decodes_notification() throws {
         let line = #"{"jsonrpc":"2.0","method":"sieve.heartbeat"}"#
         let m = try IPCIncoming.decode(line: Data(line.utf8))
-        if case .notification(let method, _) = m {
+        if case let .notification(method, _) = m {
             #expect(method == "sieve.heartbeat")
         } else {
             Issue.record("expected notification")
@@ -28,7 +28,7 @@ struct IPCMessageTests {
     @Test func decodes_error_response() throws {
         let line = #"{"jsonrpc":"2.0","id":"x","error":{"code":-32010,"message":"critical_lock_violation"}}"#
         let m = try IPCIncoming.decode(line: Data(line.utf8))
-        if case .errorResponse(_, let code, let message, _) = m {
+        if case let .errorResponse(_, code, message, _) = m {
             #expect(code == -32010)
             #expect(message == "critical_lock_violation")
         } else {
@@ -46,7 +46,7 @@ struct IPCMessageTests {
 
 @Suite("PresetChangedParams decode")
 struct PresetChangedParamsTests {
-    // D3：daemon 只发 mode(String)（SPEC §10.1，无 preset 字段）；GUI DTO 已删 preset。
+    /// D3：daemon 只发 mode(String)（SPEC §10.1，无 preset 字段）；GUI DTO 已删 preset。
     @Test func decodes_with_origin_request_id() throws {
         let json = #"{"mode":"standard","changed_at":"2099-01-01T00:00:00Z","source":"gui","origin_request_id":"req-xyz"}"#
         let p = try JSONDecoder().decode(PresetChangedParams.self, from: Data(json.utf8))
@@ -89,7 +89,7 @@ struct InflightMutatingSetTests {
         #expect(await set.count() == 0)
     }
 
-    // 三场景：自发回声 / 他 GUI 触发 / daemon CLI 触发（null origin）
+    /// 三场景：自发回声 / 他 GUI 触发 / daemon CLI 触发（null origin）
     @Test func echo_detection_self_issued() async {
         let set = InflightMutatingSet()
         await set.insert("req-abc")
@@ -109,7 +109,7 @@ struct InflightMutatingSetTests {
         await set.insert("req-abc")
         // daemon CLI 触发，origin_request_id 为 nil → 不在集合 → 应更新
         let id: String? = nil
-        #expect(id == nil)  // nil → 应更新（IPCClient.isMutatingEcho 返回 false）
+        #expect(id == nil) // nil → 应更新（IPCClient.isMutatingEcho 返回 false）
     }
 }
 
@@ -337,7 +337,7 @@ struct NotifyKindTests {
             ("hook_terminal", .hookTerminal),
             ("user_rules_load_failed", .userRulesLoadFailed),
             ("user_rules_reloaded", .userRulesReloaded),
-            ("generic", .generic),
+            ("generic", .generic)
         ]
         for (raw, expected) in cases {
             let data = Data("\"\(raw)\"".utf8)

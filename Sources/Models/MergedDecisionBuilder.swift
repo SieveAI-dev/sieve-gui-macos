@@ -2,14 +2,13 @@ import Foundation
 
 /// 多 issue 合并模式下用户的整体动作（SPEC-002 §4.8 三按钮）。
 public enum MergedAction: Sendable, Equatable {
-    case denyAll            // 拒绝全部
-    case allowAll           // 全部允许（仅 0 Critical 时合法）
-    case allowNonCritical   // 仅允许非 Critical 项（Critical 拒绝）
+    case denyAll // 拒绝全部
+    case allowAll // 全部允许（仅 0 Critical 时合法）
+    case allowNonCritical // 仅允许非 Critical 项（Critical 拒绝）
 }
 
 /// 把多 issue + 整体动作翻译为 per-issue 决策（SPEC-002 §4.8 / ipc-protocol §4.1）。
 public enum MergedDecisionBuilder {
-
     /// 是否可渲染「全部允许」按钮：无 Critical 才可（红线，禁止含 Critical 时允许全部）。
     public static func canAllowAll(_ issues: [HipsIssue]) -> Bool {
         !issues.contains { $0.severity == .critical }
@@ -29,17 +28,16 @@ public enum MergedDecisionBuilder {
         rememberByIssueId: [String: Bool] = [:]
     ) -> [MergedDecisionResponse.PerIssue] {
         issues.map { issue in
-            let decision: Decision
-            switch action {
+            let decision: Decision = switch action {
             case .denyAll:
-                decision = .deny
+                .deny
             case .allowAll:
                 // Fail-safe：即使 UI/调用方误传 allowAll，含 Critical 的合并请求也绝不能
                 // 允许 Critical issue。UI 层仍负责隐藏“全部允许”按钮；编码层保底降级为
                 // “仅允许非 Critical 项”。
-                decision = issue.severity == .critical && !canAllowAll(issues) ? .deny : .allow
+                issue.severity == .critical && !canAllowAll(issues) ? .deny : .allow
             case .allowNonCritical:
-                decision = issue.severity == .critical ? .deny : .allow
+                issue.severity == .critical ? .deny : .allow
             }
             // remember 仅在「allow + 该 issue 允许记住 + 用户勾选」三者同时成立时为 true
             let remember = decision == .allow

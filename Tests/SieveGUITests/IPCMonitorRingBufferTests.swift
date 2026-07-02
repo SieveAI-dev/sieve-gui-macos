@@ -1,11 +1,10 @@
-import Testing
 import Foundation
+import Testing
 @testable import SieveGUICore
 
 @Suite("IPCMonitorRingBuffer — 详情面板字段 + params 不渲染")
 @MainActor
 struct IPCMonitorRingBufferTests {
-
     @Test("记录消息包含 method / messageId / bytes / timestamp")
     func record_contains_expected_fields() {
         let buf = IPCMonitorRingBuffer()
@@ -37,7 +36,7 @@ struct IPCMonitorRingBufferTests {
     @Test("ring buffer 容量上限：超出后丢弃旧条目")
     func ring_buffer_capacity_limit() {
         let buf = IPCMonitorRingBuffer()
-        for i in 0..<(IPCMonitorRingBuffer.capacity + 10) {
+        for i in 0 ..< (IPCMonitorRingBuffer.capacity + 10) {
             buf.record(direction: .inbound, method: "m-\(i)", messageId: nil, bytes: i)
         }
         #expect(buf.entries.count == IPCMonitorRingBuffer.capacity)

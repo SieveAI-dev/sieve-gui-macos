@@ -1,5 +1,5 @@
-import Foundation
 import Combine
+import Foundation
 
 /// 实时事件 ring buffer（容量 1000）。来源：audit.db / IPC notify_status_bar / GUILog。
 @MainActor
@@ -26,7 +26,7 @@ public final class LiveEventsRingBuffer: ObservableObject {
 
     public static let capacity: Int = 1000
     @Published public private(set) var entries: [Entry] = []
-    private var pausedSnapshot: [Entry]? = nil
+    private var pausedSnapshot: [Entry]?
     /// UI 暂停标志：冻结可见快照，不影响 ring buffer 继续写入。
     @Published public var paused: Bool = false {
         didSet {
@@ -54,8 +54,10 @@ public final class LiveEventsRingBuffer: ObservableObject {
         let visibleEntries = pausedSnapshot ?? entries
         return visibleEntries.filter { e in
             (source == "all" || e.source.rawValue == source)
-            && (level == "all" || e.level.rawValue == level)
-            && (grep.isEmpty || e.message.localizedCaseInsensitiveContains(grep) || e.category.localizedCaseInsensitiveContains(grep))
+                && (level == "all" || e.level.rawValue == level)
+                &&
+                (grep.isEmpty || e.message.localizedCaseInsensitiveContains(grep) || e.category
+                    .localizedCaseInsensitiveContains(grep))
         }
     }
 
@@ -66,9 +68,9 @@ public final class LiveEventsRingBuffer: ObservableObject {
 
     public static func sourceColorToken(_ source: Entry.Source) -> SourceColorToken {
         switch source {
-        case .audit: return .blue
-        case .ipc: return .orange
-        case .gui: return .green
+        case .audit: .blue
+        case .ipc: .orange
+        case .gui: .green
         }
     }
 }
@@ -97,14 +99,29 @@ public final class IPCMonitorRingBuffer: ObservableObject {
     @Published public private(set) var inflightCount: Int = 0
 
     public func record(direction: Entry.Flow, method: String, messageId: String?, bytes: Int) {
-        let e = Entry(id: UUID(), timestamp: Date(), direction: direction, method: method, messageId: messageId, bytes: bytes)
+        let e = Entry(
+            id: UUID(),
+            timestamp: Date(),
+            direction: direction,
+            method: method,
+            messageId: messageId,
+            bytes: bytes
+        )
         entries.append(e)
         if entries.count > Self.capacity {
             entries.removeFirst(entries.count - Self.capacity)
         }
     }
 
-    public func recordHandshake() { handshakeCount += 1 }
-    public func recordReconnect() { reconnectCount += 1 }
-    public func setInflight(_ n: Int) { inflightCount = n }
+    public func recordHandshake() {
+        handshakeCount += 1
+    }
+
+    public func recordReconnect() {
+        reconnectCount += 1
+    }
+
+    public func setInflight(_ n: Int) {
+        inflightCount = n
+    }
 }

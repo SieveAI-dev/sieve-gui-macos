@@ -20,7 +20,8 @@ public struct CountdownView: View {
                 // Phase3（red）闪烁动画：reduce-motion=true 时禁用，保留颜色切换
                 .opacity(shouldFlash ? flashOpacity : 1.0)
                 .animation(
-                    reduceMotion ? nil : (phase == .red ? .easeInOut(duration: 0.5).repeatForever(autoreverses: true) : nil),
+                    reduceMotion ? nil :
+                        (phase == .red ? .easeInOut(duration: 0.5).repeatForever(autoreverses: true) : nil),
                     value: flashOpacity
                 )
 
@@ -28,14 +29,19 @@ public struct CountdownView: View {
                 .progressViewStyle(.linear)
                 .tint(color)
                 .frame(maxWidth: .infinity)
-                // 进度条颜色切换不受 reduce-motion 影响（信息量不能丢）
+            // 进度条颜色切换不受 reduce-motion 影响（信息量不能丢）
         }
     }
 
-    // 是否处于红色闪烁阶段
-    private var shouldFlash: Bool { phase == .red && !reduceMotion }
-    // 闪烁时的不透明度驱动（通过 animation modifier 触发）
-    private var flashOpacity: Double { phase == .red ? 0.4 : 1.0 }
+    /// 是否处于红色闪烁阶段
+    private var shouldFlash: Bool {
+        phase == .red && !reduceMotion
+    }
+
+    /// 闪烁时的不透明度驱动（通过 animation modifier 触发）
+    private var flashOpacity: Double {
+        phase == .red ? 0.4 : 1.0
+    }
 
     public var phase: HipsPhase {
         HipsPhase.resolve(
@@ -51,9 +57,9 @@ public struct CountdownView: View {
 
     private var color: Color {
         switch phase {
-        case .blue: return .accentColor
-        case .orange: return .orange
-        case .red: return .red
+        case .blue: .accentColor
+        case .orange: .orange
+        case .red: .red
         }
     }
 }
@@ -91,12 +97,12 @@ public struct DisconnectedBanner: View {
 
     private var detail: String {
         switch reason {
-        case .socketMissing: return "找不到 ~/.sieve/ipc.sock，daemon 可能未启动。"
-        case .connectionRefused: return "~/.sieve/ipc.sock 存在，但 daemon 拒绝连接，请重启 daemon。"
-        case .heartbeatTimeout: return "30 秒未收到 daemon 消息。"
-        case .versionMismatch: return "协议版本不兼容，请同步升级 daemon 与 GUI。"
-        case .daemonShutdown: return "daemon 主动关闭了连接。"
-        case .unknown: return "未知原因。"
+        case .socketMissing: "找不到 ~/.sieve/ipc.sock，daemon 可能未启动。"
+        case .connectionRefused: "~/.sieve/ipc.sock 存在，但 daemon 拒绝连接，请重启 daemon。"
+        case .heartbeatTimeout: "30 秒未收到 daemon 消息。"
+        case .versionMismatch: "协议版本不兼容，请同步升级 daemon 与 GUI。"
+        case .daemonShutdown: "daemon 主动关闭了连接。"
+        case .unknown: "未知原因。"
         }
     }
 }

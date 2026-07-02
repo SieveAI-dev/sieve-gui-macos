@@ -1,6 +1,6 @@
-import Testing
 import Foundation
 import SQLite3
+import Testing
 @testable import SieveGUICore
 
 @Suite("HistoryWindowViewModel — pagination state")
@@ -16,7 +16,7 @@ struct HistoryWindowViewModelTests {
 
         try await waitUntil { viewModel.rows.count == 50 && !viewModel.loading }
 
-        for _ in 0..<5 {
+        for _ in 0 ..< 5 {
             let previousLastId = viewModel.rows.last?.id
             viewModel.loadMore()
             try await waitUntil {
@@ -47,7 +47,7 @@ struct HistoryWindowViewModelTests {
         viewModel.selectAndReveal(requestId: "req_120")
         try await waitUntil { viewModel.selected?.id == 120 }
 
-        for _ in 0..<3 {
+        for _ in 0 ..< 3 {
             let previousLastId = viewModel.rows.last?.id
             viewModel.loadMore()
             try await waitUntil {
@@ -104,7 +104,7 @@ struct HistoryWindowViewModelTests {
         )
         """)
 
-        for id in 1...rowCount {
+        for id in 1 ... rowCount {
             try exec(db, """
             INSERT INTO events
             (id, created_at, direction, severity, rule_id, disposition, user_choice,

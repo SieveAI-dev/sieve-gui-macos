@@ -1,5 +1,5 @@
-import Testing
 import Foundation
+import Testing
 @testable import SieveGUICore
 
 /// HIPS 倒计时阶段阈值公式测试（SPEC-002）。
@@ -9,7 +9,6 @@ import Foundation
 /// （历史教训：旧测试内联重写 `ratio > 0.5 / > 0.2`，未触达真实代码，漂移不会变红。）
 @Suite("HipsPhase.resolve 阈值公式（唯一权威源）")
 struct HipsPhaseResolverTests {
-
     // MARK: - blue（ratio > 0.5）
 
     @Test("ratio > 0.5 → .blue")
@@ -43,7 +42,7 @@ struct HipsPhaseResolverTests {
 
     @Test("ratio == 0.2 → .red（非 .orange，区间为 > 0.2 才 orange）")
     func exactly_one_fifth_is_red() {
-        #expect(HipsPhase.resolve(remaining: 6, total: 30) == .red)   // 0.2
+        #expect(HipsPhase.resolve(remaining: 6, total: 30) == .red) // 0.2
         #expect(HipsPhase.resolve(remaining: 20, total: 100) == .red) // 0.2
     }
 
@@ -57,7 +56,7 @@ struct HipsPhaseResolverTests {
     @Test("ratio < 0.2 → .red")
     func below_one_fifth_is_red() {
         #expect(HipsPhase.resolve(remaining: 5, total: 100) == .red) // 0.05
-        #expect(HipsPhase.resolve(remaining: 0, total: 30) == .red)  // 0.0
+        #expect(HipsPhase.resolve(remaining: 0, total: 30) == .red) // 0.0
     }
 
     // MARK: - total=0 兜底（防除零）
@@ -72,5 +71,4 @@ struct HipsPhaseResolverTests {
     func negative_total_is_red() {
         #expect(HipsPhase.resolve(remaining: 10, total: -5) == .red)
     }
-
 }

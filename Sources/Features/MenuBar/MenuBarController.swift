@@ -1,6 +1,6 @@
 import AppKit
-import SwiftUI
 import Combine
+import SwiftUI
 
 /// 菜单栏 controller。管理 NSStatusItem 与 Quick Menu popover。
 @MainActor
@@ -139,8 +139,8 @@ public final class MenuBarController: NSObject, NSPopoverDelegate {
         let optimisticUntil = Date().addingTimeInterval(TimeInterval(bounded * 60))
         appState.updatePaused(true, until: optimisticUntil)
         Task { [weak self] in
-            guard let self = self, let client = self.ipcClient else { return }
-            await client.registerMutatingRequest(pauseId)   // 注册先于发送，避免 echo 漏判
+            guard let self, let client = ipcClient else { return }
+            await client.registerMutatingRequest(pauseId) // 注册先于发送，避免 echo 漏判
             do {
                 let data = try await client.sendRequest(
                     id: pauseId,
@@ -149,7 +149,8 @@ public final class MenuBarController: NSObject, NSPopoverDelegate {
                 )
                 client.unregisterMutatingRequest(pauseId)
                 if let resp = try? JSONDecoder().decode(SetPausedResult.self, from: data),
-                   let until = resp.pausedUntil {
+                   let until = resp.pausedUntil
+                {
                     await MainActor.run { self.appState.updatePaused(true, until: until) }
                 }
             } catch {
@@ -167,8 +168,8 @@ public final class MenuBarController: NSObject, NSPopoverDelegate {
         let previousPausedUntil = appState.pausedUntil
         appState.updatePaused(false, until: nil)
         Task { [weak self] in
-            guard let self = self, let client = self.ipcClient else { return }
-            await client.registerMutatingRequest(resumeId)   // 注册先于发送，避免 echo 漏判
+            guard let self, let client = ipcClient else { return }
+            await client.registerMutatingRequest(resumeId) // 注册先于发送，避免 echo 漏判
             do {
                 let data = try await client.sendRequest(
                     id: resumeId,

@@ -19,7 +19,8 @@ public struct DaemonSettingsView: View {
                 LabeledContent("Preset") { Text(appState.preset.rawValue) }
                 LabeledContent("audit.db schema") {
                     if appState.auditDbUserVersion > 0 {
-                        Text("v\(appState.auditDbUserVersion)") + Text(appState.auditSchemaWarning ? "（未知版本）" : "").foregroundColor(.orange)
+                        Text("v\(appState.auditDbUserVersion)") + Text(appState.auditSchemaWarning ? "（未知版本）" : "")
+                            .foregroundColor(.orange)
                     } else {
                         Text("—")
                     }
@@ -56,9 +57,15 @@ public struct DaemonSettingsView: View {
                     Button("Reload Config") {
                         Task {
                             do {
-                                let data = try await ipcClient.sendRequest(id: UUID().uuidString, method: "sieve.reload_config")
+                                let data = try await ipcClient.sendRequest(
+                                    id: UUID().uuidString,
+                                    method: "sieve.reload_config"
+                                )
                                 if let r = try? JSONDecoder().decode(ReloadConfigResult.self, from: data) {
-                                    await GUILog.shared.info("reload_config ok: system=\(r.systemRulesCount) user=\(r.userRulesCount) errors=\(r.userRulesErrors.count)", category: "settings")
+                                    await GUILog.shared.info(
+                                        "reload_config ok: system=\(r.systemRulesCount) user=\(r.userRulesCount) errors=\(r.userRulesErrors.count)",
+                                        category: "settings"
+                                    )
                                     await MainActor.run {
                                         operationMessage = "配置已重载（\(r.systemRulesCount + r.userRulesCount) 条规则）"
                                         operationIsError = false
@@ -113,20 +120,20 @@ public struct DaemonSettingsView: View {
             let data = try await ipcClient.sendRequest(id: UUID().uuidString, method: "sieve.health")
             let dto = try JSONDecoder().decode(HealthResultDTO.self, from: data)
             await MainActor.run {
-                self.health = dto
-                self.healthFetchedAt = Date()
-                self.healthErrorMessage = nil
-                self.operationMessage = "Health Check 已刷新"
-                self.operationIsError = false
+                health = dto
+                healthFetchedAt = Date()
+                healthErrorMessage = nil
+                operationMessage = "Health Check 已刷新"
+                operationIsError = false
             }
         } catch {
             await GUILog.shared.warn("sieve.health failed: \(error)", category: "settings")
             await MainActor.run {
-                self.health = nil
-                self.healthFetchedAt = Date()
-                self.healthErrorMessage = "Health Check 失败：—"
-                self.operationMessage = "Health Check 失败，请检查 daemon 连接状态"
-                self.operationIsError = true
+                health = nil
+                healthFetchedAt = Date()
+                healthErrorMessage = "Health Check 失败：—"
+                operationMessage = "Health Check 失败，请检查 daemon 连接状态"
+                operationIsError = true
             }
         }
     }

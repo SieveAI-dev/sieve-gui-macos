@@ -1,10 +1,9 @@
-import Testing
 import Foundation
+import Testing
 @testable import SieveGUICore
 
 @Suite("HipsDenyTracker — 5s 内同 rule_id deny 后按钮互换逻辑")
 struct HipsDenyTrackerTests {
-
     @Test("5s 内再次弹同 rule → shouldSwapLayout = true")
     func swap_within_window() {
         var tracker = HipsDenyTracker()

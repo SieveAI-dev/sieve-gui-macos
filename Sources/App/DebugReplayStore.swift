@@ -1,5 +1,5 @@
-import Foundation
 import Combine
+import Foundation
 
 /// History → Debug Tab 重放状态桥。
 /// WindowManager.replayInDebug(prompt:) 写入；RuleEvaluationTab.onAppear 读取并清空。

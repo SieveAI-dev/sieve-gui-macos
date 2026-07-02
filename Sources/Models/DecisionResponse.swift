@@ -2,12 +2,12 @@ import Foundation
 
 /// 用户对 HIPS 弹窗的回应。编码层强制：`allowRemember == false` → `remember = false`。
 public struct DecisionResponse: Sendable {
-    public let id: String                  // 与 request_decision id 相同（= JSON-RPC id）
+    public let id: String // 与 request_decision id 相同（= JSON-RPC id）
     public let decision: Decision
     public let remember: Bool
-    public let contextHint: String?        // ≤ 200 字符
-    public let decidedAt: Date             // GUI 端时钟，SPEC-005 §6.2.1 required
-    public let byUser: Bool                // true=用户主动操作；false=超时/失联回退
+    public let contextHint: String? // ≤ 200 字符
+    public let decidedAt: Date // GUI 端时钟，SPEC-005 §6.2.1 required
+    public let byUser: Bool // true=用户主动操作；false=超时/失联回退
     public let uiPhaseWhenClicked: HipsPhase
 
     public init(
@@ -33,7 +33,7 @@ public struct DecisionResponse: Sendable {
         var dict: [String: Any] = [
             "request_id": id,
             "decision": decision.rawValue,
-            "remember": allowRemember ? remember : false,   // ← 编码层强制
+            "remember": allowRemember ? remember : false, // ← 编码层强制
             "decided_at": Self.iso8601(decidedAt),
             "by_user": byUser,
             "ui_phase_when_clicked": Self.phaseLabel(uiPhaseWhenClicked)
@@ -60,9 +60,9 @@ public struct DecisionResponse: Sendable {
 
     static func phaseLabel(_ phase: HipsPhase) -> String {
         switch phase {
-        case .blue: return "blue"
-        case .orange: return "orange"
-        case .red: return "red"
+        case .blue: "blue"
+        case .orange: "orange"
+        case .red: "red"
         }
     }
 }
@@ -71,15 +71,15 @@ public struct DecisionResponse: Sendable {
 public struct MergedDecisionResponse: Sendable {
     public let id: String
     public let perIssue: [PerIssue]
-    public let decidedAt: Date             // GUI 端时钟，SPEC-005 §6.2.1 required
-    public let byUser: Bool                // true=用户主动操作；false=超时/失联回退
+    public let decidedAt: Date // GUI 端时钟，SPEC-005 §6.2.1 required
+    public let byUser: Bool // true=用户主动操作；false=超时/失联回退
 
     public struct PerIssue: Sendable {
         public let issueId: String
         public let decision: Decision
         public let remember: Bool
         public let contextHint: String?
-        public let allowRemember: Bool   // 用于编码层强制
+        public let allowRemember: Bool // 用于编码层强制
 
         public init(issueId: String, decision: Decision, remember: Bool, contextHint: String?, allowRemember: Bool) {
             self.issueId = issueId
@@ -110,7 +110,7 @@ public struct MergedDecisionResponse: Sendable {
             var d: [String: Any] = [
                 "issue_id": p.issueId,
                 "decision": p.decision.rawValue,
-                "remember": p.allowRemember ? p.remember : false  // ← 强制
+                "remember": p.allowRemember ? p.remember : false // ← 强制
             ]
             // SPEC-002 §4.6：context_hint 只属于“允许并记住”路径；未 remember 或 deny 时不外带。
             let maySendContextHint = p.decision == .allow && p.allowRemember && p.remember
@@ -141,17 +141,17 @@ public enum DecisionError: Sendable {
 
     public var code: Int {
         switch self {
-        case .userCanceledViaWindowClose: return -32100
-        case .guiRenderFailed: return -32101
-        case .guiShutdownDuringDecision: return -32102
+        case .userCanceledViaWindowClose: -32100
+        case .guiRenderFailed: -32101
+        case .guiShutdownDuringDecision: -32102
         }
     }
 
     public var message: String {
         switch self {
-        case .userCanceledViaWindowClose: return "user_canceled_via_window_close"
-        case .guiRenderFailed: return "gui_render_failed"
-        case .guiShutdownDuringDecision: return "gui_shutdown_during_decision"
+        case .userCanceledViaWindowClose: "user_canceled_via_window_close"
+        case .guiRenderFailed: "gui_render_failed"
+        case .guiShutdownDuringDecision: "gui_shutdown_during_decision"
         }
     }
 }

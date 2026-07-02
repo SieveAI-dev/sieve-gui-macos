@@ -41,7 +41,7 @@ struct AppStateStatusMachineTests {
     @Test("applyHello 握手投递后必须离开失联态")
     func applyHelloLeavesDisconnected() throws {
         let state = makeState()
-        state.applyHello(try makeHello())
+        try state.applyHello(makeHello())
         #expect(state.daemonStatus == .normal)
     }
 

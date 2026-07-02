@@ -1,6 +1,6 @@
+import ServiceManagement
 import SwiftUI
 import UserNotifications
-import ServiceManagement
 
 public struct OnboardingView: View {
     @ObservedObject var appState: AppState
@@ -18,7 +18,12 @@ public struct OnboardingView: View {
     @State private var setupError: String?
     @State private var setupRunning: Bool = false
 
-    public init(appState: AppState, ipcClient: IPCClient, skipBridge: OnboardingSkipBridge? = nil, onClose: @escaping () -> Void) {
+    public init(
+        appState: AppState,
+        ipcClient: IPCClient,
+        skipBridge: OnboardingSkipBridge? = nil,
+        onClose: @escaping () -> Void
+    ) {
         self.appState = appState
         self.ipcClient = ipcClient
         self.skipBridge = skipBridge
@@ -42,7 +47,7 @@ public struct OnboardingView: View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Sieve 引导").font(.title3.weight(.semibold)).padding(16)
             Divider()
-            ForEach(1...6, id: \.self) { i in
+            ForEach(1 ... 6, id: \.self) { i in
                 stepRow(index: i, title: stepTitle(i))
             }
             Spacer()
@@ -123,7 +128,9 @@ public struct OnboardingView: View {
                 Spacer()
                 Button("继续") { step = 3 }
                     .buttonStyle(.borderedProminent)
-                    .disabled(daemonNotInstalled || doctorResults.isEmpty || doctorResults.contains { check in !check.ok })
+                    .disabled(daemonNotInstalled || doctorResults.isEmpty || doctorResults.contains { check in
+                        !check.ok
+                    })
             }
         }
         .onAppear { runDoctor() }
@@ -247,7 +254,8 @@ public struct OnboardingView: View {
                 .foregroundStyle(.secondary)
             if !demoResult.isEmpty {
                 HStack(spacing: 6) {
-                    Image(systemName: demoResult.hasPrefix("✓") ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                    Image(systemName: demoResult
+                        .hasPrefix("✓") ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                         .foregroundStyle(demoResult.hasPrefix("✓") ? .green : .orange)
                     Text(demoResult).font(.caption)
                 }
@@ -271,9 +279,9 @@ public struct OnboardingView: View {
         demoResult = ""
         // Demo payload: 触发 OUT-* 规则的 BIP39 助记词 + 地址片段
         let demoPayload = """
-            transfer 0x71C7656EC7ab88b098defB751B7401B5f6d8976F amount=2.5 ETH
-            seed: abandon ability able about above absent absorb abstract absurd abuse access accident
-            """
+        transfer 0x71C7656EC7ab88b098defB751B7401B5f6d8976F amount=2.5 ETH
+        seed: abandon ability able about above absent absorb abstract absurd abuse access accident
+        """
         Task {
             do {
                 _ = try await ipcClient.sendRequest(
@@ -355,17 +363,17 @@ public struct OnboardingView: View {
                 let data = try await ipcClient.sendRequest(id: UUID().uuidString, method: "sieve.health")
                 let dto = try JSONDecoder().decode(HealthResultDTO.self, from: data)
                 await MainActor.run {
-                    self.daemonNotInstalled = false
-                    self.doctorResults = Self.checks(from: dto)
+                    daemonNotInstalled = false
+                    doctorResults = Self.checks(from: dto)
                 }
             } catch {
                 // 失联：先区分「未安装」（场景 C）与「装了但没起来」（场景 B）。
                 let installed = Self.detectDaemonInstalled()
                 await MainActor.run {
                     if installed {
-                        self.daemonNotInstalled = false
+                        daemonNotInstalled = false
                         // 装了但失联：展示占位条目，引导用户跑 sieve setup（场景 B）。
-                        self.doctorResults = [
+                        doctorResults = [
                             DoctorCheck(name: "ipc.sock 可连接", ok: false),
                             DoctorCheck(name: "daemon listener 已绑定", ok: false),
                             DoctorCheck(name: "audit.db 可访问", ok: false),
@@ -374,8 +382,8 @@ public struct OnboardingView: View {
                         ]
                     } else {
                         // 未安装：展示专用提示 + 禁用继续（场景 C）。
-                        self.daemonNotInstalled = true
-                        self.doctorResults = []
+                        daemonNotInstalled = true
+                        doctorResults = []
                     }
                 }
             }
@@ -386,15 +394,21 @@ public struct OnboardingView: View {
     static func checks(from dto: HealthResultDTO) -> [DoctorCheck] {
         let listeners = dto.effectiveListeners
         let listenerSummary = listeners
-            .map { "\($0.port) [\($0.providerId)/\($0.`protocol`)]" }
+            .map { "\($0.port) [\($0.providerId)/\($0.protocol)]" }
             .joined(separator: ", ")
         let auditOK = dto.auditDb.schemaVersion >= 2
         let rulesOK = dto.rules.systemCount > 0
         let ipcOK = dto.ipc.connectedClients >= 1
         return [
             DoctorCheck(name: "ipc.sock 可连接（daemon v\(dto.daemonVersion) / 协议 \(dto.protocolVersion)）", ok: true),
-            DoctorCheck(name: "daemon listener 已绑定：\(listenerSummary.isEmpty ? "无" : listenerSummary)", ok: !listeners.isEmpty),
-            DoctorCheck(name: "audit.db schema v\(dto.auditDb.schemaVersion)（\(dto.auditDb.eventsTotal) 条事件）", ok: auditOK),
+            DoctorCheck(
+                name: "daemon listener 已绑定：\(listenerSummary.isEmpty ? "无" : listenerSummary)",
+                ok: !listeners.isEmpty
+            ),
+            DoctorCheck(
+                name: "audit.db schema v\(dto.auditDb.schemaVersion)（\(dto.auditDb.eventsTotal) 条事件）",
+                ok: auditOK
+            ),
             DoctorCheck(name: "规则引擎已加载（系统 \(dto.rules.systemCount) / 用户 \(dto.rules.userCount)）", ok: rulesOK),
             DoctorCheck(name: "client 握手成功（在线 \(dto.ipc.connectedClients) 个）", ok: ipcOK)
         ]
@@ -452,10 +466,10 @@ public struct OnboardingView: View {
 
     private func presetDesc(_ p: Preset) -> String {
         switch p {
-        case .strict: return "全员严格"
-        case .standard: return "默认推荐"
-        case .relaxed: return "宽松"
-        case .custom: return "自定义"
+        case .strict: "全员严格"
+        case .standard: "默认推荐"
+        case .relaxed: "宽松"
+        case .custom: "自定义"
         }
     }
 }

@@ -23,7 +23,8 @@ public actor DiagnosticPackager {
     public func exportRedacted() async -> URL? {
         let stamp = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-")
         let fm = FileManager.default
-        let downloads = fm.urls(for: .downloadsDirectory, in: .userDomainMask).first ?? URL(fileURLWithPath: NSHomeDirectory() + "/Downloads")
+        let downloads = fm.urls(for: .downloadsDirectory, in: .userDomainMask)
+            .first ?? URL(fileURLWithPath: NSHomeDirectory() + "/Downloads")
         let outURL = downloads.appendingPathComponent("sieve-diagnostic-\(stamp).zip")
 
         // 1. 收集源文件
@@ -69,7 +70,10 @@ public actor DiagnosticPackager {
             "redacted_columns": Array(DiagnosticPackager.auditRedactedColumns).sorted(),
             "note": "本包已自动脱敏：evidence_meta / fingerprint / session_id / caller_pid / caller_exe 已清空"
         ]
-        if let manifestData = try? JSONSerialization.data(withJSONObject: manifest, options: [.prettyPrinted, .sortedKeys]) {
+        if let manifestData = try? JSONSerialization.data(
+            withJSONObject: manifest,
+            options: [.prettyPrinted, .sortedKeys]
+        ) {
             try? manifestData.write(to: tmpDir.appendingPathComponent("manifest.json"))
         }
 

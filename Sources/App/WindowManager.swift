@@ -114,12 +114,12 @@ public final class WindowManager: NSObject {
 
     private func scheduleModalPump(session: NSApplication.ModalSession) {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-            guard let self = self, self.onboardingSession != nil else { return }
+            guard let self, onboardingSession != nil else { return }
             let result = NSApp.runModalSession(session)
             if result == .continue {
-                self.scheduleModalPump(session: session)
+                scheduleModalPump(session: session)
             } else {
-                self.cleanupOnboardingSession()
+                cleanupOnboardingSession()
             }
         }
     }
@@ -185,8 +185,11 @@ public final class OnboardingSkipBridge {
 /// Onboarding 窗口的关闭按钮拦截：返回 false 阻止系统直接关窗，转交 onClose 走确认 alert。
 final class OnboardingCloseDelegate: NSObject, NSWindowDelegate {
     private let onClose: () -> Void
-    init(onClose: @escaping () -> Void) { self.onClose = onClose }
-    func windowShouldClose(_ sender: NSWindow) -> Bool {
+    init(onClose: @escaping () -> Void) {
+        self.onClose = onClose
+    }
+
+    func windowShouldClose(_: NSWindow) -> Bool {
         onClose()
         return false
     }

@@ -1,5 +1,5 @@
-import SwiftUI
 import AppKit
+import SwiftUI
 
 public struct HipsPopupView: View {
     let request: HipsRequest
@@ -46,7 +46,12 @@ public struct HipsPopupView: View {
                             IssueCardView(issue: issue, isUnlocked: appState.isUnlocked)
                         }
                     } else if let context = request.context, let ruleId = request.ruleId {
-                        DetailCardView(ruleId: ruleId, context: context, recommendation: request.recommendation, isUnlocked: appState.isUnlocked)
+                        DetailCardView(
+                            ruleId: ruleId,
+                            context: context,
+                            recommendation: request.recommendation,
+                            isUnlocked: appState.isUnlocked
+                        )
                     }
                     if let rec = request.recommendation {
                         RecommendationBarView(recommendation: rec)
@@ -158,7 +163,7 @@ public struct HipsPopupView: View {
                 if rememberChecked {
                     TextField("可选备注（≤ 200 字符）", text: $contextHint, axis: .vertical)
                         .textFieldStyle(.roundedBorder)
-                        .lineLimit(2...3)
+                        .lineLimit(2 ... 3)
                         .onChange(of: contextHint) { new in
                             // SPEC-005 §1.3: 截断按 Unicode scalar 计数（≤ 200）
                             if new.unicodeScalars.count > 200 {
@@ -313,7 +318,12 @@ public struct HipsPopupView: View {
             let flags = NSApp.currentEvent?.modifierFlags ?? []
             if !flags.contains(.command) { return }
         }
-        onDecision(.allow, request.allowRemember && rememberChecked, contextHint.isEmpty ? nil : contextHint, currentPhase)
+        onDecision(
+            .allow,
+            request.allowRemember && rememberChecked,
+            contextHint.isEmpty ? nil : contextHint,
+            currentPhase
+        )
     }
 
     private func tryDeny() {

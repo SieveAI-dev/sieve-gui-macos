@@ -5,10 +5,10 @@ public enum Severity: String, Codable, CaseIterable, Sendable, Comparable {
 
     public var sortOrder: Int {
         switch self {
-        case .critical: return 0
-        case .high: return 1
-        case .medium: return 2
-        case .low: return 3
+        case .critical: 0
+        case .high: 1
+        case .medium: 2
+        case .low: 3
         }
     }
 
@@ -30,9 +30,9 @@ public enum Disposition: String, Codable, CaseIterable, Sendable {
 }
 
 public enum DefaultOnTimeout: String, Codable, Sendable {
-    case block = "block"
-    case allow = "allow"
-    case redact = "redact"
+    case block
+    case allow
+    case redact
 }
 
 public enum Decision: String, Codable, Sendable {
@@ -44,10 +44,10 @@ public enum RecommendationConfidence: String, Codable, Sendable {
 }
 
 public enum Preset: String, Codable, CaseIterable, Sendable {
-    case strict = "strict"
-    case standard = "standard"
-    case relaxed = "relaxed"
-    case custom = "custom"
+    case strict
+    case standard
+    case relaxed
+    case custom
 }
 
 public enum NotifyKind: String, Codable, Sendable {
@@ -56,13 +56,13 @@ public enum NotifyKind: String, Codable, Sendable {
     case hookTerminal = "hook_terminal"
     case userRulesLoadFailed = "user_rules_load_failed"
     case userRulesReloaded = "user_rules_reloaded"
-    case generic = "generic"
+    case generic
 }
 
 public enum HipsPhase: Sendable {
-    case blue   // remaining/total > 0.5
+    case blue // remaining/total > 0.5
     case orange // 0.2 < remaining/total <= 0.5
-    case red    // remaining/total <= 0.2
+    case red // remaining/total <= 0.2
 
     /// HIPS 倒计时阶段阈值的唯一权威实现（核心库纯函数，可测）。
     /// `total <= 0` 兜底为 `.red`（防除零，等价"已无剩余时间"最严格）。
@@ -80,7 +80,7 @@ public enum DaemonStatus: Equatable, Sendable {
     case normal
     case warning
     case hold
-    case paused(until: Date?)   // until 可空：启动握手时 daemon 已暂停但 hello 不带 paused_until
+    case paused(until: Date?) // until 可空：启动握手时 daemon 已暂停但 hello 不带 paused_until
     case disconnected(reason: DisconnectReason)
 
     public enum DisconnectReason: String, Sendable {
@@ -109,35 +109,35 @@ public struct StatusBarIconPresentation: Equatable, Sendable {
     public static func resolve(for status: DaemonStatus) -> StatusBarIconPresentation {
         switch status {
         case .normal:
-            return StatusBarIconPresentation(
+            StatusBarIconPresentation(
                 symbolName: "shield.lefthalf.filled",
                 tint: .template,
                 accessibilityTitle: "Sieve — 正常",
                 tooltip: "Sieve 正常"
             )
         case .warning:
-            return StatusBarIconPresentation(
+            StatusBarIconPresentation(
                 symbolName: "shield.lefthalf.filled.badge.exclamationmark",
                 tint: .warning,
                 accessibilityTitle: "Sieve — 有警告",
                 tooltip: "Sieve 有警告"
             )
         case .hold:
-            return StatusBarIconPresentation(
+            StatusBarIconPresentation(
                 symbolName: "shield.lefthalf.filled.trianglebadge.exclamationmark",
                 tint: .danger,
                 accessibilityTitle: "Sieve — 等待用户决策",
                 tooltip: "Sieve 正在等待用户决策"
             )
         case .paused:
-            return StatusBarIconPresentation(
+            StatusBarIconPresentation(
                 symbolName: "pause.circle",
                 tint: .disabled,
                 accessibilityTitle: "Sieve — 已暂停",
                 tooltip: "Sieve 已暂停"
             )
         case .disconnected:
-            return StatusBarIconPresentation(
+            StatusBarIconPresentation(
                 symbolName: "shield.slash",
                 tint: .danger,
                 accessibilityTitle: "Sieve — 失联",
