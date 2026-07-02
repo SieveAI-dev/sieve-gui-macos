@@ -11,11 +11,16 @@ public struct HipsPopupView: View {
     let isClickSwallowed: () -> Bool
     /// 多 issue 合并模式的整体决策（拒绝全部 / 仅允许非 Critical / 全部允许）
     let onMergedDecision: (MergedAction) -> Void
+    /// SPEC-002 §4.4：字段解锁的「人在场」认证（不建会话）。默认 fail-closed 恒拒。
+    let requestFieldUnlock: () async -> Bool
 
     @State private var rememberChecked: Bool = false
     @State private var contextHint: String = ""
     @State private var lastHovered: Bool = false
     @State private var showCopyJSONAlert: Bool = false
+    /// SPEC-002 §4.4：HIPS 敏感字段解锁态——绑定 request_id 仅本弹窗有效，
+    /// 与 History 的 AppState.unlockSession 完全隔离（不读不写）。
+    @State private var fieldUnlock = HipsFieldUnlock()
 
     public init(
         request: HipsRequest,
@@ -24,7 +29,8 @@ public struct HipsPopupView: View {
         onDecision: @escaping (Decision, Bool, String?, HipsPhase) -> Void,
         onCloseWithoutDecision: @escaping () -> Void,
         isClickSwallowed: @escaping () -> Bool,
-        onMergedDecision: @escaping (MergedAction) -> Void = { _ in }
+        onMergedDecision: @escaping (MergedAction) -> Void = { _ in },
+        requestFieldUnlock: @escaping () async -> Bool = { false }
     ) {
         self.request = request
         self.appState = appState
@@ -33,6 +39,20 @@ public struct HipsPopupView: View {
         self.onCloseWithoutDecision = onCloseWithoutDecision
         self.isClickSwallowed = isClickSwallowed
         self.onMergedDecision = onMergedDecision
+        self.requestFieldUnlock = requestFieldUnlock
+    }
+
+    private var fieldsUnlocked: Bool {
+        fieldUnlock.isUnlocked(for: request.id)
+    }
+
+    /// 当前模板是否存在可解锁的脱敏字段（secret_outbound/markdown_exfil 不推全文，无解锁入口）。
+    private var hasUnlockableFields: Bool {
+        if request.merged { return !request.issues.isEmpty }
+        switch request.context {
+        case .addressCompare, .signingToolUse, .generic: return true
+        case .markdownExfil, .secretOutbound, .none: return false
+        }
     }
 
     public var body: some View {
@@ -43,15 +63,20 @@ public struct HipsPopupView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     if request.merged {
                         ForEach(request.issues) { issue in
-                            IssueCardView(issue: issue, isUnlocked: appState.isUnlocked)
+                            IssueCardView(issue: issue, isUnlocked: fieldsUnlocked)
                         }
                     } else if let context = request.context, let ruleId = request.ruleId {
                         DetailCardView(
                             ruleId: ruleId,
                             context: context,
                             recommendation: request.recommendation,
-                            isUnlocked: appState.isUnlocked
+                            isUnlocked: fieldsUnlocked
                         )
+                    }
+                    // SPEC-002 §4.4：字段解锁与 History 会话隔离——每个弹窗独立认证，
+                    // 认证不建会话；失败/取消保持脱敏、不自动重弹（可手动再点）。
+                    if hasUnlockableFields {
+                        fieldUnlockControl
                     }
                     if let rec = request.recommendation {
                         RecommendationBarView(recommendation: rec)
@@ -93,6 +118,36 @@ public struct HipsPopupView: View {
                     NSPasteboard.general.clearContents()
                 }
             }
+        }
+    }
+
+    // MARK: - Field unlock（SPEC-002 §4.4）
+
+    @ViewBuilder
+    private var fieldUnlockControl: some View {
+        if fieldsUnlocked {
+            HStack(spacing: 6) {
+                Image(systemName: "lock.open").foregroundStyle(.secondary)
+                Text("敏感字段已解锁（仅本弹窗有效）")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        } else {
+            Button(action: { tryFieldUnlock() }) {
+                Label("显示完整字段（Touch ID）", systemImage: "lock.fill")
+            }
+            .buttonStyle(.bordered)
+            .help("解锁仅对当前弹窗有效，关闭即失效；与历史窗口的解锁互不相干")
+        }
+    }
+
+    private func tryFieldUnlock() {
+        let requestId = request.id
+        Task { @MainActor in
+            if await requestFieldUnlock() {
+                fieldUnlock.unlock(requestId: requestId)
+            }
+            // 失败/取消：保持脱敏视图，不自动再次弹认证
         }
     }
 
